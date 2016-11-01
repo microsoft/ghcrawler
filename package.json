@@ -1,0 +1,35 @@
+{
+  "name": "ghcrawler",
+  "version": "0.1.0",
+  "description": "A robust GitHub API crawler that walks a queue of GitHub entities retrieving and storing their contents.",
+  "main": "./lib/crawler.js",
+  "bin": {
+    "ghcrawler": "./lib/crawler.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "github",
+    "api",
+    "crawler",
+    "pagination"
+  ],
+  "author": "William Bartholomew <willbar@microsoft.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/microsoft/ghcrawler.git"
+  },
+  "homepage": "https://github.com/microsoft/ghcrawler#readme",
+  "bugs": {
+    "url": "https://github.com/microsoft/ghcrawler"
+  },
+  "dependencies": {
+    "moment": "2.15.2"
+  },
+  "devDependencies": {},
+  "jshintConfig": {
+    "esversion": "es6"
+  }
+}
