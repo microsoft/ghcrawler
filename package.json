@@ -1,6 +1,6 @@
 {
   "name": "ghcrawler",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A robust GitHub API crawler that walks a queue of GitHub entities retrieving and storing their contents.",
   "main": "./lib/crawler.js",
   "bin": {
