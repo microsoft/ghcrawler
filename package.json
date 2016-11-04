@@ -30,6 +30,6 @@
   },
   "devDependencies": {},
   "jshintConfig": {
-    "esversion": "es6"
+    "esversion": "6"
   }
 }
