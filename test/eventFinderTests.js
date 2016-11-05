@@ -22,14 +22,14 @@ describe('Event Finder', () => {
     const events = [
       [{ url: 'http://test1' }, { url: 'http://test2' }]
     ];
-    const eventDocuments = [{ 'http://test1': { etag: 34 } }];
+    const eventDocuments = [{ 'http://test1': { etag: 34 } }, { 'http://test2': { etag: 34 } }];
     const instance = createFinder(events, eventDocuments);
 
     return instance.getNewEvents('http://test.com').then(found => {
       expect(found.length).to.be.equal(0);
     });
   });
-  it('will stop finding at first found document', () => {
+  it('will stop not finding at first found document', () => {
     const events = [
       [{ url: 'http://test1' }, { url: 'http://test2' }, { url: 'http://test3' }]
     ];
@@ -37,8 +37,9 @@ describe('Event Finder', () => {
     const instance = createFinder(events, eventDocuments);
 
     return instance.getNewEvents('http://test.com').then(found => {
-      expect(found.length).to.be.equal(1);
+      expect(found.length).to.be.equal(2);
       expect(found[0].url).to.be.equal('http://test1');
+      expect(found[1].url).to.be.equal('http://test3');
     });
   });
 });
@@ -63,8 +64,10 @@ function createStore(documents) {
     extend(collection, document);
     return collection;
   }, {});
-  result.etag = url => {
-    return hash[url];
+  result.etag = (type, url, callback) => {
+    let result = hash[url];
+    result = result ? result.etag : null;
+    return callback ? callback(null, result) : Q(result);
   };
   return result;
 }
