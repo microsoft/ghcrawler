@@ -26,7 +26,8 @@
     "url": "https://github.com/microsoft/ghcrawler"
   },
   "dependencies": {
-    "moment": "2.15.2"
+    "moment": "2.15.2",
+    "q": "1.4.1"
   },
   "devDependencies": {},
   "jshintConfig": {
