@@ -24,7 +24,6 @@
   },
   "dependencies": {
     "async": "^2.1.2",
-    "azure": "^1.2.0-preview",
     "moment": "2.15.2",
     "q": "1.4.1"
   },
