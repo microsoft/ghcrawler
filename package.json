@@ -23,9 +23,9 @@
     "url": "https://github.com/microsoft/ghcrawler"
   },
   "dependencies": {
-    "async": "^2.1.2",
     "moment": "2.15.2",
-    "q": "1.4.1"
+    "q": "1.4.1",
+    "qlimit": "^0.1.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
