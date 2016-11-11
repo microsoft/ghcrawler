@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "moment": "2.15.2",
+    "parse-link-header": "^0.4.1",
     "q": "1.4.1",
     "qlimit": "^0.1.1"
   },
