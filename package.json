@@ -27,7 +27,8 @@
     "moment": "2.15.2",
     "parse-link-header": "^0.4.1",
     "q": "1.4.1",
-    "qlimit": "^0.1.1"
+    "qlimit": "^0.1.1",
+    "query-string": "^4.2.3"
   },
   "devDependencies": {
     "chai": "^3.5.0",
