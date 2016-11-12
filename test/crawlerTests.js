@@ -137,6 +137,44 @@ describe('Crawler fetch', () => {
       });
   });
 
+  it('should throw for requestor get errors', () => {
+    const request = new Request('repos', 'http://test');
+    const requestor = createBaseRequestor({
+      get: () => { throw new Error('test'); }
+    });
+    const store = createBaseStore({ etag: () => { return Q(42); } });
+    const crawler = createBaseCrawler({ requestor: requestor, store: store });
+    return Q().then(() => {
+      return crawler._fetch(request);
+    }).then(
+      request => {
+        assert.fail();
+      },
+      error => {
+        expect(error.message).to.be.equal('test');
+      });
+  });
+
+  it('should throw for store get errors', () => {
+    const request = new Request('repos', 'http://test');
+    request.force = true;
+    const responses = [createResponse(null, 304, 42)];
+    const requestor = createBaseRequestor({
+      get: () => { return Q(responses.shift()); }
+    });
+    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
+    const crawler = createBaseCrawler({ requestor: requestor, store: store });
+    return Q().then(() => {
+      return crawler._fetch(request);
+    }).then(
+      request => {
+        assert.fail();
+      },
+      error => {
+        expect(error.message).to.be.equal('test');
+      });
+  });
+
 });
 
 function createResponse(body, code = 200, etag = null) {
