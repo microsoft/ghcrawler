@@ -89,9 +89,7 @@ describe('Crawler get request', () => {
   it('should abandon the request when the lock cannot be acquired', () => {
     const abandoned = [];
     const priority = createBaseQueue({
-      pop: () => {
-        return Q(new Request('priority', 'http://test'));
-      },
+      pop: () => { return Q(new Request('priority', 'http://test')); },
       abandon: request => {
         abandoned.push(request);
         return Q();
@@ -106,6 +104,24 @@ describe('Crawler get request', () => {
       error => {
         expect(error.message).to.be.equal('locker error');
         expect(abandoned.length).to.be.equal(1);
+      });
+  });
+
+  it('should get lock error even if abandon fails', () => {
+    const abandoned = [];
+    const priority = createBaseQueue({
+      pop: () => { return Q(new Request('priority', 'http://test')); },
+      abandon: request => { throw new Error('Abandon error'); }
+    });
+    const normal = createBaseQueue({ pop: () => { return Q(null); } });
+    const locker = createBaseLocker({ lock: () => { return Q.reject(new Error('locker error')); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority, locker: locker });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(
+      request => assert.fail(),
+      error => {
+        expect(error.message).to.be.equal('locker error');
+        expect(abandoned.length).to.be.equal(0);
       });
   });
 
@@ -269,6 +285,96 @@ describe('Crawler fetch', () => {
   });
 });
 
+describe('Crawler config filter', () => {
+  it('should filter', () => {
+    const config = { orgFilter: new Set(['microsoft']) };
+    const crawler = createBaseCrawler({ options: config });
+    expect(crawler._configFilter('repo', 'http://api.github.com/repo/microsoft/test')).to.be.false;
+    expect(crawler._configFilter('repos', 'http://api.github.com/repos/microsoft/test')).to.be.false;
+    expect(crawler._configFilter('org', 'http://api.github.com/org/microsoft/test')).to.be.false;
+
+    expect(crawler._configFilter('repo', 'http://api.github.com/repo/test/test')).to.be.true;
+    expect(crawler._configFilter('repos', 'http://api.github.com/repos/test/test')).to.be.true;
+    expect(crawler._configFilter('org', 'http://api.github.com/org/test/test')).to.be.true;
+  });
+
+  it('should not filter if no config', () => {
+    const config = {};
+    const crawler = createBaseCrawler({ options: config });
+    expect(crawler._configFilter('repo', 'http://api.github.com/repo/microsoft/test')).to.be.false;
+    expect(crawler._configFilter('repo', 'http://api.github.com/repo/test/test')).to.be.false;
+  });
+});
+
+describe('Crawler queue', () => {
+  it('should not queue if filtered', () => {
+    const config = { orgFilter: new Set(['test']) };
+    const queue = [];
+    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    request = { promises: [] };
+    const crawler = createBaseCrawler({ normal: normal, options: config });
+    crawler.queue(request, newRequest);
+    expect(request.promises.length).to.be.equal(0);
+    expect(queue.length).to.be.equal(0);
+  });
+
+  it('should queue if not filtered', () => {
+    const config = { orgFilter: new Set(['microsoft']) };
+    const queue = [];
+    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    request = { promises: [] };
+    const crawler = createBaseCrawler({ normal: normal, options: config });
+    crawler.queue(request, newRequest);
+    expect(request.promises.length).to.be.equal(1);
+    expect(queue.length).to.be.equal(1);
+    expect(queue[0] !== newRequest).to.be.true;
+    expect(queue[0].type === newRequest.type).to.be.true;
+    expect(queue[0].url === newRequest.url).to.be.true;
+  });
+
+  it('should queue in supplied queue', () => {
+    const config = { orgFilter: new Set(['microsoft']) };
+    const queue = [];
+    const supplied = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    request = { promises: [] };
+    const crawler = createBaseCrawler({ options: config });
+    crawler.queue(request, newRequest, supplied);
+    expect(request.promises.length).to.be.equal(1);
+    expect(queue.length).to.be.equal(1);
+    expect(queue[0] !== newRequest).to.be.true;
+    expect(queue[0].type === newRequest.type).to.be.true;
+    expect(queue[0].url === newRequest.url).to.be.true;
+  });
+});
+
+describe('Crawler requeue', () => {
+  it('should return if queuing not needed', () => {
+    const request = new Request('test', null);
+    const crawler = createBaseCrawler();
+    // The crawler will throw if it tries to do anything
+    crawler._requeue(request);
+  });
+
+  it('should requeue in same queue as before', () => {
+    const queue = [];
+    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
+    request.markRequeue();
+    request.promises = [];
+    request.originQueue = normal;
+    const crawler = createBaseCrawler({ normal: normal });
+    crawler._requeue(request);
+    expect(request.promises.length).to.be.equal(1);
+    expect(queue.length).to.be.equal(1);
+    expect(queue[0] !== request).to.be.true;
+    expect(queue[0].type === request.type).to.be.true;
+    expect(queue[0].url === request.url).to.be.true;
+  });
+});
+
 function createResponse(body, code = 200, etag = null) {
   return {
     statusCode: code,
@@ -315,7 +421,7 @@ function createLinkHeader(target, previous, next, last) {
   return [firstLink, prevLink, nextLink, lastLink].filter(value => { return value !== null; }).join(',');
 }
 
-function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = null, winston = createBaseLog() } = {}) {
+function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = {}, winston = createBaseLog() } = {}) {
   return new Crawler(normal, priority, deadLetter, store, locker, requestor, options, winston);
 }
 
