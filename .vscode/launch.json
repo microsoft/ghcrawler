@@ -2,13 +2,34 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run mocha",
+      "name": "Mocha",
       "type": "node",
       "request": "launch",
       "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
       "stopOnEntry": false,
       "args": [
-        "test/*.js"
+        "${workspace}/test/*.js"
+      ],
+      "cwd": "${workspaceRoot}",
+      "runtimeExecutable": null,
+      "runtimeArgs": [
+        "--nolazy"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "internalConsole"
+    },
+    {
+      "name": "Coverage",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceRoot}/node_modules/istanbul/lib/cli.js",
+      "stopOnEntry": false,
+      "args": [
+        "cover",
+        "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+        "${workspaceRoot}/test/*.js"
       ],
       "cwd": "${workspaceRoot}",
       "runtimeExecutable": null,
