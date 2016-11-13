@@ -6,6 +6,111 @@ const extend = require('extend');
 const Q = require('q');
 const Request = require('../lib/request');
 
+describe('Crawler get request', () => {
+  it('should get from the priority queue first', () => {
+    const priority = createBaseQueue({ pop: () => { return Q(new Request('priority', 'http://test')); } });
+    const normal = createBaseQueue({ pop: () => { return Q(new Request('normal', 'http://test')); } });
+    const locker = createBaseLocker({ lock: () => { return Q('locked'); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority, locker: locker });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(request => {
+      expect(request.type).to.be.equal('priority');
+      expect(request.originQueue === priority).to.be.true;
+      expect(request.lock).to.be.equal('locked');
+      expect(request.crawlerName).to.be.equal('test');
+      expect(request).to.be.equal(requestBox[0]);
+    });
+  });
+
+  it('should get from the normal queue if no priority', () => {
+    const priority = createBaseQueue({ pop: () => { return Q(null); } });
+    const normal = createBaseQueue({ pop: () => { return Q(new Request('normal', 'http://test')); } });
+    const locker = createBaseLocker({ lock: () => { return Q('locked'); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority, locker: locker });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(request => {
+      expect(request.type).to.be.equal('normal');
+      expect(request.originQueue === normal).to.be.true;
+      expect(request.lock).to.be.equal('locked');
+      expect(request.crawlerName).to.be.equal('test');
+      expect(request).to.be.equal(requestBox[0]);
+    });
+  });
+
+  it('should return a dummy skip/delay request if none are queued', () => {
+    const priority = createBaseQueue({ pop: () => { return Q(null); } });
+    const normal = createBaseQueue({ pop: () => { return Q(null); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(request => {
+      expect(request.type).to.be.equal('wait');
+      expect(request.lock).to.be.undefined;
+      expect(request.shouldSkip()).to.be.true;
+      expect(request.flowControl).to.be.equal('delay');
+      expect(request.crawlerName).to.be.equal('test');
+      expect(request).to.be.equal(requestBox[0]);
+    });
+  });
+
+  it('should throw when normal pop errors', () => {
+    const priority = createBaseQueue({ pop: () => { return Q(null); } });
+    const normal = createBaseQueue({ pop: () => { throw new Error('normal test'); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('normal test')
+    );
+  });
+
+  it('should throw when priority pop errors', () => {
+    const priority = createBaseQueue({ pop: () => { throw new Error('priority test'); } });
+    const normal = createBaseQueue({ pop: () => { return Q(null); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('priority test')
+    );
+  });
+
+  it('should throw when acquire lock errors', () => {
+    const priority = createBaseQueue({ pop: () => { return Q(new Request('priority', 'http://test')); } });
+    const normal = createBaseQueue({ pop: () => { return Q(null); } });
+    const locker = createBaseLocker({ lock: () => { throw new Error('locker error'); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority, locker: locker });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('locker error')
+    );
+  });
+
+  it('should abandon the request when the lock cannot be acquired', () => {
+    const abandoned = [];
+    const priority = createBaseQueue({
+      pop: () => {
+        return Q(new Request('priority', 'http://test'));
+      },
+      abandon: request => {
+        abandoned.push(request);
+        return Q();
+      }
+    });
+    const normal = createBaseQueue({ pop: () => { return Q(null); } });
+    const locker = createBaseLocker({ lock: () => { return Q.reject(new Error('locker error')); } });
+    const crawler = createBaseCrawler({ normal: normal, priority: priority, locker: locker });
+    const requestBox = [];
+    return crawler._getRequest(requestBox, 'test').then(
+      request => assert.fail(),
+      error => {
+        expect(error.message).to.be.equal('locker error');
+        expect(abandoned.length).to.be.equal(1);
+      });
+  });
+
+});
+
 describe('Crawler fetch', () => {
   it('should skip skipped requests', () => {
     const request = new Request('foo', null);
@@ -114,12 +219,9 @@ describe('Crawler fetch', () => {
     return Q().then(() => {
       return crawler._fetch(request);
     }).then(
-      request => {
-        assert.fail();
-      },
-      error => {
-        expect(error.message.startsWith('Code: 500')).to.be.true;
-      });
+      request => assert.fail(),
+      error => expect(error.message.startsWith('Code: 500')).to.be.true
+      );
   });
 
   it('should throw for store etag errors', () => {
@@ -129,12 +231,9 @@ describe('Crawler fetch', () => {
     return Q().then(() => {
       return crawler._fetch(request);
     }).then(
-      request => {
-        assert.fail();
-      },
-      error => {
-        expect(error.message).to.be.equal('test');
-      });
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('test')
+      );
   });
 
   it('should throw for requestor get errors', () => {
@@ -147,12 +246,9 @@ describe('Crawler fetch', () => {
     return Q().then(() => {
       return crawler._fetch(request);
     }).then(
-      request => {
-        assert.fail();
-      },
-      error => {
-        expect(error.message).to.be.equal('test');
-      });
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('test')
+      );
   });
 
   it('should throw for store get errors', () => {
@@ -167,14 +263,10 @@ describe('Crawler fetch', () => {
     return Q().then(() => {
       return crawler._fetch(request);
     }).then(
-      request => {
-        assert.fail();
-      },
-      error => {
-        expect(error.message).to.be.equal('test');
-      });
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('test')
+      );
   });
-
 });
 
 function createResponse(body, code = 200, etag = null) {
@@ -223,8 +315,8 @@ function createLinkHeader(target, previous, next, last) {
   return [firstLink, prevLink, nextLink, lastLink].filter(value => { return value !== null; }).join(',');
 }
 
-function createBaseCrawler({normalQueue = createBaseQueue(), priorityQueue = createBaseQueue(), deadLetterQueue = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = null, winston = createBaseLog() } = {}) {
-  return new Crawler(normalQueue, priorityQueue, deadLetterQueue, store, locker, requestor, options, winston);
+function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = null, winston = createBaseLog() } = {}) {
+  return new Crawler(normal, priority, deadLetter, store, locker, requestor, options, winston);
 }
 
 function createBaseQueue({ pop = null, push = null, done = null, abandon = null} = {}) {
