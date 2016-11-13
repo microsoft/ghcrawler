@@ -132,14 +132,14 @@ describe('Crawler fetch', () => {
     const request = new Request('foo', null);
     request.markSkip();
     const crawler = createBaseCrawler();
-    crawler._fetch(request);
+    return crawler._fetch(request);
   });
 
   it('should skip requeued requests', () => {
     const request = new Request('foo', null);
     request.markRequeue();
     const crawler = createBaseCrawler();
-    crawler._fetch(request);
+    return crawler._fetch(request);
   });
 
   it('should fetch one unseen document', () => {
@@ -310,7 +310,7 @@ describe('Crawler queue', () => {
   it('should not queue if filtered', () => {
     const config = { orgFilter: new Set(['test']) };
     const queue = [];
-    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const normal = createBaseQueue({ push: request => { queue.push(request); return Q(); } });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     request = { promises: [] };
     const crawler = createBaseCrawler({ normal: normal, options: config });
@@ -322,7 +322,7 @@ describe('Crawler queue', () => {
   it('should queue if not filtered', () => {
     const config = { orgFilter: new Set(['microsoft']) };
     const queue = [];
-    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const normal = createBaseQueue({ push: request => { queue.push(request); return Q(); } });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     request = { promises: [] };
     const crawler = createBaseCrawler({ normal: normal, options: config });
@@ -337,7 +337,7 @@ describe('Crawler queue', () => {
   it('should queue in supplied queue', () => {
     const config = { orgFilter: new Set(['microsoft']) };
     const queue = [];
-    const supplied = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const supplied = createBaseQueue({ push: request => { queue.push(request); return Q(); } });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     request = { promises: [] };
     const crawler = createBaseCrawler({ options: config });
@@ -360,7 +360,7 @@ describe('Crawler requeue', () => {
 
   it('should requeue in same queue as before', () => {
     const queue = [];
-    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const normal = createBaseQueue({ push: request => { queue.push(request); return Q(); } });
     const crawler = createBaseCrawler({ normal: normal });
     for (let i = 0; i < 5; i++) {
       const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
@@ -383,8 +383,8 @@ describe('Crawler requeue', () => {
   it('should requeue in deadletter queue after 5 attempts', () => {
     const queue = [];
     const deadLetterQueue = [];
-    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
-    const deadLetter = createBaseQueue({ push: (request) => { deadLetterQueue.push(request); return Q(); } });
+    const normal = createBaseQueue({ push: request => { queue.push(request); return Q(); } });
+    const deadLetter = createBaseQueue({ push: request => { deadLetterQueue.push(request); return Q(); } });
     const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
     request.promises = [];
     request.attemptCount = 5;
@@ -399,6 +399,270 @@ describe('Crawler requeue', () => {
     expect(deadLetterQueue[0].type === request.type).to.be.true;
     expect(deadLetterQueue[0].url === request.url).to.be.true;
     expect(deadLetterQueue[0].attemptCount).to.be.equal(6);
+  });
+});
+
+describe('Crawler complete request', () => {
+  // it('should unlock, dequeue and return the request being completed', () => {
+  //   const done = [];
+  //   const unlock = [];
+  //   const normal = createBaseQueue({ done: request => { done.push(request); return Q(); } });
+  //   const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
+  //   const originalRequest = new Request('test', 'http://test.com');
+  //   originalRequest.lock = 42;
+  //   originalRequest.originQueue = normal;
+  //   originalRequest.promises = [];
+  //   const crawler = createBaseCrawler({ normal: normal, locker: locker });
+  //   return crawler._completeRequest(originalRequest).then(request => {
+  //     expect(request === originalRequest).to.be.true;
+  //     expect(request.lock).to.be.null;
+  //     expect(done.length).to.be.equal(1);
+  //     expect(done[0] === request).to.be.true;
+  //     expect(unlock.length).to.be.equal(1);
+  //     expect(unlock[0]).to.be.equal(42);
+  //   });
+  // });
+
+  // it('waits for all promises to complete', () => {
+  //   const done = [];
+  //   const unlock = [];
+  //   const promiseValue = [];
+  //   const normal = createBaseQueue({
+  //     done: request => {
+  //       if (!promiseValue[0]) assert.fail();
+  //       done.push(request);
+  //       return Q();
+  //     }
+  //   });
+  //   const locker = createBaseLocker({
+  //     unlock: request => {
+  //       if (!promiseValue[0]) assert.fail();
+  //       unlock.push(request);
+  //       return Q();
+  //     }
+  //   });
+  //   const originalRequest = new Request('test', 'http://test.com');
+  //   originalRequest.lock = 42;
+  //   originalRequest.originQueue = normal;
+  //   originalRequest.promises = [Q.delay(1).then(() => promiseValue[0] = 13)];
+  //   const crawler = createBaseCrawler({ normal: normal, locker: locker });
+  //   return crawler._completeRequest(originalRequest).then(
+  //     request => {
+  //       expect(request === originalRequest).to.be.true;
+  //       expect(request.lock).to.be.null;
+  //       expect(done.length).to.be.equal(1);
+  //       expect(done[0] === request).to.be.true;
+  //       expect(unlock.length).to.be.equal(1);
+  //       expect(unlock[0]).to.be.equal(42);
+  //       expect(promiseValue[0]).to.be.equal(13);
+  //     },
+  //     error => assert.fail());
+  // });
+
+  it('still dequeues and unlocks if promises fail', () => {
+    const done = [];
+    const unlock = [];
+    const normal = createBaseQueue({ done: request => { done.push(request); return Q(); } });
+    const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [Q.reject(13)];
+    const crawler = createBaseCrawler({ normal: normal, locker: locker });
+    return crawler._completeRequest(originalRequest).then(
+      request => {
+        expect(request === originalRequest).to.be.true;
+        expect(request.lock).to.be.null;
+        expect(done.length).to.be.equal(1);
+        expect(done[0] === request).to.be.true;
+        expect(unlock.length).to.be.equal(1);
+        expect(unlock[0]).to.be.equal(42);
+      },
+      error => assert.fail());
+  });
+
+  it('still dequeues when unlocking fails', () => {
+    const done = [];
+    const unlock = [];
+    const normal = createBaseQueue({ done: request => { done.push(request); return Q(); } });
+    const locker = createBaseLocker({ unlock: () => { throw new Error('sigh'); } });
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [];
+    const crawler = createBaseCrawler({ normal: normal, locker: locker });
+    return crawler._completeRequest(originalRequest).then(
+      request => {
+        expect(request === originalRequest).to.be.true;
+        expect(request.lock).to.be.null;
+        expect(done.length).to.be.equal(1);
+        expect(done[0] === request).to.be.true;
+        expect(unlock.length).to.be.equal(0);
+      },
+      error => assert.fail());
+  });
+
+  it('still unlocks when dequeue fails', () => {
+    const done = [];
+    const unlock = [];
+    const normal = createBaseQueue({ done: () => { throw new Error('sigh'); } });
+    const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [];
+    const crawler = createBaseCrawler({ normal: normal, locker: locker });
+    return crawler._completeRequest(originalRequest).then(
+      request => {
+        expect(request === originalRequest).to.be.true;
+        expect(request.lock).to.be.null;
+        expect(done.length).to.be.equal(0);
+        expect(unlock.length).to.be.equal(1);
+        expect(unlock[0]).to.be.equal(42);
+      },
+      error => assert.fail());
+  });
+});
+
+describe('Crawler convert to document', () => {
+  it('should skip if skipping', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.markSkip();
+    originalRequest.document = {};
+    const crawler = createBaseCrawler();
+    return crawler._convertToDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(Object.keys(request.document).length).to.be.equal(0);
+    });
+  });
+
+  it('should configure the document and metadata', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.response = {
+      headers: { etag: 42 }
+    };
+    originalRequest.document = {};
+    const crawler = createBaseCrawler();
+    return crawler._convertToDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      const metadata = request.document._metadata;
+      expect(metadata.url).to.be.equal(request.url);
+      expect(metadata.type).to.be.equal(request.type);
+      expect(metadata.etag).to.be.equal(42);
+      expect(metadata.links).to.be.not.null;
+      expect(metadata.fetchedAt).to.be.not.null;
+    });
+  });
+
+  it('should wrap array documents in an object', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.response = {
+      headers: { etag: 42 }
+    };
+    const array = [1, 2, 3];
+    originalRequest.document = array;
+    const crawler = createBaseCrawler();
+    return crawler._convertToDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      const metadata = request.document._metadata;
+      expect(metadata.url).to.be.equal(request.url);
+      expect(metadata.type).to.be.equal(request.type);
+      expect(metadata.etag).to.be.equal(42);
+      expect(metadata.links).to.be.not.null;
+      expect(metadata.fetchedAt).to.be.not.null;
+      expect(request.document.elements === array).to.be.true;
+    });
+  });
+});
+
+describe('Crawler process document', () => {
+  it('should skip if skipping', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.markSkip();
+    const crawler = createBaseCrawler();
+    return crawler._processDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+    });
+  });
+
+  it('should invoke a handler', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    const doc = {};
+    originalRequest.document = doc;
+    const crawler = createBaseCrawler();
+    const requestBox = [];
+    crawler.test = request => {
+      requestBox[0] = 42;
+      request.document.cool = 'content';
+      return request.document;
+    };
+    return crawler._processDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(requestBox.length).to.be.equal(1);
+      expect(requestBox[0]).to.be.equal(42);
+      expect(request.document === doc).to.be.true;
+      expect(request.document.cool).to.be.equal('content');
+    });
+  });
+
+  it('should skip if no handler is found', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.document = {};
+    const crawler = createBaseCrawler();
+    return crawler._processDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(request.shouldSkip()).to.be.true;
+    });
+  });
+
+  it('should throw if the handler throws', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.document = {};
+    const crawler = createBaseCrawler();
+    crawler.test = request => { throw new Error('bummer'); };
+    return Q.try(() => {
+      crawler._processDocument(originalRequest)
+    }).then(
+      request => assert.fail(),
+      error => { expect(error.message).to.be.equal('bummer'); });
+  });
+});
+
+describe('Crawler store document', () => {
+  it('should skip if skipping', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.markSkip();
+    const crawler = createBaseCrawler();
+    return crawler._storeDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+    });
+  });
+
+  it('should actually store', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.document = { something: 'interesting' };
+    const storeBox = [];
+    const store = createBaseStore({ upsert: document => { storeBox[0] = document; return Q('token'); } });
+    const crawler = createBaseCrawler({ store: store });
+    return crawler._storeDocument(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(request.upsert).to.be.equal('token');
+      expect(storeBox.length).to.be.equal(1);
+      expect(storeBox[0].something).to.be.equal('interesting');
+    });
+  });
+
+  it('should throw if the store throws', () => {
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.document = { something: 'interesting' };
+    const storeBox = [];
+    const store = createBaseStore({ upsert: () => { throw new Error('problem'); } });
+    const crawler = createBaseCrawler({ store: store });
+    return Q.try(() => {
+      crawler._storeDocument(originalRequest)
+    }).then(
+      request => assert.fail(),
+      error => expect(error.message).to.be.equal('problem'));
   });
 });
 
