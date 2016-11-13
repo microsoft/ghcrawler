@@ -232,7 +232,7 @@ describe('Crawler fetch', () => {
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return Q().then(() => {
+    return Q.try(() => {
       return crawler._fetch(request);
     }).then(
       request => assert.fail(),
@@ -244,7 +244,7 @@ describe('Crawler fetch', () => {
     const request = new Request('foo', 'http://test');
     const store = createBaseStore({ etag: () => { throw new Error('test'); } });
     const crawler = createBaseCrawler({ store: store });
-    return Q().then(() => {
+    return Q.try(() => {
       return crawler._fetch(request);
     }).then(
       request => assert.fail(),
@@ -259,7 +259,7 @@ describe('Crawler fetch', () => {
     });
     const store = createBaseStore({ etag: () => { return Q(42); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return Q().then(() => {
+    return Q.try(() => {
       return crawler._fetch(request);
     }).then(
       request => assert.fail(),
@@ -276,7 +276,7 @@ describe('Crawler fetch', () => {
     });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return Q().then(() => {
+    return Q.try(() => {
       return crawler._fetch(request);
     }).then(
       request => assert.fail(),
@@ -285,24 +285,24 @@ describe('Crawler fetch', () => {
   });
 });
 
-describe('Crawler config filter', () => {
+describe('Crawler filtering', () => {
   it('should filter', () => {
     const config = { orgFilter: new Set(['microsoft']) };
     const crawler = createBaseCrawler({ options: config });
-    expect(crawler._configFilter('repo', 'http://api.github.com/repo/microsoft/test')).to.be.false;
-    expect(crawler._configFilter('repos', 'http://api.github.com/repos/microsoft/test')).to.be.false;
-    expect(crawler._configFilter('org', 'http://api.github.com/org/microsoft/test')).to.be.false;
+    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/microsoft/test')).to.be.true;
+    expect(crawler._shouldInclude('repos', 'http://api.github.com/repos/microsoft/test')).to.be.true;
+    expect(crawler._shouldInclude('org', 'http://api.github.com/org/microsoft/test')).to.be.true;
 
-    expect(crawler._configFilter('repo', 'http://api.github.com/repo/test/test')).to.be.true;
-    expect(crawler._configFilter('repos', 'http://api.github.com/repos/test/test')).to.be.true;
-    expect(crawler._configFilter('org', 'http://api.github.com/org/test/test')).to.be.true;
+    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/test/test')).to.be.false;
+    expect(crawler._shouldInclude('repos', 'http://api.github.com/repos/test/test')).to.be.false;
+    expect(crawler._shouldInclude('org', 'http://api.github.com/org/test/test')).to.be.false;
   });
 
   it('should not filter if no config', () => {
     const config = {};
     const crawler = createBaseCrawler({ options: config });
-    expect(crawler._configFilter('repo', 'http://api.github.com/repo/microsoft/test')).to.be.false;
-    expect(crawler._configFilter('repo', 'http://api.github.com/repo/test/test')).to.be.false;
+    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/microsoft/test')).to.be.true;
+    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/test/test')).to.be.true;
   });
 });
 
@@ -361,17 +361,44 @@ describe('Crawler requeue', () => {
   it('should requeue in same queue as before', () => {
     const queue = [];
     const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
-    const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
-    request.markRequeue();
-    request.promises = [];
-    request.originQueue = normal;
     const crawler = createBaseCrawler({ normal: normal });
+    for (let i = 0; i < 5; i++) {
+      const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
+      request.markRequeue();
+      request.promises = [];
+      request.originQueue = normal;
+      request.attemptCount = i === 0 ? null : i;
+      crawler._requeue(request);
+      expect(request.promises.length).to.be.equal(1);
+      expect(queue.length).to.be.equal(1);
+      expect(queue[0] !== request).to.be.true;
+      expect(queue[0].type === request.type).to.be.true;
+      expect(queue[0].url === request.url).to.be.true;
+      expect(queue[0].attemptCount).to.be.equal(i + 1);
+      // pop the request to get ready for the next iteration
+      queue.shift();
+    }
+  });
+
+  it('should requeue in deadletter queue after 5 attempts', () => {
+    const queue = [];
+    const deadLetterQueue = [];
+    const normal = createBaseQueue({ push: (request) => { queue.push(request); return Q(); } });
+    const deadLetter = createBaseQueue({ push: (request) => { deadLetterQueue.push(request); return Q(); } });
+    const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
+    request.promises = [];
+    request.attemptCount = 5;
+    request.markRequeue();
+    request.originQueue = normal;
+    const crawler = createBaseCrawler({ normal: normal, deadLetter: deadLetter });
     crawler._requeue(request);
     expect(request.promises.length).to.be.equal(1);
-    expect(queue.length).to.be.equal(1);
-    expect(queue[0] !== request).to.be.true;
-    expect(queue[0].type === request.type).to.be.true;
-    expect(queue[0].url === request.url).to.be.true;
+    expect(queue.length).to.be.equal(0);
+    expect(deadLetterQueue.length).to.be.equal(1);
+    expect(deadLetterQueue[0] !== request).to.be.true;
+    expect(deadLetterQueue[0].type === request.type).to.be.true;
+    expect(deadLetterQueue[0].url === request.url).to.be.true;
+    expect(deadLetterQueue[0].attemptCount).to.be.equal(6);
   });
 });
 
