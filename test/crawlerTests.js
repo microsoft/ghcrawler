@@ -5,6 +5,7 @@ const expect = require('chai').expect;
 const extend = require('extend');
 const Q = require('q');
 const Request = require('../lib/request');
+const sinon = require('sinon');
 
 describe('Crawler get request', () => {
   it('should get from the priority queue first', () => {
@@ -254,9 +255,7 @@ describe('Crawler fetch', () => {
 
   it('should throw for requestor get errors', () => {
     const request = new Request('repos', 'http://test');
-    const requestor = createBaseRequestor({
-      get: () => { throw new Error('test'); }
-    });
+    const requestor = createBaseRequestor({ get: () => { throw new Error('test'); } });
     const store = createBaseStore({ etag: () => { return Q(42); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
     return Q.try(() => {
@@ -271,9 +270,7 @@ describe('Crawler fetch', () => {
     const request = new Request('repos', 'http://test');
     request.force = true;
     const responses = [createResponse(null, 304, 42)];
-    const requestor = createBaseRequestor({
-      get: () => { return Q(responses.shift()); }
-    });
+    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
     return Q.try(() => {
@@ -296,6 +293,8 @@ describe('Crawler filtering', () => {
     expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/test/test')).to.be.false;
     expect(crawler._shouldInclude('repos', 'http://api.github.com/repos/test/test')).to.be.false;
     expect(crawler._shouldInclude('org', 'http://api.github.com/org/test/test')).to.be.false;
+
+    expect(crawler._shouldInclude('foo', 'http://api.github.com/blah/test/test')).to.be.true;
   });
 
   it('should not filter if no config', () => {
@@ -303,6 +302,99 @@ describe('Crawler filtering', () => {
     const crawler = createBaseCrawler({ options: config });
     expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/microsoft/test')).to.be.true;
     expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/test/test')).to.be.true;
+  });
+});
+
+describe('Crawler error handler', () => {
+  it('should mark for requeuing if there is a request', () => {
+    const box = [];
+    box.push(new Request('repo', 'http://test.com'));
+    const crawler = createBaseCrawler();
+    const error = 'error';
+    const request = crawler._errorHandler(box, error);
+    expect(request.shouldSkip()).to.be.true;
+    expect(request.shouldRequeue()).to.be.true;
+    expect(request.outcome).to.be.equal('Error');
+    expect(request.message).to.be.equal(error);
+  });
+
+  it('should bail and delay if no request', () => {
+    const box = [];
+    const crawler = createBaseCrawler();
+    const error = 'error';
+    const request = crawler._errorHandler(box, error);
+    expect(request.shouldSkip()).to.be.false;
+    expect(request.shouldRequeue()).to.be.false;
+    expect(request.flowControl).to.be.equal('delay');
+  });
+});
+
+describe('Crawler log outcome', () => {
+  it('should log the Processed case', () => {
+    const info = [];
+    const error = [];
+    const logger = createBaseLog({
+      info: value => info.push(value),
+      error: value => error.push(value)
+    });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    const crawler = createBaseCrawler({ logger: logger });
+    crawler._logOutcome(newRequest);
+    expect(info.length).to.be.equal(1);
+    expect(info[0].includes('Processed')).to.be.true;
+    expect(error.length).to.be.equal(0);
+  });
+
+  it('should log explicit outcomes', () => {
+    const info = [];
+    const error = [];
+    const logger = createBaseLog({
+      info: value => info.push(value),
+      error: value => error.push(value)
+    });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    newRequest.markSkip('test', 'message');
+    const crawler = createBaseCrawler({ logger: logger });
+    crawler._logOutcome(newRequest);
+    expect(info.length).to.be.equal(1);
+    expect(info[0].includes('test')).to.be.true;
+    expect(info[0].includes('message')).to.be.true;
+    expect(error.length).to.be.equal(0);
+  });
+
+  it('should log errors', () => {
+    const info = [];
+    const error = [];
+    const logger = createBaseLog({
+      info: value => info.push(value),
+      error: value => error.push(value)
+    });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    newRequest.markSkip('Error', 'message');
+    const crawler = createBaseCrawler({ logger: logger });
+    crawler._logOutcome(newRequest);
+    expect(error.length).to.be.equal(1);
+    expect(error[0] instanceof Error).to.be.true;
+    expect(error[0].message).to.be.equal('message');
+    expect(info.length).to.be.equal(0);
+  });
+
+
+  it('should log errors cases with Error objects', () => {
+    const info = [];
+    const error = [];
+    const logger = createBaseLog({
+      info: value => info.push(value),
+      error: value => error.push(value)
+    });
+    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+    newRequest.markSkip('Error', new Error('message'));
+    const crawler = createBaseCrawler({ logger: logger });
+    crawler._logOutcome(newRequest);
+    expect(error.length).to.be.equal(1);
+    expect(error[0] instanceof Error).to.be.true;
+    expect(error[0].message).to.be.equal('message');
+    expect(info.length).to.be.equal(0);
   });
 });
 
@@ -403,61 +495,107 @@ describe('Crawler requeue', () => {
 });
 
 describe('Crawler complete request', () => {
-  // it('should unlock, dequeue and return the request being completed', () => {
-  //   const done = [];
-  //   const unlock = [];
-  //   const normal = createBaseQueue({ done: request => { done.push(request); return Q(); } });
-  //   const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
-  //   const originalRequest = new Request('test', 'http://test.com');
-  //   originalRequest.lock = 42;
-  //   originalRequest.originQueue = normal;
-  //   originalRequest.promises = [];
-  //   const crawler = createBaseCrawler({ normal: normal, locker: locker });
-  //   return crawler._completeRequest(originalRequest).then(request => {
-  //     expect(request === originalRequest).to.be.true;
-  //     expect(request.lock).to.be.null;
-  //     expect(done.length).to.be.equal(1);
-  //     expect(done[0] === request).to.be.true;
-  //     expect(unlock.length).to.be.equal(1);
-  //     expect(unlock[0]).to.be.equal(42);
-  //   });
-  // });
+  it('should unlock, dequeue and return the request being completed', () => {
+    const done = [];
+    const unlock = [];
+    const normal = createBaseQueue({ done: request => { done.push(request); return Q(); } });
+    const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [];
+    const crawler = createBaseCrawler({ normal: normal, locker: locker });
+    return crawler._completeRequest(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(request.lock).to.be.null;
+      expect(done.length).to.be.equal(1);
+      expect(done[0] === request).to.be.true;
+      expect(unlock.length).to.be.equal(1);
+      expect(unlock[0]).to.be.equal(42);
+    });
+  });
 
-  // it('waits for all promises to complete', () => {
-  //   const done = [];
-  //   const unlock = [];
-  //   const promiseValue = [];
-  //   const normal = createBaseQueue({
-  //     done: request => {
-  //       if (!promiseValue[0]) assert.fail();
-  //       done.push(request);
-  //       return Q();
-  //     }
-  //   });
-  //   const locker = createBaseLocker({
-  //     unlock: request => {
-  //       if (!promiseValue[0]) assert.fail();
-  //       unlock.push(request);
-  //       return Q();
-  //     }
-  //   });
-  //   const originalRequest = new Request('test', 'http://test.com');
-  //   originalRequest.lock = 42;
-  //   originalRequest.originQueue = normal;
-  //   originalRequest.promises = [Q.delay(1).then(() => promiseValue[0] = 13)];
-  //   const crawler = createBaseCrawler({ normal: normal, locker: locker });
-  //   return crawler._completeRequest(originalRequest).then(
-  //     request => {
-  //       expect(request === originalRequest).to.be.true;
-  //       expect(request.lock).to.be.null;
-  //       expect(done.length).to.be.equal(1);
-  //       expect(done[0] === request).to.be.true;
-  //       expect(unlock.length).to.be.equal(1);
-  //       expect(unlock[0]).to.be.equal(42);
-  //       expect(promiseValue[0]).to.be.equal(13);
-  //     },
-  //     error => assert.fail());
-  // });
+  it('should requeue the request being completed if needed', () => {
+    const queue = [];
+    const done = [];
+    const unlock = [];
+    const normal = createBaseQueue({
+      push: request => { queue.push(request); return Q(); },
+      done: request => { done.push(request); return Q(); }
+    });
+    const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.markRequeue();
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [];
+    const crawler = createBaseCrawler({ normal: normal, locker: locker });
+    return crawler._completeRequest(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(request.lock).to.be.null;
+      expect(queue.length).to.be.equal(1);
+      expect(queue[0] !== request).to.be.true;
+      expect(queue[0].type).to.be.equal(originalRequest.type);
+      expect(queue[0].url).to.be.equal(originalRequest.url);
+      expect(done.length).to.be.equal(1);
+      expect(done[0] === request).to.be.true;
+      expect(unlock.length).to.be.equal(1);
+      expect(unlock[0]).to.be.equal(42);
+    });
+  });
+
+
+  it('should do all right things for requests with no url', () => {
+    const done = [];
+    const normal = createBaseQueue({ done: request => { done.push(request); return Q(); } });
+    const originalRequest = new Request('test', null);
+    originalRequest.markRequeue();
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [];
+    const crawler = createBaseCrawler({ normal: normal });
+    return crawler._completeRequest(originalRequest).then(request => {
+      expect(request === originalRequest).to.be.true;
+      expect(done.length).to.be.equal(1);
+      expect(done[0] === request).to.be.true;
+    });
+  });
+
+  it('should wait for all promises to complete', () => {
+    const done = [];
+    const unlock = [];
+    const promiseValue = [];
+    const normal = createBaseQueue({
+      done: request => {
+        if (!promiseValue[0]) assert.fail();
+        done.push(request);
+        return Q();
+      }
+    });
+    const locker = createBaseLocker({
+      unlock: request => {
+        if (!promiseValue[0]) assert.fail();
+        unlock.push(request);
+        return Q();
+      }
+    });
+    const originalRequest = new Request('test', 'http://test.com');
+    originalRequest.lock = 42;
+    originalRequest.originQueue = normal;
+    originalRequest.promises = [Q.delay(1).then(() => promiseValue[0] = 13)];
+    const crawler = createBaseCrawler({ normal: normal, locker: locker });
+    return crawler._completeRequest(originalRequest).then(
+      request => {
+        expect(request === originalRequest).to.be.true;
+        expect(request.lock).to.be.null;
+        expect(done.length).to.be.equal(1);
+        expect(done[0] === request).to.be.true;
+        expect(unlock.length).to.be.equal(1);
+        expect(unlock[0]).to.be.equal(42);
+        expect(promiseValue[0]).to.be.equal(13);
+      },
+      error => assert.fail());
+  });
 
   it('still dequeues and unlocks if promises fail', () => {
     const done = [];
@@ -666,6 +804,88 @@ describe('Crawler store document', () => {
   });
 });
 
+describe('Crawler whole meal deal', () => {
+  it('should process normal requests (sinon)', () => {
+    const crawler = createFullCrawler();
+    sinon.stub(crawler, '_startNext', () => Q());
+
+    crawler.normalQueue.requests = [new Request('user', 'http://test.com/users/user1')];
+    crawler.requestor.responses = [createResponse({ id: '42', repos_url: 'http://test.com/users/user1/repos' })];
+    return Q.try(() => {
+      return crawler.start('test');
+    }).then(() => {
+      expect(crawler.priorityQueue.pop.callCount).to.be.equal(1);
+      expect(crawler.normalQueue.pop.callCount).to.be.equal(1);
+
+      const lock = crawler.locker.lock;
+      expect(lock.callCount).to.be.equal(1);
+      expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
+
+      const requestorGet = crawler.requestor.get;
+      expect(requestorGet.callCount).to.be.equal(1);
+      expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
+
+      const etag = crawler.store.etag;
+      expect(etag.callCount).to.be.equal(1);
+      expect(etag.getCall(0).args[0]).to.be.equal('user');
+      expect(etag.getCall(0).args[1]).to.be.equal('http://test.com/users/user1');
+
+      const push = crawler.normalQueue.push;
+      expect(push.callCount).to.be.equal(1);
+      expect(push.getCall(0).args[0].type).to.be.equal('repos');
+
+      const upsert = crawler.store.upsert;
+      expect(upsert.callCount).to.be.equal(1);
+      const document = upsert.getCall(0).args[0];
+      expect(document.id).to.be.equal('42');
+      expect(document._metadata.url).to.be.equal('http://test.com/users/user1');
+
+      const unlock = crawler.locker.unlock;
+      expect(unlock.callCount).to.be.equal(1);
+      expect(unlock.getCall(0).args[0]).to.be.equal('lockToken');
+
+      expect(crawler.normalQueue.done.callCount).to.be.equal(1);
+
+      expect(crawler.logger.info.callCount).to.be.equal(1);
+    });
+
+  });
+});
+
+function createFullCrawler() {
+  const priority = createBaseQueue();
+  priority.requests = [];
+  sinon.stub(priority, 'pop', () => { return Q(priority.requests.shift()); });
+
+  const normal = createBaseQueue();
+  normal.requests = [];
+  sinon.stub(normal, 'pop', () => { return Q(normal.requests.shift()); });
+  sinon.stub(normal, 'push', request => { return Q(); });
+  sinon.spy(normal, 'done');
+
+  const locker = createBaseLocker();
+  sinon.stub(locker, 'lock', request => { return Q('lockToken'); });
+  sinon.stub(locker, 'unlock', request => { return Q(); });
+
+  const store = createBaseStore();
+  sinon.stub(store, 'etag', request => { return Q(); });
+  sinon.stub(store, 'upsert', request => { return Q(); });
+
+  const requestor = createBaseRequestor();
+  requestor.responses = [];
+  sinon.stub(requestor, 'get', () => {
+    return Q(requestor.responses.shift());
+  });
+
+  const logger = createBaseLog();
+  sinon.spy(logger, 'info');
+  sinon.spy(logger, 'error');
+
+  const config = [];
+
+  return createBaseCrawler({ normal: normal, priority: priority, requestor: requestor, store: store, logger: logger, locker: locker, options: config });
+}
+
 function createResponse(body, code = 200, etag = null) {
   return {
     statusCode: code,
@@ -712,8 +932,8 @@ function createLinkHeader(target, previous, next, last) {
   return [firstLink, prevLink, nextLink, lastLink].filter(value => { return value !== null; }).join(',');
 }
 
-function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = {}, winston = createBaseLog() } = {}) {
-  return new Crawler(normal, priority, deadLetter, store, locker, requestor, options, winston);
+function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = {}, logger = createBaseLog() } = {}) {
+  return new Crawler(normal, priority, deadLetter, store, locker, requestor, options, logger);
 }
 
 function createBaseQueue({ pop = null, push = null, done = null, abandon = null} = {}) {
@@ -733,9 +953,9 @@ function createBaseStore({etag = null, upsert = null, get = null} = {}) {
   return result;
 }
 
-function createBaseLog({log = null, warn = null, error = null, verbose = null} = {}) {
+function createBaseLog({info = null, warn = null, error = null, verbose = null} = {}) {
   const result = {};
-  result.log = log || (() => { });
+  result.info = info || (() => { });
   result.warn = warn || (() => { });
   result.error = error || (() => { });
   result.verbose = verbose || (() => { });
