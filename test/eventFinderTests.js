@@ -18,6 +18,7 @@ describe('Event Finder', () => {
       expect(found[0].url).to.be.equal('http://test1');
     });
   });
+
   it('will not find any documents', () => {
     const events = [
       [{ url: 'http://test1' }, { url: 'http://test2' }]
@@ -29,6 +30,7 @@ describe('Event Finder', () => {
       expect(found.length).to.be.equal(0);
     });
   });
+
   it('will stop not finding at first found document', () => {
     const events = [
       [{ url: 'http://test1' }, { url: 'http://test2' }, { url: 'http://test3' }]
@@ -64,10 +66,9 @@ function createStore(documents) {
     extend(collection, document);
     return collection;
   }, {});
-  result.etag = (type, url, callback) => {
+  result.etag = (type, url) => {
     let result = hash[url];
-    result = result ? result.etag : null;
-    return callback ? callback(null, result) : Q(result);
+    return Q(result ? result.etag : null);
   };
   return result;
 }
