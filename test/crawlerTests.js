@@ -181,6 +181,19 @@ describe('Crawler fetch', () => {
     });
   });
 
+  it('should requeue and delay on 403 forbidden throttling', () => {
+    const request = new Request('foo', 'http://test');
+    const responses = [createResponse('test', 403)];
+    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
+    const store = createBaseStore({ etag: () => { return Q(null); } });
+    const crawler = createBaseCrawler({ requestor: requestor, store: store });
+    return crawler._fetch(request).then(request => {
+      expect(request.document).to.be.undefined;
+      expect(request.shouldRequeue()).to.be.true;
+      expect(crawler.delayUntil > Date.now()).to.be.true;
+    });
+  });
+
   it('should skip 409s', () => {
     const request = new Request('foo', 'http://test');
     const responses = [createResponse('test', 409)];
