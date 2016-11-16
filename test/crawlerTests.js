@@ -824,11 +824,11 @@ describe('Crawler whole meal deal', () => {
     return Q.try(() => {
       return crawler.start('test');
     }).then(() => {
-      expect(crawler.priorityQueue.pop.callCount).to.be.equal(1);
-      expect(crawler.normalQueue.pop.callCount).to.be.equal(1);
+      expect(crawler.priorityQueue.pop.callCount).to.be.equal(1, 'priority call count');
+      expect(crawler.normalQueue.pop.callCount).to.be.equal(1, 'normal call count');
 
       const lock = crawler.locker.lock;
-      expect(lock.callCount).to.be.equal(1);
+      expect(lock.callCount).to.be.equal(1, 'lock call count');
       expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
 
       const etag = crawler.store.etag;
@@ -1045,7 +1045,7 @@ describe('Crawler whole meal deal', () => {
       expect(newRequest.type).to.be.equal('user');
       expect(newRequest.attemptCount).to.be.equal(1);
 
-      expect(crawler.logger.error.callCount).to.be.equal(2);
+      expect(crawler.logger.error.callCount).to.be.equal(1);
       const error = crawler.logger.error.getCall(0).args[0];
       expect(error instanceof Error).to.be.true;
     });
