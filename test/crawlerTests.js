@@ -733,7 +733,7 @@ describe('Crawler process document', () => {
 
   it('should invoke a handler', () => {
     const originalRequest = new Request('test', 'http://test.com');
-    const doc = {};
+    const doc = { _metadata: {} };
     originalRequest.document = doc;
     const crawler = createBaseCrawler();
     const processorBox = [];
@@ -753,7 +753,8 @@ describe('Crawler process document', () => {
 
   it('should skip if no handler is found', () => {
     const originalRequest = new Request('test', 'http://test.com');
-    originalRequest.document = {};
+    const doc = { _metadata: {} };
+    originalRequest.document = doc;
     const crawler = createBaseCrawler();
     return crawler._processDocument(originalRequest).then(request => {
       expect(request === originalRequest).to.be.true;
@@ -763,7 +764,8 @@ describe('Crawler process document', () => {
 
   it('should throw if the handler throws', () => {
     const originalRequest = new Request('test', 'http://test.com');
-    originalRequest.document = {};
+    const doc = { _metadata: {} };
+    originalRequest.document = doc;
     const crawler = createBaseCrawler();
     crawler.processor.test = request => { throw new Error('bummer'); };
     return Q.try(() => {
@@ -1162,7 +1164,7 @@ function createBaseLog({info = null, warn = null, error = null, verbose = null} 
   result.info = info || (() => { });
   result.warn = warn || (() => { });
   result.error = error || (() => { });
-  result.verbose = verbose || (() => { });
+  result.verbose = verbose || ((message) => { console.log(message) });
   return result;
 }
 
