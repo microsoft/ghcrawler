@@ -125,7 +125,6 @@ describe('Crawler get request', () => {
         expect(abandoned.length).to.be.equal(0);
       });
   });
-
 });
 
 describe('Crawler fetch', () => {
@@ -190,7 +189,39 @@ describe('Crawler fetch', () => {
     return crawler._fetch(request).then(request => {
       expect(request.document).to.be.undefined;
       expect(request.shouldRequeue()).to.be.true;
-      expect(crawler.delayUntil > Date.now()).to.be.true;
+      expect(request.nextRequestTime > Date.now()).to.be.true;
+    });
+  });
+
+  it('should delay on backoff throttling', () => {
+    const request = new Request('foo', 'http://test');
+    const resetTime = Date.now() + 2000;
+    const responses = [createResponse('bar', 200, null, 30, resetTime)];
+    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
+    const store = createBaseStore({ etag: () => { return Q(null); } });
+    const crawler = createBaseCrawler({ requestor: requestor, store: store });
+    return crawler._fetch(request).then(request => {
+      expect(request.document).to.be.equal('bar');
+      expect(request.shouldRequeue()).to.be.false;
+      expect(request.shouldSkip()).to.be.false;
+      expect(request.nextRequestTime).to.be.equal(resetTime);
+    });
+  });
+
+  it('should delay on Retry-After throttling', () => {
+    const request = new Request('foo', 'http://test');
+    const resetTime = Date.now() + 3000;
+    const headers = { 'Retry-After': 3 };
+    const responses = [createResponse('bar', 200, null, 30, resetTime, headers)];
+    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
+    const store = createBaseStore({ etag: () => { return Q(null); } });
+    const crawler = createBaseCrawler({ requestor: requestor, store: store });
+    return crawler._fetch(request).then(request => {
+      expect(request.document).to.be.equal('bar');
+      expect(request.shouldRequeue()).to.be.false;
+      expect(request.shouldSkip()).to.be.false;
+      // give at most 100ms for the test to run
+      expect(request.nextRequestTime).to.be.within(resetTime, resetTime + 100);
     });
   });
 
@@ -299,22 +330,23 @@ describe('Crawler filtering', () => {
   it('should filter', () => {
     const config = { orgFilter: new Set(['microsoft']) };
     const crawler = createBaseCrawler({ options: config });
-    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/microsoft/test')).to.be.true;
-    expect(crawler._shouldInclude('repos', 'http://api.github.com/repos/microsoft/test')).to.be.true;
-    expect(crawler._shouldInclude('org', 'http://api.github.com/org/microsoft/test')).to.be.true;
+    expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/microsoft/test')).shouldSkip()).to.be.false;
+    expect(crawler._filter(new Request('repos', 'http://api.github.com/repos/microsoft/test')).shouldSkip()).to.be.false;
+    expect(crawler._filter(new Request('org', 'http://api.github.com/org/microsoft/test')).shouldSkip()).to.be.false;
 
-    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/test/test')).to.be.false;
-    expect(crawler._shouldInclude('repos', 'http://api.github.com/repos/test/test')).to.be.false;
-    expect(crawler._shouldInclude('org', 'http://api.github.com/org/test/test')).to.be.false;
+    expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.true;
+    expect(crawler._filter(new Request('repos', 'http://api.github.com/repos/test/test')).shouldSkip()).to.be.true;
+    expect(crawler._filter(new Request('org', 'http://api.github.com/org/test/test')).shouldSkip()).to.be.true;
 
-    expect(crawler._shouldInclude('foo', 'http://api.github.com/blah/test/test')).to.be.true;
+    expect(crawler._filter(new Request('foo', 'http://api.github.com/org/test/test')).shouldSkip()).to.be.false;
   });
 
   it('should not filter if no config', () => {
     const config = {};
     const crawler = createBaseCrawler({ options: config });
-    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/microsoft/test')).to.be.true;
-    expect(crawler._shouldInclude('repo', 'http://api.github.com/repo/test/test')).to.be.true;
+    expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/microsoft/test')).shouldSkip()).to.be.false;
+    expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.false;
+    expect(crawler._filter(new Request('foo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.false;
   });
 });
 
@@ -815,6 +847,45 @@ describe('Crawler store document', () => {
 });
 
 describe('Crawler whole meal deal', () => {
+  it('should delay starting next iteration when markDelay', () => {
+    const crawler = createBaseCrawler();
+    sinon.stub(crawler, 'start', () => Q());
+    const clock = sinon.useFakeTimers();
+    sinon.spy(clock, 'setTimeout');
+
+    const request = new Request('user', 'http://test.com/users/user1');
+    request.markDelay();
+
+    crawler._startNext('test', request);
+    expect(clock.setTimeout.getCall(0).args[1]).to.be.equal(1000);
+  });
+
+  it('should delay starting next iteration when delayUntil', () => {
+    const crawler = createBaseCrawler();
+    sinon.stub(crawler, 'start', () => Q());
+    const clock = sinon.useFakeTimers();
+    sinon.spy(clock, 'setTimeout');
+
+    const request = new Request('user', 'http://test.com/users/user1');
+    request.delayUntil(323);
+
+    crawler._startNext('test', request);
+    expect(clock.setTimeout.getCall(0).args[1]).to.be.equal(323);
+  });
+
+  it('should delay starting next iteration when delayFor', () => {
+    const crawler = createBaseCrawler();
+    sinon.stub(crawler, 'start', () => Q());
+    const clock = sinon.useFakeTimers();
+    sinon.spy(clock, 'setTimeout');
+
+    const request = new Request('user', 'http://test.com/users/user1');
+    request.delayFor(451);
+
+    crawler._startNext('test', request);
+    expect(clock.setTimeout.getCall(0).args[1]).to.be.equal(451);
+  });
+
   it('should process normal requests', () => {
     const crawler = createFullCrawler();
     sinon.stub(crawler, '_startNext', () => Q());
@@ -1092,12 +1163,14 @@ function createFullCrawler() {
   return result;
 }
 
-function createResponse(body, code = 200, etag = null) {
+function createResponse(body, code = 200, etag = null, remaining = 4000, reset = 0, headers = {}) {
   return {
     statusCode: code,
-    headers: {
-      etag: etag
-    },
+    headers: Object.assign({
+      etag: etag,
+      'x-ratelimit-remaining': remaining,
+      'x-ratelimit-reset': reset ? reset : 0
+    }, headers),
     body: body
   };
 }
@@ -1138,7 +1211,7 @@ function createLinkHeader(target, previous, next, last) {
   return [firstLink, prevLink, nextLink, lastLink].filter(value => { return value !== null; }).join(',');
 }
 
-function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = {}, logger = createBaseLog() } = {}) {
+function createBaseCrawler({normal = createBaseQueue(), priority = createBaseQueue(), deadLetter = createBaseQueue(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = { promiseTrace: false }, logger = createBaseLog() } = {}) {
   return new Crawler(normal, priority, deadLetter, store, locker, requestor, options, logger);
 }
 
@@ -1159,12 +1232,14 @@ function createBaseStore({etag = null, upsert = null, get = null} = {}) {
   return result;
 }
 
-function createBaseLog({info = null, warn = null, error = null, verbose = null} = {}) {
+function createBaseLog({info = null, warn = null, error = null, verbose = null, silly = null} = {}) {
   const result = {};
   result.info = info || (() => { });
   result.warn = warn || (() => { });
   result.error = error || (() => { });
   result.verbose = verbose || ((message) => { console.log(message) });
+  result.silly = silly || ((message) => { console.log(message) });
+  result.level = 'silly';
   return result;
 }
 
