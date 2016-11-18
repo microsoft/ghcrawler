@@ -267,6 +267,28 @@ describe('Crawler fetch', () => {
     });
   });
 
+  it('should return cached content and headers for 304 with force', () => {
+    const url = 'http://test';
+    const request = new Request('repos', url);
+    request.force = true;
+    let getArgs = null;
+    const responses = [createResponse(null, 304, 42)];
+    const requestor = createBaseRequestor({
+      get: (url, options) => { getArgs = { url: url, options: options }; return Q(responses.shift()); }
+    });
+    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ _metadata: { headers: { link: 'links' } }, elements: ['test'] }); } });
+    const crawler = createBaseCrawler({ requestor: requestor, store: store });
+    return crawler._fetch(request).then(request => {
+      expect(request.document.elements[0]).to.be.equal('test');
+      expect(request.response.headers.link).to.be.equal('links');
+      expect(request.response.statusCode).to.be.equal(304);
+      expect(request.shouldSkip()).to.be.false;
+      expect(request.store).to.be.false;
+      expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
+      expect(getArgs.url).to.be.equal(url);
+    });
+  });
+
   it('should skip for 304 without force', () => {
     const request = new Request('foo', 'http://test');
     const responses = [createResponse(null, 304, 42)];
