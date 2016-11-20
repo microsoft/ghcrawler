@@ -16,7 +16,7 @@ describe('Crawler get request', () => {
     const locker = createBaseLocker({ lock: () => { return Q('locked'); } });
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(request => {
+    return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
       expect(request.type).to.be.equal('priority');
       expect(request._originQueue === queues.priority).to.be.true;
       expect(request.lock).to.be.equal('locked');
@@ -32,7 +32,7 @@ describe('Crawler get request', () => {
     const locker = createBaseLocker({ lock: () => { return Q('locked'); } });
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(request => {
+    return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
       expect(request.type).to.be.equal('normal');
       expect(request._originQueue === queues.normal).to.be.true;
       expect(request.lock).to.be.equal('locked');
@@ -47,7 +47,7 @@ describe('Crawler get request', () => {
     const queues = createBaseQueues({ priority: priority, normal: normal });
     const crawler = createBaseCrawler({ queues: queues });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(request => {
+    return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
       expect(request.type).to.be.equal('_blank');
       expect(request.lock).to.be.undefined;
       expect(request.shouldSkip()).to.be.true;
@@ -63,7 +63,7 @@ describe('Crawler get request', () => {
     const queues = createBaseQueues({ priority: priority, normal: normal });
     const crawler = createBaseCrawler({ queues: queues });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(
+    return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => assert.fail(),
       error => expect(error.message).to.be.equal('normal test')
     );
@@ -75,7 +75,7 @@ describe('Crawler get request', () => {
     const queues = createBaseQueues({ priority: priority, normal: normal });
     const crawler = createBaseCrawler({ queues: queues });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(
+    return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => assert.fail(),
       error => expect(error.message).to.be.equal('priority test')
     );
@@ -88,7 +88,7 @@ describe('Crawler get request', () => {
     const locker = createBaseLocker({ lock: () => { throw new Error('locker error'); } });
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(
+    return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => assert.fail(),
       error => expect(error.message).to.be.equal('locker error')
     );
@@ -108,7 +108,7 @@ describe('Crawler get request', () => {
     const locker = createBaseLocker({ lock: () => { return Q.reject(new Error('locker error')); } });
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(
+    return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => assert.fail(),
       error => {
         expect(error.message).to.be.equal('locker error');
@@ -127,7 +127,7 @@ describe('Crawler get request', () => {
     const locker = createBaseLocker({ lock: () => { return Q.reject(new Error('locker error')); } });
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     const requestBox = [];
-    return crawler._getRequest(requestBox, 'test').then(
+    return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => assert.fail(),
       error => {
         expect(error.message).to.be.equal('locker error');
@@ -883,51 +883,53 @@ describe('Crawler store document', () => {
 describe('Crawler whole meal deal', () => {
   it('should delay starting next iteration when markDelay', () => {
     const crawler = createBaseCrawler();
-    sinon.stub(crawler, 'start', () => Q());
-    const clock = sinon.useFakeTimers();
-    sinon.spy(clock, 'setTimeout');
+    crawler.run = () => { };
+    crawler.processOne = () => { return Q(request) };
 
     const request = new Request('user', 'http://test.com/users/user1');
     request.markDelay();
 
-    crawler._startNext('test', request);
-    expect(clock.setTimeout.getCall(0).args[1]).to.be.equal(1000);
+    const options = { name: 'foo', delay: 0 };
+    return crawler._run(options).then(() => {
+      expect(options.delay).to.be.equal(2000);
+    });
   });
 
   it('should delay starting next iteration when delayUntil', () => {
     const crawler = createBaseCrawler();
-    sinon.stub(crawler, 'start', () => Q());
-    const clock = sinon.useFakeTimers();
-    sinon.spy(clock, 'setTimeout');
+    crawler.run = () => { };
+    crawler.processOne = () => { return Q(request) };
 
     const request = new Request('user', 'http://test.com/users/user1');
-    request.delayUntil(323);
+    request.delayUntil(Date.now() + 323);
 
-    crawler._startNext('test', request);
-    expect(clock.setTimeout.getCall(0).args[1]).to.be.equal(323);
+    const options = { name: 'foo', delay: 0 };
+    return crawler._run(options).then(() => {
+      expect(options.delay).to.be.approximately(323, 4);
+    });
   });
 
   it('should delay starting next iteration when delayFor', () => {
     const crawler = createBaseCrawler();
-    sinon.stub(crawler, 'start', () => Q());
-    const clock = sinon.useFakeTimers();
-    sinon.spy(clock, 'setTimeout');
+    crawler.run = () => { };
+    crawler.processOne = () => { return Q(request) };
 
     const request = new Request('user', 'http://test.com/users/user1');
     request.delayFor(451);
 
-    crawler._startNext('test', request);
-    expect(clock.setTimeout.getCall(0).args[1]).to.be.equal(451);
+    const options = { name: 'foo', delay: 0 };
+    return crawler._run(options).then(() => {
+      expect(options.delay).to.be.approximately(451, 4);
+    });
   });
 
   it('should process normal requests', () => {
     const crawler = createFullCrawler();
-    sinon.stub(crawler, '_startNext', () => Q());
 
     crawler.queues.normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => {
-      return crawler.start('test');
+      return crawler.processOne({ name: 'test' });
     }).then(() => {
       expect(crawler.queues.priority.pop.callCount).to.be.equal(1, 'priority call count');
       expect(crawler.queues.normal.pop.callCount).to.be.equal(1, 'normal call count');
@@ -971,7 +973,6 @@ describe('Crawler whole meal deal', () => {
 
   it('should handle getRequest reject', () => {
     const crawler = createFullCrawler();
-    sinon.stub(crawler, '_startNext', () => Q());
 
     // setup a problem popping
     const normal = createBaseQueue();
@@ -982,7 +983,7 @@ describe('Crawler whole meal deal', () => {
 
     crawler.requestor.responses = [createResponse(null, 500)];
     return Q.try(() => {
-      return crawler.start('test');
+      return crawler.processOne({ name: 'test' });
     }).then(() => {
       expect(crawler.queues.priority.pop.callCount).to.be.equal(1);
       expect(crawler.queues.normal.pop.callCount).to.be.equal(1);
@@ -1015,13 +1016,12 @@ describe('Crawler whole meal deal', () => {
 
   it('should handle fetch reject', () => {
     const crawler = createFullCrawler();
-    sinon.stub(crawler, '_startNext', () => Q());
 
     // setup a good request but a server error response
     crawler.queues.normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.requestor.responses = [createResponse(null, 500)];
     return Q.try(() => {
-      return crawler.start('test');
+      return crawler.processOne({ name: 'test' });
     }).then(() => {
       expect(crawler.queues.priority.pop.callCount).to.be.equal(1);
       expect(crawler.queues.normal.pop.callCount).to.be.equal(1);
@@ -1062,13 +1062,12 @@ describe('Crawler whole meal deal', () => {
 
   it('should handle process document reject', () => {
     const crawler = createFullCrawler();
-    sinon.stub(crawler, '_startNext', () => Q());
     crawler.processor = { process: () => { throw new Error('bad processor') } };
 
     crawler.queues.normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => {
-      return crawler.start('test');
+      return crawler.processOne({ name: 'test' });
     }).then(() => {
       expect(crawler.queues.priority.pop.callCount).to.be.equal(1);
       expect(crawler.queues.normal.pop.callCount).to.be.equal(1);
@@ -1109,13 +1108,12 @@ describe('Crawler whole meal deal', () => {
 
   it('should handle store document reject', () => {
     const crawler = createFullCrawler();
-    sinon.stub(crawler, '_startNext', () => Q());
     crawler.store = { upsert: () => { throw new Error('bad upsert') } };
 
     crawler.queues.normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => {
-      return crawler.start('test');
+      return crawler.processOne({ name: 'test' });
     }).then(() => {
       const unlock = crawler.locker.unlock;
       expect(unlock.callCount).to.be.equal(1);
@@ -1137,13 +1135,12 @@ describe('Crawler whole meal deal', () => {
 
   it('should handle complete request reject', () => {
     const crawler = createFullCrawler();
-    sinon.stub(crawler, '_startNext', () => Q());
     crawler.locker = { unlock: () => { throw new Error('bad unlock') } };
 
     crawler.queues.normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => {
-      return crawler.start('test');
+      return crawler.processOne({ name: 'test' });
     }).then(() => {
       const push = crawler.queues.normal.push;
       expect(push.callCount).to.be.equal(1);
