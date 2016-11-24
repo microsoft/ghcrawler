@@ -301,6 +301,30 @@ describe('Crawler fetch', () => {
     });
   });
 
+  it('should get from requestor even with a 304 when fetch == force', () => {
+    const request = new Request('foo', 'http://test');
+    request.fetch = 'force';
+    const responses = [createResponse('hey there')];
+    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
+    const crawler = createBaseCrawler({ requestor: requestor });
+    return crawler._fetch(request).then(request => {
+      expect(request.document).to.be.equal('hey there');
+      expect(request.shouldSkip()).to.be.false;
+    });
+  });
+
+  it('should pull from store only if fetch == none', () => {
+    const request = new Request('foo', 'http://test');
+    request.fetch = 'none';
+    const responses = [createResponse(null, 304, 42)];
+    const store = createBaseStore({ get: () => { return Q('test'); } });
+    const crawler = createBaseCrawler({ store: store });
+    return crawler._fetch(request).then(request => {
+      expect(request.document).to.be.equal('test');
+      expect(request.shouldSkip()).to.be.false;
+    });
+  });
+
   it('should throw for bad codes', () => {
     const request = new Request('foo', 'http://test');
     const responses = [createResponse('test', 500)];
