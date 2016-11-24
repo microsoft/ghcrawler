@@ -249,7 +249,7 @@ describe('Crawler fetch', () => {
   it('should return cached content and not save and response for 304 with force', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.force = true;
+    request.transitivity = 'forceNormal';
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -270,7 +270,7 @@ describe('Crawler fetch', () => {
   it('should return cached content and headers for 304 with force', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.force = true;
+    request.transitivity = 'forceNormal';
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -297,7 +297,6 @@ describe('Crawler fetch', () => {
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
     return crawler._fetch(request).then(request => {
       expect(request.document).to.be.undefined;
-      expect(request.response).to.be.undefined;
       expect(request.shouldSkip()).to.be.true;
     });
   });
@@ -343,7 +342,7 @@ describe('Crawler fetch', () => {
 
   it('should throw for store get errors', () => {
     const request = new Request('repos', 'http://test');
-    request.force = true;
+    request.transitivity = 'forceNormal';
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
@@ -1265,31 +1264,10 @@ function create304Response(etag) {
   };
 }
 
-function createMultiPageResponse(target, body, previous, next, last, code = 200, error = null, remaining = 4000, reset = null) {
-  return {
-    headers: {
-      'x-ratelimit-remaining': remaining,
-      'x-ratelimit-reset': reset ? reset : 0,
-      link: createLinkHeader(target, previous, next, last)
-    },
-    statusCode: code,
-    body: body
-  };
-}
-
 function createErrorResponse(error) {
   return {
     error: new Error(error)
   };
-}
-
-function createLinkHeader(target, previous, next, last) {
-  separator = target.includes('?') ? '&' : '?';
-  const firstLink = null; //`<${urlHost}/${target}${separator}page=1>; rel="first"`;
-  const prevLink = previous ? `<${urlHost}/${target}${separator}page=${previous}>; rel="prev"` : null;
-  const nextLink = next ? `<${urlHost}/${target}${separator}page=${next}>; rel="next"` : null;
-  const lastLink = last ? `<${urlHost}/${target}${separator}page=${last}>; rel="last"` : null;
-  return [firstLink, prevLink, nextLink, lastLink].filter(value => { return value !== null; }).join(',');
 }
 
 function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = { promiseTrace: false }, logger = createBaseLog() } = {}) {
