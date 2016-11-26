@@ -51,15 +51,16 @@ describe('Collection processing', () => {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
     request.document = { _metadata: { links: {} }, elements: [{ type: 'issue', url: 'http://child1' }] };
-    request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
+    request.crawler = { queue: () => { }, queues: { push: () => { } } };
     sinon.spy(request.crawler, 'queue');
-    sinon.spy(request.crawler.queues, 'pushPriority');
+    const push = sinon.spy(request.crawler.queues, 'push');
     const processor = new Processor();
 
     processor.collection(request);
 
-    expect(request.crawler.queues.pushPriority.callCount).to.be.equal(1);
-    const newPages = request.crawler.queues.pushPriority.getCall(0).args[0];
+    expect(request.crawler.queues.push.callCount).to.be.equal(1);
+    expect(push.getCall(0).args[1]).to.be.equal('soon');
+    const newPages = request.crawler.queues.push.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
     expect(newPages[0].transitivity).to.be.equal('forceNormal');
     expect(newPages[0].url).to.be.equal('http://test.com/issues?page=2&per_page=100');
@@ -81,15 +82,17 @@ describe('Collection processing', () => {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
     request.document = { _metadata: { links: {} }, elements: [{ type: 'org', url: 'http://child1' }] };
-    request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
+    request.crawler = { queue: () => { }, queues: { push: () => { } } };
     sinon.spy(request.crawler, 'queue');
-    sinon.spy(request.crawler.queues, 'pushPriority');
+    const push = sinon.spy(request.crawler.queues, 'push');
     const processor = new Processor();
 
     processor.collection(request);
 
-    expect(request.crawler.queues.pushPriority.callCount).to.be.equal(1);
-    const newPages = request.crawler.queues.pushPriority.getCall(0).args[0];
+    expect(push.callCount).to.be.equal(1);
+    expect(push.getCall(0).args[1]).to.be.equal('soon');
+
+    const newPages = push.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
     expect(newPages[0].transitivity).to.be.equal('forceNormal');
     expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
@@ -111,15 +114,16 @@ describe('Collection processing', () => {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
     request.document = { _metadata: { links: {} }, elements: [{ type: 'org', url: 'http://child1' }] };
-    request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
+    request.crawler = { queue: () => { }, queues: { push: () => { } } };
     sinon.spy(request.crawler, 'queue');
-    sinon.spy(request.crawler.queues, 'pushPriority');
+    const push = sinon.spy(request.crawler.queues, 'push');
     const processor = new Processor();
 
     processor.collection(request);
 
-    expect(request.crawler.queues.pushPriority.callCount).to.be.equal(1);
-    const newPages = request.crawler.queues.pushPriority.getCall(0).args[0];
+    expect(push.callCount).to.be.equal(1);
+    expect(push.getCall(0).args[1]).to.be.equal('soon');
+    const newPages = push.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
     expect(newPages[0].transitivity).to.be.equal('forceForce');
     expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
@@ -149,9 +153,54 @@ describe('Collection processing', () => {
     expect(newRequest.url).to.be.equal('http://child1');
     expect(newRequest.type).to.be.equal('org');
   });
-
 });
 
+describe('URN building', () => {
+  it('should create urn for team members', () => {
+    const request = new Request('repo', 'http://test.com/foo');
+    request.document = { _metadata: { links: {} }, id: 42, owner: { url: 'http://test.com/test' }, teams_url: 'http://test.com/teams', issues_url: 'http://test.com/issues', commits_url: 'http://test.com/commits', collaborators_url: 'http://test.com/collaborators' };
+    request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
+    sinon.spy(request.crawler, 'queue');
+    sinon.spy(request.crawler.queues, 'pushPriority');
+    const processor = new Processor();
+
+    processor.repo(request);
+    expect(request.crawler.queue.callCount).to.be.at.least(4);
+    const teamsRequest = request.crawler.queue.getCall(1).args[0];
+    expect(teamsRequest.context.qualifier).to.be.equal('urn:repo:42');
+    expect(teamsRequest.context.relation).to.be.equal('repo_teams_relation');
+
+    request.crawler.queue.reset();
+    teamsRequest.type = 'collection';
+    teamsRequest.subType = 'team';
+    teamsRequest.document = { _metadata: { links: {} }, elements: [{ id: 13, url: 'http://team1' }] };
+    teamsRequest.crawler = request.crawler;
+    const teamsPage = processor.collection(teamsRequest);
+    const links = teamsPage._metadata.links;
+    expect(links.teams.type).to.be.equal('self');
+    expect(links.teams.hrefs.length).to.be.equal(1);
+    expect(links.teams.hrefs[0]).to.be.equal('urn:team:13');
+    expect(links.repo.type).to.be.equal('self');
+    expect(links.repo.href).to.be.equal('urn:repo:42');
+
+    const teamRequest = request.crawler.queue.getCall(0).args[0];
+    expect(teamRequest.type).to.be.equal('team');
+    expect(teamRequest.context.qualifier).to.be.equal('urn:');
+
+    request.crawler.queue.reset();
+    teamRequest.document = { _metadata: { links: {} }, id: 54, organization: { id: 87 }, members_url: "http://team1/members", repositories_url: "http://team1/repos" };
+    teamRequest.crawler = request.crawler;
+    processor.team(teamRequest);
+    const membersRequest = request.crawler.queue.getCall(0).args[0];
+    expect(membersRequest.url).to.be.equal('http://team1/members');
+    expect(membersRequest.context.qualifier).to.be.equal('urn:team:54');
+    expect(membersRequest.context.relation).to.be.equal('team_members_relation');
+    const reposRequest = request.crawler.queue.getCall(1).args[0];
+    expect(reposRequest.url).to.be.equal('http://team1/repos');
+    expect(reposRequest.context.qualifier).to.be.equal('urn:team:54');
+    expect(reposRequest.context.relation).to.be.equal('team_repos_relation');
+  });
+});
 
 function createLinkHeader(target, previous, next, last) {
   separator = target.includes('?') ? '&' : '?';
