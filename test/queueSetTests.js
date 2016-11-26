@@ -14,7 +14,7 @@ describe('QueueSet construction', () => {
 
 describe('QueueSet weighting', () => {
   it('should create a simple startMap', () => {
-    const set = new QueueSet([{ name: '1' }, { name: '2' }], null, [3, 2]);
+    const set = new QueueSet([{ name: '1' }, { name: '2' }], null, createOptions([3, 2]));
     expect(set.startMap.length).to.be.equal(5);
     expect(set.startMap[0]).to.be.equal(0);
     expect(set.startMap[2]).to.be.equal(0);
@@ -29,7 +29,7 @@ describe('QueueSet weighting', () => {
   });
 
   it('should throw if too many weights are given', () => {
-    expect(() => new QueueSet([{ name: '1' }, { name: '2' }], null, [3, 2, 1])).to.throw(Error);
+    expect(() => new QueueSet([{ name: '1' }, { name: '2' }], null, createOptions([3, 2, 1]))).to.throw(Error);
   });
 
   it('should throw if no weights are given', () => {
@@ -37,7 +37,7 @@ describe('QueueSet weighting', () => {
   });
 
   it('should create a simple startMap', () => {
-    const set = new QueueSet([{ name: '1' }, { name: '2' }], null, [3, 2]);
+    const set = new QueueSet([{ name: '1' }, { name: '2' }], null, createOptions([3, 2]));
     expect(set.startMap.length).to.be.equal(5);
     expect(set.startMap[0]).to.be.equal(0);
     expect(set.startMap[2]).to.be.equal(0);
@@ -240,8 +240,12 @@ describe('QueueSet subscription management', () => {
   });
 });
 
-function createBaseQueues(queues, deadletter, weights) {
-  return new QueueSet(queues, deadletter || createBaseQueue('deadletter'), weights);
+function createOptions(weights) {
+  return { weights: weights };
+}
+
+function createBaseQueues(queues, deadletter, weights = [1]) {
+  return new QueueSet(queues, deadletter || createBaseQueue('deadletter'), createOptions(weights));
 }
 
 function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null, subscribe = null, unsubscribe = null} = {}) {

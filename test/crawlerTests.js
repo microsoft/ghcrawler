@@ -20,7 +20,7 @@ describe('Crawler get request', () => {
       expect(request.type).to.be.equal('priority');
       expect(request._originQueue === priority).to.be.true;
       expect(request.lock).to.be.equal('locked');
-      expect(request.crawlerName).to.be.equal('test');
+      expect(request.loopName).to.be.equal('test');
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -36,7 +36,7 @@ describe('Crawler get request', () => {
       expect(request.type).to.be.equal('normal');
       expect(request._originQueue === normal).to.be.true;
       expect(request.lock).to.be.equal('locked');
-      expect(request.crawlerName).to.be.equal('test');
+      expect(request.loopName).to.be.equal('test');
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -52,7 +52,7 @@ describe('Crawler get request', () => {
       expect(request.lock).to.be.undefined;
       expect(request.shouldSkip()).to.be.true;
       expect(request.nextRequestTime - Date.now()).to.be.approximately(2000, 4);
-      expect(request.crawlerName).to.be.equal('test');
+      expect(request.loopName).to.be.equal('test');
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -278,7 +278,7 @@ describe('Crawler fetch', () => {
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ _metadata: { headers: { link: 'links' } }, elements: ['test'] }); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
     return crawler._fetch(request).then(request => {
-      expect(request.document.elements[0]).to.be.equal('test');
+      expect(request.document[0]).to.be.equal('test');
       expect(request.response.headers.link).to.be.equal('links');
       expect(request.response.statusCode).to.be.equal(304);
       expect(request.shouldSkip()).to.be.false;
@@ -381,8 +381,9 @@ describe('Crawler fetch', () => {
 
 describe('Crawler filtering', () => {
   it('should filter', () => {
-    const config = { orgFilter: new Set(['microsoft']) };
-    const crawler = createBaseCrawler({ options: config });
+    const options = createBaseOptions();
+    options.crawler.orgList = ['microsoft'];
+    const crawler = createBaseCrawler({ options: options.crawler });
     expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/microsoft/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('repos', 'http://api.github.com/repos/microsoft/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('org', 'http://api.github.com/org/microsoft/test')).shouldSkip()).to.be.false;
@@ -395,8 +396,8 @@ describe('Crawler filtering', () => {
   });
 
   it('should not filter if no config', () => {
-    const config = {};
-    const crawler = createBaseCrawler({ options: config });
+    const options = createBaseOptions();
+    const crawler = createBaseCrawler({ options: options.crawler });
     expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/microsoft/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('foo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.false;
@@ -435,7 +436,7 @@ describe('Crawler log outcome', () => {
       error: value => error.push(value)
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ logger: logger });
+    const crawler = createBaseCrawler({ options: { logger: logger } });
     crawler._logOutcome(newRequest);
     expect(info.length).to.be.equal(1);
     expect(info[0].includes('Processed')).to.be.true;
@@ -451,7 +452,7 @@ describe('Crawler log outcome', () => {
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('test', 'message');
-    const crawler = createBaseCrawler({ logger: logger });
+    const crawler = createBaseCrawler({ options: { logger: logger } });
     crawler._logOutcome(newRequest);
     expect(info.length).to.be.equal(1);
     expect(info[0].includes('test')).to.be.true;
@@ -468,7 +469,7 @@ describe('Crawler log outcome', () => {
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('Error', 'message');
-    const crawler = createBaseCrawler({ logger: logger });
+    const crawler = createBaseCrawler({ options: { logger: logger } });
     crawler._logOutcome(newRequest);
     expect(error.length).to.be.equal(1);
     expect(error[0] instanceof Error).to.be.true;
@@ -486,7 +487,7 @@ describe('Crawler log outcome', () => {
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('Error', new Error('message'));
-    const crawler = createBaseCrawler({ logger: logger });
+    const crawler = createBaseCrawler({ options: { logger: logger } });
     crawler._logOutcome(newRequest);
     expect(error.length).to.be.equal(1);
     expect(error[0] instanceof Error).to.be.true;
@@ -497,24 +498,26 @@ describe('Crawler log outcome', () => {
 
 describe('Crawler queue', () => {
   it('should not queue if filtered', () => {
-    const config = { orgFilter: new Set(['test']) };
+    const options = createBaseOptions();
+    options.crawler.orgList = ['test'];
     const queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ queues: queues, options: config });
+    const crawler = createBaseCrawler({ queues: queues, options: options.crawler });
     crawler.queue(request);
     expect(request.promises.length).to.be.equal(0);
     expect(queue.length).to.be.equal(0);
   });
 
   it('should queue if not filtered', () => {
-    const config = { orgFilter: new Set(['microsoft']) };
+    const options = createBaseOptions();
+    options.crawler.orgList = ['microsoft'];
     const queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ queues: queues, options: config });
+    const crawler = createBaseCrawler({ queues: queues, options: options.crawler });
     request.track(crawler.queue(request));
     expect(request.promises.length).to.be.equal(1);
     expect(queue.length).to.be.equal(1);
@@ -525,12 +528,13 @@ describe('Crawler queue', () => {
 
   // TODO
   it('should queue in supplied queue', () => {
-    const config = { orgFilter: new Set(['microsoft']) };
+    const options = createBaseOptions();
+    options.crawler.orgList = ['microsoft'];
     const queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ queues: queues, options: config });
+    const crawler = createBaseCrawler({ queues: queues, options: options.crawler });
     request.track(crawler.queue(request));
     expect(request.promises.length).to.be.equal(1);
     expect(queue.length).to.be.equal(1);
@@ -912,14 +916,14 @@ describe('Crawler run', () => {
 
     const request = new Request('user', 'http://test.com/users/user1');
 
-    const options = { name: 'foo', delay: 0 };
-    return crawler._run(options).then(() => {
+    const context = { name: 'foo', delay: 0 };
+    return crawler._run(context).then(() => {
       expect(crawler.processOne.callCount).to.be.equal(1);
       expect(crawler._computeDelay.callCount).to.be.equal(0);
       expect(crawler._panic.callCount).to.be.equal(1);
       expect(crawler.run.callCount).to.be.equal(1);
     }, error => {
-        console.log(error);
+      console.log(error);
     });
   });
 
@@ -932,14 +936,14 @@ describe('Crawler run', () => {
 
     const request = new Request('user', 'http://test.com/users/user1');
 
-    const options = { name: 'foo', delay: 0 };
-    return crawler._run(options).then(() => {
+    const context = { name: 'foo', delay: 0 };
+    return crawler._run(context).then(() => {
       expect(crawler.processOne.callCount).to.be.equal(1);
       expect(crawler._computeDelay.callCount).to.be.equal(0);
       expect(crawler._panic.callCount).to.be.equal(1);
       expect(crawler.run.callCount).to.be.equal(1);
     }, error => {
-        console.log(error);
+      console.log(error);
     });
   });
 });
@@ -953,9 +957,9 @@ describe('Crawler whole meal deal', () => {
     const request = new Request('user', 'http://test.com/users/user1');
     request.delay();
 
-    const options = { name: 'foo', delay: 0 };
-    return crawler._run(options).then(() => {
-      expect(options.currentDelay).to.be.approximately(2000, 4);
+    const context = { name: 'foo', delay: 0 };
+    return crawler._run(context).then(() => {
+      expect(context.currentDelay).to.be.approximately(2000, 4);
     });
   });
 
@@ -967,9 +971,9 @@ describe('Crawler whole meal deal', () => {
     const request = new Request('user', 'http://test.com/users/user1');
     request.delayUntil(Date.now() + 323);
 
-    const options = { name: 'foo', delay: 0 };
-    return crawler._run(options).then(() => {
-      expect(options.currentDelay).to.be.approximately(323, 4);
+    const context = { name: 'foo', delay: 0 };
+    return crawler._run(context).then(() => {
+      expect(context.currentDelay).to.be.approximately(323, 4);
     });
   });
 
@@ -981,9 +985,9 @@ describe('Crawler whole meal deal', () => {
     const request = new Request('user', 'http://test.com/users/user1');
     request.delay(451);
 
-    const options = { name: 'foo', delay: 0 };
-    return crawler._run(options).then(() => {
-      expect(options.currentDelay).to.be.approximately(451, 4);
+    const context = { name: 'foo', delay: 0 };
+    return crawler._run(context).then(() => {
+      expect(context.currentDelay).to.be.approximately(451, 4);
     });
   });
 
@@ -1267,9 +1271,9 @@ function createFullCrawler() {
   const processor = new Processor();
   sinon.spy(processor, 'process');
 
-  const config = [];
+  const options = createBaseOptions(logger);
 
-  const result = createBaseCrawler({ queues: queues, requestor: requestor, store: store, logger: logger, locker: locker, options: config });
+  const result = createBaseCrawler({ queues: queues, requestor: requestor, store: store, locker: locker, options: options.crawler });
   result.processor = processor;
 
   sinon.spy(result, '_errorHandler');
@@ -1304,12 +1308,40 @@ function createErrorResponse(error) {
   };
 }
 
-function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = { promiseTrace: false }, logger = createBaseLog() } = {}) {
-  return new Crawler(queues, store, locker, requestor, options, logger);
+function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = createBaseOptions().crawler } = {}) {
+  return new Crawler(queues, store, locker, requestor, options);
 }
 
-function createBaseQueues({ priority = null, normal = null, deadletter = null} = {}) {
-  return new QueueSet([priority || createBaseQueue('priority'), normal || createBaseQueue('normal')], deadletter || createBaseQueue('deadletter'));
+function createBaseOptions(logger = createBaseLog()) {
+  return {
+    queuing: {
+      logger: logger,
+      ttl: 1000,
+      weights: [1]
+    },
+    storage: {
+      logger: logger,
+      ttl: 60000
+    },
+    locker: {
+      logger: logger,
+      retryCount: 3,
+      retryDelay: 200
+    },
+    crawler: {
+      logger: logger,
+      tokenLowerBound: 50,
+      promiseTrace: false,
+      orgList: [],
+    },
+    requestor: {
+    }
+  };
+}
+
+
+function createBaseQueues({ priority = null, normal = null, deadletter = null, options = null} = {}) {
+  return new QueueSet([priority || createBaseQueue('priority'), normal || createBaseQueue('normal')], deadletter || createBaseQueue('deadletter'), (options || createBaseOptions()).queuing);
 }
 
 function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null} = {}) {
