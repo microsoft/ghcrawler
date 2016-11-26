@@ -46,7 +46,6 @@ describe('Collection processing', () => {
   it('should queue forceNormal normal collection pages as forceNormal and elements as forceNormal', () => {
     const request = new Request('issues', 'http://test.com/issues');
     request.transitivity = 'forceNormal';
-    request.subType = 'issue';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
@@ -64,8 +63,7 @@ describe('Collection processing', () => {
     expect(newPages.length).to.be.equal(1);
     expect(newPages[0].transitivity).to.be.equal('forceNormal');
     expect(newPages[0].url).to.be.equal('http://test.com/issues?page=2&per_page=100');
-    expect(newPages[0].type).to.be.equal('page');
-    expect(newPages[0].subType).to.be.equal('issue');
+    expect(newPages[0].type).to.be.equal('issues');
 
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
@@ -74,10 +72,9 @@ describe('Collection processing', () => {
     expect(newRequest.type).to.be.equal('issue');
   });
 
-  it('should queue forceNormal root collection pages as forceNormal and elements as normal', () => {
-    const request = new Request('collection', 'http://test.com/orgs');
+  it('should queue forceNormal root collection as forceNormal and elements as normal', () => {
+    const request = new Request('orgs', 'http://test.com/orgs');
     request.transitivity = 'forceNormal';
-    request.subType = 'org';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
@@ -96,8 +93,7 @@ describe('Collection processing', () => {
     expect(newPages.length).to.be.equal(1);
     expect(newPages[0].transitivity).to.be.equal('forceNormal');
     expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
-    expect(newPages[0].type).to.be.equal('page');
-    expect(newPages[0].subType).to.be.equal('org');
+    expect(newPages[0].type).to.be.equal('orgs');
 
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
@@ -107,9 +103,8 @@ describe('Collection processing', () => {
   });
 
   it('should queue forceForce root collection pages as forceForce and elements as forceNormal', () => {
-    const request = new Request('collection', 'http://test.com/orgs');
+    const request = new Request('orgs', 'http://test.com/orgs');
     request.transitivity = 'forceForce';
-    request.subType = 'org';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
@@ -127,8 +122,7 @@ describe('Collection processing', () => {
     expect(newPages.length).to.be.equal(1);
     expect(newPages[0].transitivity).to.be.equal('forceForce');
     expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
-    expect(newPages[0].type).to.be.equal('page');
-    expect(newPages[0].subType).to.be.equal('org');
+    expect(newPages[0].type).to.be.equal('orgs');
 
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
@@ -138,15 +132,14 @@ describe('Collection processing', () => {
   });
 
   it('should queue forceForce page elements with forceNormal transitivity', () => {
-    const request = new Request('page', 'http://test.com/orgs?page=2&per_page=100');
+    const request = new Request('orgs', 'http://test.com/orgs?page=2&per_page=100');
     request.transitivity = 'forceForce';
-    request.subType = 'org';
     request.document = { _metadata: { links: {} }, elements: [{ url: 'http://child1' }] };
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     const processor = new Processor();
 
-    processor.page(request);
+    processor.page(2, request);
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
     expect(newRequest.transitivity).to.be.equal('forceNormal');
@@ -171,8 +164,7 @@ describe('URN building', () => {
     expect(teamsRequest.context.relation).to.be.equal('repo_teams_relation');
 
     request.crawler.queue.reset();
-    teamsRequest.type = 'collection';
-    teamsRequest.subType = 'team';
+    teamsRequest.type = 'teams';
     teamsRequest.document = { _metadata: { links: {} }, elements: [{ id: 13, url: 'http://team1' }] };
     teamsRequest.crawler = request.crawler;
     const teamsPage = processor.collection(teamsRequest);

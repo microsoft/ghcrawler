@@ -164,7 +164,7 @@ describe('Crawler fetch', () => {
     });
   });
 
-  it('should set subtype for collection requests', () => {
+  it('should set proper types for collection requests', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
     let etagArgs = null;
@@ -181,9 +181,8 @@ describe('Crawler fetch', () => {
       expect(request.document).to.be.equal('test');
       expect(request.response.statusCode).to.be.equal(200);
       expect(request.shouldSkip()).to.be.false;
-      expect(request.type).to.be.equal('collection');
-      expect(request.subType).to.be.equal('repo');
-      expect(etagArgs.type).to.be.equal('page');
+      expect(request.type).to.be.equal('repos');
+      expect(etagArgs.type).to.be.equal('repos');
       expect(etagArgs.url).to.be.equal(url);
       expect(getArgs.url).to.be.equal(url);
     });
