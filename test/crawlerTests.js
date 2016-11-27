@@ -254,10 +254,10 @@ describe('Crawler fetch', () => {
     const requestor = createBaseRequestor({
       get: (url, options) => { getArgs = { url: url, options: options }; return Q(responses.shift()); }
     });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q('test'); } });
+    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ _metadata: {}, id: 'test' }); } });
     const crawler = createBaseCrawler({ requestor: requestor, store: store });
     return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('test');
+      expect(request.document.id).to.be.equal('test');
       expect(request.response.statusCode).to.be.equal(304);
       expect(request.shouldSkip()).to.be.false;
       expect(request.store).to.be.false;
@@ -316,10 +316,10 @@ describe('Crawler fetch', () => {
     const request = new Request('foo', 'http://test');
     request.fetch = 'none';
     const responses = [createResponse(null, 304, 42)];
-    const store = createBaseStore({ get: () => { return Q('test'); } });
+    const store = createBaseStore({ get: () => { return Q({ _metadata: {}, id: 'test' }); } });
     const crawler = createBaseCrawler({ store: store });
     return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('test');
+      expect(request.document.id).to.be.equal('test');
       expect(request.shouldSkip()).to.be.false;
     });
   });

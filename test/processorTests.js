@@ -25,7 +25,7 @@ describe('Processor reprocessing', () => {
     sinon.stub(processor, 'user', () => { });
     processor.process(request);
     expect(request.shouldSkip()).to.be.true;
-    expect(request.outcome).to.be.equal('Warn');
+    expect(request.outcome).to.be.equal('Superceded');
     expect(processor.user.callCount).to.be.equal(0);
   });
 
