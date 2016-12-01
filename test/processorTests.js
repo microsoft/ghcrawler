@@ -4,12 +4,13 @@ const expect = require('chai').expect;
 const Processor = require('../lib/processor.js');
 const Request = require('../lib/request.js');
 const sinon = require('sinon');
+const TraversalPolicy = require('../lib/traversalPolicy');
 
 describe('Processor reprocessing', () => {
   it('will skip if at same version', () => {
     const processor = new Processor();
     const request = new Request('user', 'http://test.com/users/user1');
-    request.fetch = 'none';
+    request.policy.freshness = 'version';
     request.document = { _metadata: { version: processor.version } };
     sinon.stub(processor, 'user', () => { });
     processor.process(request);
@@ -20,12 +21,12 @@ describe('Processor reprocessing', () => {
   it('will skip and warn if at greater version', () => {
     const processor = new Processor();
     const request = new Request('user', 'http://test.com/users/user1');
-    request.fetch = 'none';
+    request.policy.freshness = 'version';
     request.document = { _metadata: { version: processor.version + 1 } };
     sinon.stub(processor, 'user', () => { });
     processor.process(request);
     expect(request.shouldSkip()).to.be.true;
-    expect(request.outcome).to.be.equal('Superceded');
+    expect(request.outcome).to.be.equal('Excluded');
     expect(processor.user.callCount).to.be.equal(0);
   });
 
@@ -43,9 +44,9 @@ describe('Processor reprocessing', () => {
 });
 
 describe('Collection processing', () => {
-  it('should queue forceNormal normal collection pages as forceNormal and elements as forceNormal', () => {
+  it('should queue collection pages as deepShallow and elements as deepShallow', () => {
     const request = new Request('issues', 'http://test.com/issues');
-    request.transitivity = 'forceNormal';
+    request.policy.transitivity = 'deepShallow';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
@@ -55,26 +56,26 @@ describe('Collection processing', () => {
     const push = sinon.spy(request.crawler.queues, 'push');
     const processor = new Processor();
 
-    processor.collection(request);
+    processor.process(request);
 
     expect(request.crawler.queues.push.callCount).to.be.equal(1);
     expect(push.getCall(0).args[1]).to.be.equal('soon');
     const newPages = request.crawler.queues.push.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
-    expect(newPages[0].transitivity).to.be.equal('forceNormal');
+    expect(newPages[0].policy.transitivity).to.be.equal('deepShallow');
     expect(newPages[0].url).to.be.equal('http://test.com/issues?page=2&per_page=100');
     expect(newPages[0].type).to.be.equal('issues');
 
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.transitivity).to.be.equal('forceNormal');
+    expect(newRequest.policy.transitivity).to.be.equal('deepShallow');
     expect(newRequest.url).to.be.equal('http://child1');
     expect(newRequest.type).to.be.equal('issue');
   });
 
-  it('should queue forceNormal root collection as forceNormal and elements as normal', () => {
+  it('should queue deepShallow root collections as deepShallow and elements as shallow', () => {
     const request = new Request('orgs', 'http://test.com/orgs');
-    request.transitivity = 'forceNormal';
+    request.policy.transitivity = 'deepShallow';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
@@ -84,27 +85,27 @@ describe('Collection processing', () => {
     const push = sinon.spy(request.crawler.queues, 'push');
     const processor = new Processor();
 
-    processor.collection(request);
+    processor.process(request);
 
     expect(push.callCount).to.be.equal(1);
     expect(push.getCall(0).args[1]).to.be.equal('soon');
 
     const newPages = push.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
-    expect(newPages[0].transitivity).to.be.equal('forceNormal');
+    expect(newPages[0].policy.transitivity).to.be.equal('deepShallow');
     expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
     expect(newPages[0].type).to.be.equal('orgs');
 
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.transitivity).to.be.equal('normal');
+    expect(newRequest.policy.transitivity).to.be.equal('shallow');
     expect(newRequest.url).to.be.equal('http://child1');
     expect(newRequest.type).to.be.equal('org');
   });
 
   it('should queue forceForce root collection pages as forceForce and elements as forceNormal', () => {
     const request = new Request('orgs', 'http://test.com/orgs');
-    request.transitivity = 'forceForce';
+    request.policy = TraversalPolicy.update();
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
@@ -114,26 +115,26 @@ describe('Collection processing', () => {
     const push = sinon.spy(request.crawler.queues, 'push');
     const processor = new Processor();
 
-    processor.collection(request);
+    processor.process(request);
 
     expect(push.callCount).to.be.equal(1);
     expect(push.getCall(0).args[1]).to.be.equal('soon');
     const newPages = push.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
-    expect(newPages[0].transitivity).to.be.equal('forceForce');
+    expect(newPages[0].policy.transitivity).to.be.equal('deepDeep');
     expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
     expect(newPages[0].type).to.be.equal('orgs');
 
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.transitivity).to.be.equal('forceNormal');
+    expect(newRequest.policy.transitivity).to.be.equal('deepShallow');
     expect(newRequest.url).to.be.equal('http://child1');
     expect(newRequest.type).to.be.equal('org');
   });
 
   it('should queue forceForce page elements with forceNormal transitivity', () => {
     const request = new Request('orgs', 'http://test.com/orgs?page=2&per_page=100');
-    request.transitivity = 'forceForce';
+    request.policy = TraversalPolicy.update();
     request.document = { _metadata: { links: {} }, elements: [{ url: 'http://child1' }] };
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
@@ -142,7 +143,7 @@ describe('Collection processing', () => {
     processor.page(2, request);
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.transitivity).to.be.equal('forceNormal');
+    expect(newRequest.policy.transitivity).to.be.equal('deepShallow');
     expect(newRequest.url).to.be.equal('http://child1');
     expect(newRequest.type).to.be.equal('org');
   });
@@ -161,13 +162,13 @@ describe('URN building', () => {
     expect(request.crawler.queue.callCount).to.be.at.least(4);
     const teamsRequest = request.crawler.queue.getCall(1).args[0];
     expect(teamsRequest.context.qualifier).to.be.equal('urn:repo:42');
-    expect(teamsRequest.context.relation).to.be.equal('repo_teams_relation');
+    expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', name: 'teams', type: 'team' } );
 
     request.crawler.queue.reset();
     teamsRequest.type = 'teams';
     teamsRequest.document = { _metadata: { links: {} }, elements: [{ id: 13, url: 'http://team1' }] };
     teamsRequest.crawler = request.crawler;
-    const teamsPage = processor.collection(teamsRequest);
+    const teamsPage = processor.process(teamsRequest);
     const links = teamsPage._metadata.links;
     expect(links.teams.type).to.be.equal('self');
     expect(links.teams.hrefs.length).to.be.equal(1);

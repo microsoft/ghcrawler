@@ -3,146 +3,132 @@ const chai = require('chai');
 const expect = require('chai').expect;
 const Request = require('../lib/request.js');
 const sinon = require('sinon');
+const TraversalPolicy = require('../lib/traversalPolicy');
 
 describe('Request transitivity', () => {
-  it('will not queueRoot if none transitivity', () => {
+  it('will not queueRoot if documentOnly processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'none';
+    request.policy.processing = 'documentOnly';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoot('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(0);
   });
 
-  it('will not queueRoots if none transitivity', () => {
+  it('will not queueRoots if documentOnly processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'none';
+    request.policy.processing = 'documentOnly';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoots('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(0);
   });
 
-  it('will not queueChild if none transitivity', () => {
+  it('will not queueChild if documentOnly processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'none';
+    request.policy.processing = 'documentOnly';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueChild('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(0);
   });
 
-  it('will not queueChildren if none transitivity', () => {
+  it('will not queueChildren if documentOnly processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'none';
+    request.policy.processing = 'documentOnly';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueChildren('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(0);
   });
 
-  it('will queueRoot normal if normal transitivity', () => {
+  it('will queueRoot shallow if documentAndRelated processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'normal';
-    request.fetch = 'none';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoot('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('normal');
-    expect(request.crawler.queue.getCall(0).args[0].fetch).to.be.equal('none');
+    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('shallow');
   });
 
-  it('will not queueRoot if forceNone transitivity', () => {
+  it('will not queueRoot if documentAndChildren processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceNone';
+    request.policy.processing = 'documentAndChildren';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoot('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(0);
   });
 
-  it('will queueRoot normal if forceNormal transitivity', () => {
+  it('will queueRoot shallow if deepShallow transitivity', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceNormal';
+    request.transitivity = 'deepShallow';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoot('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('normal');
+    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('shallow');
   });
 
-  it('will queueRoot forceNormal if forceForce transitivity', () => {
+  it('will queueRoot deepShallow if deepDeep transitivity', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceForce';
+    request.policy.transitivity = 'deepDeep';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoot('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('forceNormal');
+    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('deepShallow');
   });
 
-  it('queueRoots will not change transitivity and will carry through fetch', () => {
+  it('queueRoots will not change policy ', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceForce';
-    request.fetch = 'force';
+    request.policy = TraversalPolicy.update();
     request.document = { _metadata: { links: { self: { href: 'urn:pick:me' } } } };
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueRoots('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
     const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.transitivity).to.be.equal('forceForce');
-    expect(newRequest.fetch).to.be.equal('force');
+    expect(newRequest.policy).to.be.deep.equal(TraversalPolicy.update());
   });
 
-  it('will not queueChild if none transitivity', () => {
+  it('will not queueChild if documentOnly processing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'none';
+    request.policy.processing = 'documentOnly';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueChild('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(0);
   });
 
-  it('will queueChild normal if normal transitivity', () => {
+  it('will queueChild shallow if shallow transitivity', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'normal';
+    request.policy.transitivity = 'shallow';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueChild('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('normal');
+    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('shallow');
   });
 
-  it('will queueChild force if force transitivity', () => {
+  it('will queueChild deepShallow if deepShallow transitivity', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceNone';
+    request.policy.transitivity = 'deepShallow';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueChild('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('forceNone');
+    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('deepShallow');
   });
 
-  it('will queueChild foceNormal if forceNormal transitivity', () => {
+  it('will queueChild deepShallow if deepDeep transitivity', () => {
     const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceNormal';
+    request.policy.transitivity = 'deepDeep';
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
     request.queueChild('foo', 'http://');
     expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('forceNormal');
-  });
-
-  it('will queueChild foceNormal if forceForce transitivity', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'forceForce';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChild('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].transitivity).to.be.equal('forceNormal');
+    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('deepShallow');
   });
 });
 
@@ -165,7 +151,8 @@ describe('Request link management', () => {
   it('will add a : to the qualifier', () => {
     const request = new Request('foo', 'http://test');
     request.document = { id: 4, _metadata: { links: {} } };
-    request.addSelfLink('id', 'test');
+    request.context.qualifier = 'test';
+    request.addSelfLink();
     expect(request.document._metadata.links.self.href.startsWith('test:foo'));
   });
 });

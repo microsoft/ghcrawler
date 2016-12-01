@@ -7,6 +7,7 @@ const Q = require('q');
 const QueueSet = require('../lib/queueSet');
 const Request = require('../lib/request');
 const sinon = require('sinon');
+const TraversalPolicy = require('../lib/traversalPolicy');
 
 describe('Crawler get request', () => {
   it('should get from the priority queue first', () => {
@@ -248,7 +249,7 @@ describe('Crawler fetch', () => {
   it('should return cached content and not save and response for 304 with force', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.transitivity = 'forceNormal';
+    request.policy = TraversalPolicy.update();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -269,7 +270,7 @@ describe('Crawler fetch', () => {
   it('should return cached content and headers for 304 with force', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.transitivity = 'forceNormal';
+    request.policy = TraversalPolicy.update();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -300,9 +301,9 @@ describe('Crawler fetch', () => {
     });
   });
 
-  it('should get from requestor even with a 304 when fetch == force', () => {
+  it('should get from origin with originOnly fetch policy', () => {
     const request = new Request('foo', 'http://test');
-    request.fetch = 'force';
+    request.policy.fetch = 'originOnly';
     const responses = [createResponse('hey there')];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const crawler = createBaseCrawler({ requestor: requestor });
@@ -312,10 +313,9 @@ describe('Crawler fetch', () => {
     });
   });
 
-  it('should pull from store only if fetch == none', () => {
+  it('should pull from storage only storageOnly fetch policy', () => {
     const request = new Request('foo', 'http://test');
-    request.fetch = 'none';
-    const responses = [createResponse(null, 304, 42)];
+    request.policy.fetch = 'storageOnly';
     const store = createBaseStore({ get: () => { return Q({ _metadata: {}, id: 'test' }); } });
     const crawler = createBaseCrawler({ store: store });
     return crawler._fetch(request).then(request => {
@@ -365,7 +365,7 @@ describe('Crawler fetch', () => {
 
   it('should throw for store get errors', () => {
     const request = new Request('repos', 'http://test');
-    request.transitivity = 'forceNormal';
+    request.policy = TraversalPolicy.update();
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
@@ -1308,7 +1308,7 @@ function createErrorResponse(error) {
   };
 }
 
-function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker, requestor = createBaseRequestor(), options = createBaseOptions().crawler } = {}) {
+function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker(), requestor = createBaseRequestor(), options = createBaseOptions().crawler } = {}) {
   return new Crawler(queues, store, locker, requestor, options);
 }
 
