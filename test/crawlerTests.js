@@ -334,8 +334,7 @@ describe('Crawler fetch', () => {
       return crawler._fetch(request);
     }).then(
       request => assert.fail(),
-      error => expect(error.message.startsWith('Code: 500')).to.be.true
-      );
+      error => expect(error.message.startsWith('Code 500')).to.be.true);
   });
 
   it('should throw for store etag errors', () => {
@@ -557,21 +556,17 @@ describe('Crawler requeue', () => {
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const crawler = createBaseCrawler({ queues: queues });
-    for (let i = 0; i < 5; i++) {
-      const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
-      request.markRequeue();
-      request._originQueue = normal;
-      request.attemptCount = i === 0 ? null : i;
-      crawler._requeue(request);
-      expect(request.promises.length).to.be.equal(1);
+    const request = new Request('test', 'http://api.github.com/repo/microsoft/test');
+    request.markRequeue();
+    request._originQueue = normal;
+    return crawler._requeue(request).then(() => {
+      // expect(request.promises.length).to.be.equal(1);
       expect(queue.length).to.be.equal(1);
       expect(queue[0] !== request).to.be.true;
       expect(queue[0].type === request.type).to.be.true;
       expect(queue[0].url === request.url).to.be.true;
-      expect(queue[0].attemptCount).to.be.equal(i + 1);
-      // pop the request to get ready for the next iteration
-      queue.shift();
-    }
+      expect(queue[0].attemptCount).to.be.equal(1);
+    });
   });
 
   it('should requeue in deadletter queue after 5 attempts', () => {
@@ -585,14 +580,14 @@ describe('Crawler requeue', () => {
     request.markRequeue();
     request._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues });
-    crawler._requeue(request);
-    expect(request.promises.length).to.be.equal(1);
-    expect(queue.length).to.be.equal(0);
-    expect(deadletterQueue.length).to.be.equal(1);
-    expect(deadletterQueue[0] !== request).to.be.true;
-    expect(deadletterQueue[0].type === request.type).to.be.true;
-    expect(deadletterQueue[0].url === request.url).to.be.true;
-    expect(deadletterQueue[0].attemptCount).to.be.equal(6);
+    return crawler._requeue(request).then(() => {
+      expect(queue.length).to.be.equal(0);
+      expect(deadletterQueue.length).to.be.equal(1);
+      expect(deadletterQueue[0] !== request).to.be.true;
+      expect(deadletterQueue[0].type === request.type).to.be.true;
+      expect(deadletterQueue[0].url === request.url).to.be.true;
+      expect(deadletterQueue[0].attemptCount).to.be.equal(6);
+    });
   });
 });
 
@@ -700,12 +695,10 @@ describe('Crawler complete request', () => {
       error => assert.fail());
   });
 
-  it('still dequeues and unlocks if promises fail', () => {
-    const done = [];
-    const unlock = [];
-    const normal = createBaseQueue('normal', { done: request => { done.push(request); return Q(); } });
+  it('requeues and unlocks if promises fail', () => {
+    const normal = createBaseQueue('normal', { push: sinon.spy(() => { return Q(); }) });
     const queues = createBaseQueues({ normal: normal });
-    const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
+    const locker = createBaseLocker({ unlock: sinon.spy(() => { return Q(); }) });
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.lock = 42;
     originalRequest._originQueue = normal;
@@ -714,10 +707,12 @@ describe('Crawler complete request', () => {
     return crawler._completeRequest(originalRequest).then(
       request => assert.fail(),
       error => {
-        expect(done.length).to.be.equal(1);
-        expect(done[0] === originalRequest).to.be.true;
-        expect(unlock.length).to.be.equal(1);
-        expect(unlock[0]).to.be.equal(42);
+        expect(normal.push.callCount).to.be.equal(1);
+        const requeued = normal.push.getCall(0).args[0];
+        expect(requeued.type).to.be.equal(originalRequest.type);
+        expect(requeued.url).to.be.equal(originalRequest.url);
+        expect(locker.unlock.callCount).to.be.equal(1);
+        expect(locker.unlock.getCall(0).args[0]).to.be.equal(42);
       });
   });
 
@@ -861,7 +856,7 @@ describe('Crawler process document', () => {
     const crawler = createBaseCrawler();
     crawler.processor.test = request => { throw new Error('bummer'); };
     return Q.try(() => {
-      crawler._processDocument(originalRequest)
+      return crawler._processDocument(originalRequest)
     }).then(
       request => assert.fail(),
       error => { expect(error.message).to.be.equal('bummer'); });
@@ -987,7 +982,7 @@ describe('Crawler whole meal deal', () => {
 
     const context = { name: 'foo', delay: 0 };
     return crawler._run(context).then(() => {
-      expect(context.currentDelay).to.be.approximately(451, 4);
+      expect(context.currentDelay).to.be.approximately(451, 10);
     });
   });
 
@@ -1316,8 +1311,14 @@ function createBaseOptions(logger = createBaseLog()) {
   return {
     queuing: {
       logger: logger,
-      ttl: 1000,
-      weights: [1]
+      weights: [1],
+      parallelPush: 10,
+      attenuation: {
+        ttl: 1000
+      },
+      tracker: {
+        ttl: 6 * 60 * 1000
+      }
     },
     storage: {
       logger: logger,
@@ -1330,9 +1331,13 @@ function createBaseOptions(logger = createBaseLog()) {
     },
     crawler: {
       logger: logger,
-      tokenLowerBound: 50,
+      processingTtl: 60 * 1000,
       promiseTrace: false,
       orgList: [],
+      fetcher: {
+        tokenLowerBound: 50,
+        forbiddenDelay: 120000
+      }
     },
     requestor: {
     }
@@ -1346,6 +1351,7 @@ function createBaseQueues({ priority = null, normal = null, deadletter = null, o
 
 function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null} = {}) {
   const result = { name: name };
+  result.getName = () => { return name; };
   result.pop = pop || (() => assert.fail('should not pop'));
   result.push = push || (() => assert.fail('should not push'));
   result.done = done || (() => assert.fail('should not done'));

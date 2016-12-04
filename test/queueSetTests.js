@@ -8,13 +8,13 @@ const sinon = require('sinon');
 
 describe('QueueSet construction', () => {
   it('should throw on duplicate queue names', () => {
-    expect(() => new QueueSet([{ name: '1' }, { name: '1' }])).to.throw(Error);
+    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('1')])).to.throw(Error);
   });
 });
 
 describe('QueueSet weighting', () => {
   it('should create a simple startMap', () => {
-    const set = new QueueSet([{ name: '1' }, { name: '2' }], null, createOptions([3, 2]));
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, createOptions([3, 2]));
     expect(set.startMap.length).to.be.equal(5);
     expect(set.startMap[0]).to.be.equal(0);
     expect(set.startMap[2]).to.be.equal(0);
@@ -23,21 +23,21 @@ describe('QueueSet weighting', () => {
   });
 
   it('should create a default startMap if no weights given', () => {
-    const set = new QueueSet([{ name: '1' }, { name: '2' }]);
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')]);
     expect(set.startMap.length).to.be.equal(1);
     expect(set.startMap[0]).to.be.equal(0);
   });
 
   it('should throw if too many weights are given', () => {
-    expect(() => new QueueSet([{ name: '1' }, { name: '2' }], null, createOptions([3, 2, 1]))).to.throw(Error);
+    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, createOptions([3, 2, 1]))).to.throw(Error);
   });
 
   it('should throw if no weights are given', () => {
-    expect(() => new QueueSet([{ name: '1' }, { name: '2' }], null, [])).to.throw(Error);
+    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, [])).to.throw(Error);
   });
 
   it('should create a simple startMap', () => {
-    const set = new QueueSet([{ name: '1' }, { name: '2' }], null, createOptions([3, 2]));
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, createOptions([3, 2]));
     expect(set.startMap.length).to.be.equal(5);
     expect(set.startMap[0]).to.be.equal(0);
     expect(set.startMap[2]).to.be.equal(0);
@@ -250,6 +250,7 @@ function createBaseQueues(queues, deadletter, weights = [1]) {
 
 function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null, subscribe = null, unsubscribe = null} = {}) {
   const result = { name: name };
+  result.getName = () => { return name; };
   result.pop = pop || (() => assert.fail('should not pop'));
   result.push = push || (() => assert.fail('should not push'));
   result.done = done || (() => assert.fail('should not done'));

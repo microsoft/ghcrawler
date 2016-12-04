@@ -45,7 +45,7 @@ describe('Processor reprocessing', () => {
 
 describe('Collection processing', () => {
   it('should queue collection pages as deepShallow and elements as deepShallow', () => {
-    const request = new Request('issues', 'http://test.com/issues');
+    const request = new Request('issues', 'http://test.com/issues', { elementType: 'issue' });
     request.policy.transitivity = 'deepShallow';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
@@ -74,7 +74,7 @@ describe('Collection processing', () => {
   });
 
   it('should queue deepShallow root collections as deepShallow and elements as shallow', () => {
-    const request = new Request('orgs', 'http://test.com/orgs');
+    const request = new Request('orgs', 'http://test.com/orgs', { elementType: 'org' });
     request.policy.transitivity = 'deepShallow';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
@@ -104,7 +104,7 @@ describe('Collection processing', () => {
   });
 
   it('should queue forceForce root collection pages as forceForce and elements as forceNormal', () => {
-    const request = new Request('orgs', 'http://test.com/orgs');
+    const request = new Request('orgs', 'http://test.com/orgs', { elementType: 'org' });
     request.policy = TraversalPolicy.update();
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
@@ -133,7 +133,7 @@ describe('Collection processing', () => {
   });
 
   it('should queue forceForce page elements with forceNormal transitivity', () => {
-    const request = new Request('orgs', 'http://test.com/orgs?page=2&per_page=100');
+    const request = new Request('orgs', 'http://test.com/orgs?page=2&per_page=100', { elementType: 'org' });
     request.policy = TraversalPolicy.update();
     request.document = { _metadata: { links: {} }, elements: [{ url: 'http://child1' }] };
     request.crawler = { queue: () => { } };
@@ -162,7 +162,7 @@ describe('URN building', () => {
     expect(request.crawler.queue.callCount).to.be.at.least(4);
     const teamsRequest = request.crawler.queue.getCall(1).args[0];
     expect(teamsRequest.context.qualifier).to.be.equal('urn:repo:42');
-    expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', name: 'teams', type: 'team' } );
+    expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', name: 'teams', type: 'team' });
 
     request.crawler.queue.reset();
     teamsRequest.type = 'teams';
@@ -170,11 +170,13 @@ describe('URN building', () => {
     teamsRequest.crawler = request.crawler;
     const teamsPage = processor.process(teamsRequest);
     const links = teamsPage._metadata.links;
-    expect(links.teams.type).to.be.equal('self');
-    expect(links.teams.hrefs.length).to.be.equal(1);
-    expect(links.teams.hrefs[0]).to.be.equal('urn:team:13');
-    expect(links.repo.type).to.be.equal('self');
+    expect(links.resources.type).to.be.equal('resource');
+    expect(links.resources.hrefs.length).to.be.equal(1);
+    expect(links.resources.hrefs[0]).to.be.equal('urn:team:13');
+    expect(links.repo.type).to.be.equal('resource');
     expect(links.repo.href).to.be.equal('urn:repo:42');
+    expect(links.origin.type).to.be.equal('resource');
+    expect(links.origin.href).to.be.equal('urn:repo:42');
 
     const teamRequest = request.crawler.queue.getCall(0).args[0];
     expect(teamRequest.type).to.be.equal('team');
@@ -187,11 +189,11 @@ describe('URN building', () => {
     const membersRequest = request.crawler.queue.getCall(0).args[0];
     expect(membersRequest.url).to.be.equal('http://team1/members');
     expect(membersRequest.context.qualifier).to.be.equal('urn:team:54');
-    expect(membersRequest.context.relation).to.be.equal('team_members_relation');
+    expect(membersRequest.context.relation).to.be.deep.equal({ name: 'members', origin: 'team', type: 'user' });
     const reposRequest = request.crawler.queue.getCall(1).args[0];
     expect(reposRequest.url).to.be.equal('http://team1/repos');
     expect(reposRequest.context.qualifier).to.be.equal('urn:team:54');
-    expect(reposRequest.context.relation).to.be.equal('team_repos_relation');
+    expect(reposRequest.context.relation).to.be.deep.equal({ name: 'repos', origin: 'team', type: 'repo' });
   });
 });
 
