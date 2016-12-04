@@ -31,7 +31,6 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "flow-bin": "^0.36.0",
     "grunt": "^1.0.1",
     "grunt-mocha-test": "^0.13.2",
     "istanbul": "^0.4.5",
