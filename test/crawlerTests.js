@@ -261,7 +261,7 @@ describe('Crawler fetch', () => {
       expect(request.document.id).to.be.equal('test');
       expect(request.response.statusCode).to.be.equal(304);
       expect(request.shouldSkip()).to.be.false;
-      expect(request.store).to.be.false;
+      expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
       expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
       expect(getArgs.url).to.be.equal(url);
     });
@@ -283,7 +283,7 @@ describe('Crawler fetch', () => {
       expect(request.response.headers.link).to.be.equal('links');
       expect(request.response.statusCode).to.be.equal(304);
       expect(request.shouldSkip()).to.be.false;
-      expect(request.store).to.be.false;
+      expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
       expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
       expect(getArgs.url).to.be.equal(url);
     });
