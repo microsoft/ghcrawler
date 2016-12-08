@@ -7,6 +7,7 @@ const Q = require('q');
 const QueueSet = require('../lib/queueSet');
 const Request = require('../lib/request');
 const sinon = require('sinon');
+const GitHubFetcher = require('../lib/githubFetcher');
 const TraversalPolicy = require('../lib/traversalPolicy');
 
 describe('Crawler get request', () => {
@@ -1304,7 +1305,8 @@ function createErrorResponse(error) {
 }
 
 function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker(), requestor = createBaseRequestor(), options = createBaseOptions().crawler } = {}) {
-  return new Crawler(queues, store, locker, requestor, options);
+  const fetcher = createBaseFetcher(requestor, store, options);
+  return new Crawler(queues, store, locker, fetcher, options);
 }
 
 function createBaseOptions(logger = createBaseLog()) {
@@ -1385,9 +1387,20 @@ function createBaseLocker({lock = null, unlock = null} = {}) {
   return result;
 }
 
+function createBaseFetcher(requestor = createBaseRequestor(), store = createBaseStore(), options = createBaseOptions().crawler ) {
+  const tokenFactory = createTokenFactory();
+  return new GitHubFetcher(requestor, store, tokenFactory, options);
+}
+
 function createBaseRequestor({ get = null, getAll = null } = {}) {
   const result = {};
   result.get = get || (() => assert.fail('should not get'));
   result.getAll = getAll || (() => assert.fail('should not getAll'));
   return result;
 }
+
+function createTokenFactory() {
+    return {
+      getToken: () => { return 'mock'; }
+    };
+  }

@@ -26,6 +26,7 @@
     "extend": "3.0.0",
     "fast-json-patch": "^1.1.2",
     "moment": "2.15.2",
+    "node-uuid": "^1.4.7",
     "parse-link-header": "^0.4.1",
     "q": "1.4.1",
     "qlimit": "^0.1.1"
