@@ -162,6 +162,8 @@ describe('URN building', () => {
     expect(request.crawler.queue.callCount).to.be.at.least(4);
     const teamsRequest = request.crawler.queue.getCall(1).args[0];
     expect(teamsRequest.context.qualifier).to.be.equal('urn:repo:42');
+    expect(!!teamsRequest.context.relation.guid).to.be.true;
+    delete teamsRequest.context.relation.guid;
     expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', name: 'teams', type: 'team' });
 
     request.crawler.queue.reset();
@@ -189,10 +191,14 @@ describe('URN building', () => {
     const membersRequest = request.crawler.queue.getCall(0).args[0];
     expect(membersRequest.url).to.be.equal('http://team1/members');
     expect(membersRequest.context.qualifier).to.be.equal('urn:team:54');
+    expect(!!membersRequest.context.relation.guid).to.be.true;
+    delete membersRequest.context.relation.guid;
     expect(membersRequest.context.relation).to.be.deep.equal({ name: 'members', origin: 'team', type: 'user' });
     const reposRequest = request.crawler.queue.getCall(1).args[0];
     expect(reposRequest.url).to.be.equal('http://team1/repos');
     expect(reposRequest.context.qualifier).to.be.equal('urn:team:54');
+    expect(!!reposRequest.context.relation.guid).to.be.true;
+    delete reposRequest.context.relation.guid;
     expect(reposRequest.context.relation).to.be.deep.equal({ name: 'repos', origin: 'team', type: 'repo' });
   });
 });

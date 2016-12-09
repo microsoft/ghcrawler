@@ -3,6 +3,7 @@ const chai = require('chai');
 const Crawler = require('../lib/crawler');
 const expect = require('chai').expect;
 const extend = require('extend');
+const GitHubFetcher = require('../lib/githubFetcher');
 const Q = require('q');
 const QueueSet = require('../lib/queueSet');
 const Request = require('../lib/request');
@@ -137,7 +138,7 @@ describe('Crawler get request', () => {
   });
 });
 
-describe('Crawler fetch', () => {
+describe('Crawler fetching', () => {
   it('should skip skipped requests', () => {
     const request = new Request('foo', null);
     request.markSkip();
@@ -151,238 +152,13 @@ describe('Crawler fetch', () => {
     const crawler = createBaseCrawler();
     return crawler._fetch(request);
   });
-
-  it('should fetch one unseen document', () => {
-    const request = new Request('foo', 'http://test');
-    const responses = [createResponse('test')];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('test');
-      expect(request.response.statusCode).to.be.equal(200);
-      expect(request.shouldSkip()).to.be.false;
-    });
-  });
-
-  it('should set proper types for collection requests', () => {
-    const url = 'http://test';
-    const request = new Request('repos', url);
-    let etagArgs = null;
-    let getArgs = null;
-    const responses = [createResponse('test')];
-    const requestor = createBaseRequestor({
-      get: (url, options) => { getArgs = { url: url, options: options }; return Q(responses.shift()); }
-    });
-    const store = createBaseStore({
-      etag: (type, url) => { etagArgs = { type: type, url: url }; return Q(null); },
-    });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('test');
-      expect(request.response.statusCode).to.be.equal(200);
-      expect(request.shouldSkip()).to.be.false;
-      expect(request.type).to.be.equal('repos');
-      expect(etagArgs.type).to.be.equal('repos');
-      expect(etagArgs.url).to.be.equal(url);
-      expect(getArgs.url).to.be.equal(url);
-    });
-  });
-
-  it('should requeue and delay on 403 forbidden throttling', () => {
-    const request = new Request('foo', 'http://test');
-    const responses = [createResponse('test', 403)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.undefined;
-      expect(request.shouldRequeue()).to.be.true;
-      expect(request.nextRequestTime > Date.now()).to.be.true;
-    });
-  });
-
-  it('should delay on backoff throttling', () => {
-    const request = new Request('foo', 'http://test');
-    const resetTime = Date.now() + 2000;
-    const responses = [createResponse('bar', 200, null, 30, resetTime)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('bar');
-      expect(request.shouldRequeue()).to.be.false;
-      expect(request.shouldSkip()).to.be.false;
-      expect(request.nextRequestTime).to.be.equal(resetTime);
-    });
-  });
-
-  it('should delay on Retry-After throttling', () => {
-    const request = new Request('foo', 'http://test');
-    const resetTime = Date.now() + 3000;
-    const headers = { 'Retry-After': 3 };
-    const responses = [createResponse('bar', 200, null, 30, resetTime, headers)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('bar');
-      expect(request.shouldRequeue()).to.be.false;
-      expect(request.shouldSkip()).to.be.false;
-      // give at most 100ms for the test to run
-      expect(request.nextRequestTime).to.be.within(resetTime, resetTime + 100);
-    });
-  });
-
-  it('should skip 409s', () => {
-    const request = new Request('foo', 'http://test');
-    const responses = [createResponse('test', 409)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.undefined;
-      expect(request.shouldSkip()).to.be.true;
-    });
-  });
-
-  it('should return cached content and not save and response for 304 with force', () => {
-    const url = 'http://test';
-    const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
-    let getArgs = null;
-    const responses = [createResponse(null, 304, 42)];
-    const requestor = createBaseRequestor({
-      get: (url, options) => { getArgs = { url: url, options: options }; return Q(responses.shift()); }
-    });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ _metadata: {}, id: 'test' }); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document.id).to.be.equal('test');
-      expect(request.response.statusCode).to.be.equal(304);
-      expect(request.shouldSkip()).to.be.false;
-      expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
-      expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
-      expect(getArgs.url).to.be.equal(url);
-    });
-  });
-
-  it('should return cached content and headers for 304 with force', () => {
-    const url = 'http://test';
-    const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
-    let getArgs = null;
-    const responses = [createResponse(null, 304, 42)];
-    const requestor = createBaseRequestor({
-      get: (url, options) => { getArgs = { url: url, options: options }; return Q(responses.shift()); }
-    });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ _metadata: { headers: { link: 'links' } }, elements: ['test'] }); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document[0]).to.be.equal('test');
-      expect(request.response.headers.link).to.be.equal('links');
-      expect(request.response.statusCode).to.be.equal(304);
-      expect(request.shouldSkip()).to.be.false;
-      expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
-      expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
-      expect(getArgs.url).to.be.equal(url);
-    });
-  });
-
-  it('should skip for 304 without force', () => {
-    const request = new Request('foo', 'http://test');
-    const responses = [createResponse(null, 304, 42)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q('test'); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.undefined;
-      expect(request.shouldSkip()).to.be.true;
-    });
-  });
-
-  it('should get from origin with originOnly fetch policy', () => {
-    const request = new Request('foo', 'http://test');
-    request.policy.fetch = 'originOnly';
-    const responses = [createResponse('hey there')];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const crawler = createBaseCrawler({ requestor: requestor });
-    return crawler._fetch(request).then(request => {
-      expect(request.document).to.be.equal('hey there');
-      expect(request.shouldSkip()).to.be.false;
-    });
-  });
-
-  it('should pull from storage only storageOnly fetch policy', () => {
-    const request = new Request('foo', 'http://test');
-    request.policy.fetch = 'storageOnly';
-    const store = createBaseStore({ get: () => { return Q({ _metadata: {}, id: 'test' }); } });
-    const crawler = createBaseCrawler({ store: store });
-    return crawler._fetch(request).then(request => {
-      expect(request.document.id).to.be.equal('test');
-      expect(request.shouldSkip()).to.be.false;
-    });
-  });
-
-  it('should throw for bad codes', () => {
-    const request = new Request('foo', 'http://test');
-    const responses = [createResponse('test', 500)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return Q.try(() => {
-      return crawler._fetch(request);
-    }).then(
-      request => assert.fail(),
-      error => expect(error.message.startsWith('Code 500')).to.be.true);
-  });
-
-  it('should throw for store etag errors', () => {
-    const request = new Request('foo', 'http://test');
-    const store = createBaseStore({ etag: () => { throw new Error('test'); } });
-    const crawler = createBaseCrawler({ store: store });
-    return Q.try(() => {
-      return crawler._fetch(request);
-    }).then(
-      request => assert.fail(),
-      error => expect(error.message).to.be.equal('test')
-      );
-  });
-
-  it('should throw for requestor get errors', () => {
-    const request = new Request('repos', 'http://test');
-    const requestor = createBaseRequestor({ get: () => { throw new Error('test'); } });
-    const store = createBaseStore({ etag: () => { return Q(42); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return Q.try(() => {
-      return crawler._fetch(request);
-    }).then(
-      request => assert.fail(),
-      error => expect(error.message).to.be.equal('test')
-      );
-  });
-
-  it('should throw for store get errors', () => {
-    const request = new Request('repos', 'http://test');
-    request.policy = TraversalPolicy.update();
-    const responses = [createResponse(null, 304, 42)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
-    const crawler = createBaseCrawler({ requestor: requestor, store: store });
-    return Q.try(() => {
-      return crawler._fetch(request);
-    }).then(
-      request => assert.fail(),
-      error => expect(error.message).to.be.equal('test')
-      );
-  });
 });
 
 describe('Crawler filtering', () => {
   it('should filter', () => {
     const options = createBaseOptions();
     options.crawler.orgList = ['microsoft'];
-    const crawler = createBaseCrawler({ options: options.crawler });
+    const crawler = createBaseCrawler({ options: options });
     expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/microsoft/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('repos', 'http://api.github.com/repos/microsoft/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('org', 'http://api.github.com/org/microsoft/test')).shouldSkip()).to.be.false;
@@ -396,7 +172,7 @@ describe('Crawler filtering', () => {
 
   it('should not filter if no config', () => {
     const options = createBaseOptions();
-    const crawler = createBaseCrawler({ options: options.crawler });
+    const crawler = createBaseCrawler({ options: options });
     expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/microsoft/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('repo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.false;
     expect(crawler._filter(new Request('foo', 'http://api.github.com/repo/test/test')).shouldSkip()).to.be.false;
@@ -435,7 +211,7 @@ describe('Crawler log outcome', () => {
       error: value => error.push(value)
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ options: { logger: logger } });
+    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
     crawler._logOutcome(newRequest);
     expect(info.length).to.be.equal(1);
     expect(info[0].includes('Processed')).to.be.true;
@@ -451,7 +227,7 @@ describe('Crawler log outcome', () => {
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('test', 'message');
-    const crawler = createBaseCrawler({ options: { logger: logger } });
+    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
     crawler._logOutcome(newRequest);
     expect(info.length).to.be.equal(1);
     expect(info[0].includes('test')).to.be.true;
@@ -468,7 +244,7 @@ describe('Crawler log outcome', () => {
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('Error', 'message');
-    const crawler = createBaseCrawler({ options: { logger: logger } });
+    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
     crawler._logOutcome(newRequest);
     expect(error.length).to.be.equal(1);
     expect(error[0] instanceof Error).to.be.true;
@@ -486,7 +262,7 @@ describe('Crawler log outcome', () => {
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('Error', new Error('message'));
-    const crawler = createBaseCrawler({ options: { logger: logger } });
+    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
     crawler._logOutcome(newRequest);
     expect(error.length).to.be.equal(1);
     expect(error[0] instanceof Error).to.be.true;
@@ -503,7 +279,7 @@ describe('Crawler queue', () => {
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ queues: queues, options: options.crawler });
+    const crawler = createBaseCrawler({ queues: queues, options: options });
     crawler.queue(request);
     expect(request.promises.length).to.be.equal(0);
     expect(queue.length).to.be.equal(0);
@@ -516,7 +292,7 @@ describe('Crawler queue', () => {
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ queues: queues, options: options.crawler });
+    const crawler = createBaseCrawler({ queues: queues, options: options });
     request.track(crawler.queue(request));
     expect(request.promises.length).to.be.equal(1);
     expect(queue.length).to.be.equal(1);
@@ -533,7 +309,7 @@ describe('Crawler queue', () => {
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ queues: queues, options: options.crawler });
+    const crawler = createBaseCrawler({ queues: queues, options: options });
     request.track(crawler.queue(request));
     expect(request.promises.length).to.be.equal(1);
     expect(queue.length).to.be.equal(1);
@@ -968,7 +744,7 @@ describe('Crawler whole meal deal', () => {
 
     const context = { name: 'foo', delay: 0 };
     return crawler._run(context).then(() => {
-      expect(context.currentDelay).to.be.approximately(323, 4);
+      expect(context.currentDelay).to.be.approximately(323, 10);
     });
   });
 
@@ -992,7 +768,7 @@ describe('Crawler whole meal deal', () => {
     const priority = crawler.queues.queueTable['priority'];
 
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
-    crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+    crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
         expect(priority.pop.callCount).to.be.equal(1, 'priority call count');
@@ -1002,14 +778,9 @@ describe('Crawler whole meal deal', () => {
         expect(lock.callCount).to.be.equal(1, 'lock call count');
         expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
 
-        const etag = crawler.store.etag;
-        expect(etag.callCount).to.be.equal(1);
-        expect(etag.getCall(0).args[0]).to.be.equal('user');
-        expect(etag.getCall(0).args[1]).to.be.equal('http://test.com/users/user1');
-
-        const requestorGet = crawler.requestor.get;
-        expect(requestorGet.callCount).to.be.equal(1);
-        expect(requestorGet.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
+        const fetch = crawler.fetcher.fetch;
+        expect(fetch.callCount).to.be.equal(1);
+        expect(fetch.getCall(0).args[0].url).to.be.equal('http://test.com/users/user1');
 
         const process = crawler.processor.process;
         expect(process.callCount).to.be.equal(1);
@@ -1049,7 +820,7 @@ describe('Crawler whole meal deal', () => {
     crawler.queues.queueTable['normal'] = normal;
     crawler.queues.queues[1] = normal;
 
-    crawler.requestor.responses = [createResponse(null, 500)];
+    crawler.fetcher.responses = [createResponse(null, 500)];
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
         expect(priority.pop.callCount).to.be.equal(1);
@@ -1061,8 +832,8 @@ describe('Crawler whole meal deal', () => {
         const etag = crawler.store.etag;
         expect(etag.callCount).to.be.equal(0);
 
-        const requestorGet = crawler.requestor.get;
-        expect(requestorGet.callCount).to.be.equal(0);
+        const fetch = crawler.fetcher.fetch;
+        expect(fetch.callCount).to.be.equal(0);
 
         const push = normal.push;
         expect(push.callCount).to.be.equal(0);
@@ -1089,8 +860,10 @@ describe('Crawler whole meal deal', () => {
 
     // setup a good request but a server error response
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
-    crawler.requestor.responses = [createResponse(null, 500)];
-    return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
+    crawler.fetcher.fetch = () => { return Q.reject(new Error('500 response')) };
+    return Q.try(() => {
+      return crawler.processOne({ name: 'test' });
+    }).then(
       () => {
         expect(priority.pop.callCount).to.be.equal(1);
         expect(normal.pop.callCount).to.be.equal(1);
@@ -1098,15 +871,6 @@ describe('Crawler whole meal deal', () => {
         const lock = crawler.locker.lock;
         expect(lock.callCount).to.be.equal(1);
         expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
-
-        const etag = crawler.store.etag;
-        expect(etag.callCount).to.be.equal(1);
-        expect(etag.getCall(0).args[0]).to.be.equal('user');
-        expect(etag.getCall(0).args[1]).to.be.equal('http://test.com/users/user1');
-
-        const requestorGet = crawler.requestor.get;
-        expect(requestorGet.callCount).to.be.equal(1);
-        expect(requestorGet.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
 
         const push = normal.push;
         expect(push.callCount).to.be.equal(1);
@@ -1137,7 +901,7 @@ describe('Crawler whole meal deal', () => {
     const normal = crawler.queues.queueTable['normal'];
 
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
-    crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+    crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
         expect(priority.pop.callCount).to.be.equal(1);
@@ -1147,14 +911,9 @@ describe('Crawler whole meal deal', () => {
         expect(lock.callCount).to.be.equal(1);
         expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
 
-        const etag = crawler.store.etag;
-        expect(etag.callCount).to.be.equal(1);
-        expect(etag.getCall(0).args[0]).to.be.equal('user');
-        expect(etag.getCall(0).args[1]).to.be.equal('http://test.com/users/user1');
-
-        const requestorGet = crawler.requestor.get;
-        expect(requestorGet.callCount).to.be.equal(1);
-        expect(requestorGet.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
+        const fetch = crawler.fetcher.fetch;
+        expect(fetch.callCount).to.be.equal(1);
+        expect(fetch.getCall(0).args[0].url).to.be.equal('http://test.com/users/user1');
 
         expect(crawler._errorHandler.callCount).to.be.equal(1);
 
@@ -1186,8 +945,10 @@ describe('Crawler whole meal deal', () => {
     const normal = crawler.queues.queueTable['normal'];
 
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
-    crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
-    return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
+    crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+    return Q.try(() => {
+      return crawler.processOne({ name: 'test' });
+    }).then(
       () => {
         const unlock = crawler.locker.unlock;
         expect(unlock.callCount).to.be.equal(1);
@@ -1196,10 +957,12 @@ describe('Crawler whole meal deal', () => {
         expect(normal.done.callCount).to.be.equal(1);
 
         const push = normal.push;
-        expect(push.callCount).to.be.equal(1);
+        expect(push.callCount).to.be.equal(2);
         const newRequest = push.getCall(0).args[0];
-        expect(newRequest.type).to.be.equal('user');
-        expect(newRequest.attemptCount).to.be.equal(1);
+        expect(newRequest.type).to.be.equal('repos');
+        const requeue = push.getCall(1).args[0];
+        expect(requeue.type).to.be.equal('user');
+        expect(requeue.attemptCount).to.be.equal(1);
 
         expect(crawler.logger.error.callCount).to.be.equal(1);
         const error = crawler.logger.error.getCall(0).args[0];
@@ -1214,7 +977,7 @@ describe('Crawler whole meal deal', () => {
     const normal = crawler.queues.queueTable['normal'];
 
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
-    crawler.requestor.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+    crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
         const push = normal.push;
@@ -1232,6 +995,12 @@ describe('Crawler whole meal deal', () => {
 });
 
 function createFullCrawler() {
+  const logger = createBaseLog();
+  sinon.spy(logger, 'info');
+  sinon.spy(logger, 'error');
+
+  const options = createBaseOptions(logger);
+
   const priority = createBaseQueue('priority');
   priority.requests = [];
   sinon.stub(priority, 'pop', () => { return Q(priority.requests.shift()); });
@@ -1252,23 +1021,21 @@ function createFullCrawler() {
   sinon.stub(store, 'etag', request => { return Q(); });
   sinon.stub(store, 'upsert', request => { return Q(); });
 
-  const requestor = createBaseRequestor();
-  requestor.responses = [];
-  sinon.stub(requestor, 'get', () => {
-    return Q(requestor.responses.shift());
+  const fetcher = createBaseFetcher();
+  fetcher.responses = [];
+  sinon.stub(fetcher, 'fetch', request => {
+    const response = fetcher.responses.shift();
+    request.response = response;
+    request.document = response.body;
+    request.contentOrigin = 'origin';
+    return Q(request);
   });
-
-  const logger = createBaseLog();
-  sinon.spy(logger, 'info');
-  sinon.spy(logger, 'error');
 
   const Processor = require('../lib/processor');
   const processor = new Processor();
   sinon.spy(processor, 'process');
 
-  const options = createBaseOptions(logger);
-
-  const result = createBaseCrawler({ queues: queues, requestor: requestor, store: store, locker: locker, options: options.crawler });
+  const result = createBaseCrawler({ queues: queues, fetcher:fetcher, store: store, locker: locker, options: options });
   result.processor = processor;
 
   sinon.spy(result, '_errorHandler');
@@ -1303,8 +1070,11 @@ function createErrorResponse(error) {
   };
 }
 
-function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker(), requestor = createBaseRequestor(), options = createBaseOptions().crawler } = {}) {
-  return new Crawler(queues, store, locker, requestor, options);
+function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker(), requestor = createBaseRequestor(), fetcher = null, options = createBaseOptions() } = {}) {
+  if (!fetcher) {
+    fetcher = createBaseFetcher();
+  }
+  return new Crawler(queues, store, locker, fetcher, options.crawler);
 }
 
 function createBaseOptions(logger = createBaseLog()) {
@@ -1333,17 +1103,15 @@ function createBaseOptions(logger = createBaseLog()) {
       logger: logger,
       processingTtl: 60 * 1000,
       promiseTrace: false,
-      orgList: [],
-      fetcher: {
-        tokenLowerBound: 50,
-        forbiddenDelay: 120000
-      }
+      orgList: []
     },
-    requestor: {
+    fetcher: {
+      logger: logger,
+      tokenLowerBound: 50,
+      forbiddenDelay: 120000
     }
   };
 }
-
 
 function createBaseQueues({ priority = null, normal = null, deadletter = null, options = null} = {}) {
   return new QueueSet([priority || createBaseQueue('priority'), normal || createBaseQueue('normal')], deadletter || createBaseQueue('deadletter'), (options || createBaseOptions()).queuing);
@@ -1385,9 +1153,21 @@ function createBaseLocker({lock = null, unlock = null} = {}) {
   return result;
 }
 
+function createBaseFetcher({ fetch = null } = {}) {
+  const result = {};
+  result.fetch = fetch || (() => assert.fail());
+  return result;
+}
+
 function createBaseRequestor({ get = null, getAll = null } = {}) {
   const result = {};
   result.get = get || (() => assert.fail('should not get'));
   result.getAll = getAll || (() => assert.fail('should not getAll'));
   return result;
+}
+
+function createTokenFactory() {
+  return {
+    getToken: () => { return 'mock'; }
+  };
 }
