@@ -203,8 +203,90 @@ describe('URN building', () => {
   });
 });
 
+describe('Pull Request processing', () => {
+  it('should link and queue correctly', () => {
+    const request = new Request('pull_request', 'http://foo/pull');
+    request.context = { qualifier: 'urn:repo:12' };
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.document = {
+      _metadata: { links: {} },
+      id: 13,
+      assignee: { id: 1, url: 'http://user.1' },
+      milestone: { id: 26 },
+      head: { repo: { id: 45, url: 'http://repo.45' } },
+      base: { repo: { id: 17, url: 'http://repo.17' } },
+      _links: {
+        issue: { href: 'http://issue.13' },
+        review_comments: { href: 'http://review_comments' },
+        commits: { href: 'http://commits' },
+        statuses: { href: 'http://statuses/funkySHA' }
+      },
+      user: { id: 7, url: 'http://user.7' },
+      merged_by: { id: 15, url: 'http://user.15' }
+    };
+    const processor = new Processor();
+    const document = processor.pull_request(request);
+    expect(queue.length).to.be.equal(9);
+
+    expectSelfLink(document, 'pull_request', 13, 12);
+    expectSiblingsLink(document, 'pull_requests', 12);
+
+    expectRootAdded(queue, document, 'user', 'user', 7, 'resource');
+    expectRootAdded(queue, document, 'merged_by', 'user', 15, 'resource');
+    expectRootAdded(queue, document, 'assignee', 'user', 1, 'resource');
+    expectRootAdded(queue, document, 'head', 'repo', 45, 'resource');
+    expectRootAdded(queue, document, 'base', 'repo', 17, 'resource');
+
+    expectCollectionAdded(queue, document, 'review_comments', 'review_comments', 13, 12, 'pull_request');
+    expectCollectionAdded(queue, document, 'commits', 'commits', 13, 12, 'pull_request');
+
+    expectLinkUrn(document, 'statuses', 'urn:repo:12:commits:funkySHA:statuses', 'collection');
+    expect(queue.some(r => r.type === 'statuses' && r.url === 'http://statuses/funkySHA')).to.be.true;
+
+    expectResourceAdded(queue, document, 'issue', 'issue', document.id, 12);
+    expectLinkUrn(document, 'comments', 'urn:repo:12:issues:13:comments', 'collection');
+  });
+});
+
+function expectLinkUrn(document, name, urn, linkType) {
+  expect(document._metadata.links[name].href).to.be.equal(urn);
+  expect(document._metadata.links[name].type).to.be.equal(linkType);
+}
+
+function expectRootLink(document, name, type, id, linkType) {
+  expectLinkUrn(document, name, `urn:${type}:${id}`, linkType);
+}
+
+function expectRootAdded(queue, document, name, type, id, linkType) {
+  expectRootLink(document, name, type, id, linkType);
+  expect(queue.some(r => r.type === type && r.url === `http://${type}.${id}`)).to.be.true;
+}
+
+function expectChildLink(document, name, type, id, linkType, repoId) {
+  expectLinkUrn(document, name, `urn:repo:${repoId}:${type}:${id}`, linkType);
+}
+
+function expectResourceAdded(queue, document, name, type, id, repoId) {
+  expectChildLink(document, name, type, id, 'resource', repoId);
+  expect(queue.some(r => r.type === type && r.url === `http://${type}.${id}`)).to.be.true;
+}
+
+function expectCollectionAdded(queue, document, name, type, id, repoId, parent) {
+  expectLinkUrn(document, name, `urn:repo:${repoId}:${parent}:${id}:${type}`, 'collection');
+  expect(queue.some(r => r.type === type && r.url === `http://${name}`)).to.be.true;
+}
+
+function expectSelfLink(document, type, id, repoId) {
+  expectLinkUrn(document, 'self', `urn:repo:${repoId}:${type}:${id}`, 'resource');
+}
+
+function expectSiblingsLink(document, type, repoId) {
+  expectLinkUrn(document, 'siblings', `urn:repo:${repoId}:${type}`, 'collection');
+}
+
 function createLinkHeader(target, previous, next, last) {
-  separator = target.includes('?') ? '&' : '?';
+  const separator = target.includes('?') ? '&' : '?';
   const firstLink = null; //`<${urlHost}/${target}${separator}page=1>; rel="first"`;
   const prevLink = previous ? `<${target}${separator}page=${previous}>; rel="prev"` : null;
   const nextLink = next ? `<${target}${separator}page=${next}>; rel="next"` : null;
