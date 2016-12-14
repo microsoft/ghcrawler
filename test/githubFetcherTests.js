@@ -51,7 +51,7 @@ describe('GitHub fetcher', () => {
 
   it('should requeue and delay on 403 forbidden throttling', () => {
     const request = new Request('foo', 'http://test');
-    const responses = [createResponse('test', 403)];
+    const responses = [createResponse('test', 403, null, 0)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
     const fetcher = createBaseFetcher({ requestor: requestor, store: store });
@@ -59,6 +59,8 @@ describe('GitHub fetcher', () => {
       expect(request.document).to.be.undefined;
       expect(request.shouldRequeue()).to.be.true;
       expect(request.nextRequestTime > Date.now()).to.be.true;
+      expect(fetcher.tokenFactory.exhaust.callCount).to.be.equal(1);
+      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(Date.now() + 120000, 20);
     });
   });
 
@@ -271,7 +273,10 @@ function createBaseRequestor({ get = null, getAll = null } = {}) {
 }
 
 function createBaseTokenFactory() {
-  return { getToken: () => { return 'token'; } };
+  return {
+    getToken: () => { return 'token'; },
+    exhaust: sinon.spy(() => { })
+  };
 }
 
 function createBaseOptions(logger = createBaseLog()) {
