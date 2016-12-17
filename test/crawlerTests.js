@@ -4,6 +4,7 @@ const Crawler = require('../lib/crawler');
 const expect = require('chai').expect;
 const extend = require('extend');
 const GitHubFetcher = require('../lib/githubFetcher');
+const GitHubProcessor = require('../lib/githubProcessor');
 const Q = require('q');
 const QueueSet = require('../lib/queueSet');
 const Request = require('../lib/request');
@@ -1017,8 +1018,8 @@ function createFullCrawler() {
     return Q(request);
   });
 
-  const Processor = require('../lib/processor');
-  const processor = new Processor();
+  const GitHubProcessor = require('../lib/githubProcessor');
+  const processor = new GitHubProcessor();
   sinon.spy(processor, 'process');
 
   const result = createBaseCrawler({ queues: queues, fetcher: fetcher, store: store, locker: locker, options: options });
@@ -1060,13 +1061,15 @@ function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore
   if (!fetcher) {
     fetcher = createBaseFetcher();
   }
-  return new Crawler(queues, store, locker, fetcher, options.crawler);
+  const processor = new GitHubProcessor(store);
+  return new Crawler(queues, store, locker, fetcher, processor, options.crawler);
 }
 
 function createBaseOptions(logger = createBaseLog()) {
   return {
     queuing: {
       logger: logger,
+      on: () => { },
       weights: [1],
       parallelPush: 10,
       attenuation: {
@@ -1078,21 +1081,25 @@ function createBaseOptions(logger = createBaseLog()) {
     },
     storage: {
       logger: logger,
+      on: () => { },
       ttl: 60000
     },
     locker: {
       logger: logger,
+      on: () => { },
       retryCount: 3,
       retryDelay: 200
     },
     crawler: {
       logger: logger,
+      on: () => { },
       processingTtl: 60 * 1000,
       promiseTrace: false,
       orgList: []
     },
     fetcher: {
       logger: logger,
+      on: () => { },
       tokenLowerBound: 50,
       forbiddenDelay: 120000
     }
