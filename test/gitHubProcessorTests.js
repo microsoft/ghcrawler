@@ -1,14 +1,14 @@
 const assert = require('chai').assert;
 const chai = require('chai');
 const expect = require('chai').expect;
-const Processor = require('../lib/processor.js');
+const GitHubProcessor = require('../lib/githubProcessor.js');
 const Request = require('../lib/request.js');
 const sinon = require('sinon');
 const TraversalPolicy = require('../lib/traversalPolicy');
 
-describe('Processor reprocessing', () => {
+describe('GitHubProcessor reprocessing', () => {
   it('will skip if at same version', () => {
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy.freshness = 'version';
     request.document = { _metadata: { version: processor.version } };
@@ -19,7 +19,7 @@ describe('Processor reprocessing', () => {
   });
 
   it('will skip and warn if at greater version', () => {
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy.freshness = 'version';
     request.document = { _metadata: { version: processor.version + 1 } };
@@ -31,7 +31,7 @@ describe('Processor reprocessing', () => {
   });
 
   it('will process and update if at lesser version', () => {
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const request = new Request('user', 'http://test.com/users/user1');
     request.fetch = 'none';
     request.document = { _metadata: { version: processor.version - 1 } };
@@ -54,7 +54,7 @@ describe('Collection processing', () => {
     request.crawler = { queue: () => { }, queues: { push: () => { } } };
     sinon.spy(request.crawler, 'queue');
     const push = sinon.spy(request.crawler.queues, 'push');
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
 
     processor.process(request);
 
@@ -83,7 +83,7 @@ describe('Collection processing', () => {
     request.crawler = { queue: () => { }, queues: { push: () => { } } };
     sinon.spy(request.crawler, 'queue');
     const push = sinon.spy(request.crawler.queues, 'push');
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
 
     processor.process(request);
 
@@ -113,7 +113,7 @@ describe('Collection processing', () => {
     request.crawler = { queue: () => { }, queues: { push: () => { } } };
     sinon.spy(request.crawler, 'queue');
     const push = sinon.spy(request.crawler.queues, 'push');
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
 
     processor.process(request);
 
@@ -138,7 +138,7 @@ describe('Collection processing', () => {
     request.document = { _metadata: { links: {} }, elements: [{ url: 'http://child1' }] };
     request.crawler = { queue: () => { } };
     sinon.spy(request.crawler, 'queue');
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
 
     processor.page(2, request);
     expect(request.crawler.queue.callCount).to.be.equal(1);
@@ -156,7 +156,7 @@ describe('URN building', () => {
     request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
     sinon.spy(request.crawler, 'queue');
     sinon.spy(request.crawler.queues, 'pushPriority');
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
 
     processor.repo(request);
     expect(request.crawler.queue.callCount).to.be.at.least(4);
@@ -217,7 +217,7 @@ describe('Org processing', () => {
       members_url: 'http://members{/member}'
     };
 
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.org(request);
 
     const links = {
@@ -250,7 +250,7 @@ describe('User processing', () => {
       repos_url: 'http://repos',
     };
 
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.user(request);
 
     const links = {
@@ -287,7 +287,7 @@ describe('Repo processing', () => {
       organization: { id: 24, url: 'http://org/24' },
     };
 
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.repo(request);
 
     const links = {
@@ -332,7 +332,7 @@ describe('Commit processing', () => {
       author: { id: 7, url: 'http://user/7' },
       committer: { id: 15, url: 'http://user/15' }
     };
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.commit(request);
 
     const links = {
@@ -375,7 +375,7 @@ describe('Pull Request processing', () => {
       user: { id: 7, url: 'http://user/7' },
       merged_by: { id: 15, url: 'http://user/15' }
     };
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.pull_request(request);
 
     const links = {
@@ -420,7 +420,7 @@ describe('Pull request/review comment processing', () => {
       id: 37,
       user: { id: 7, url: 'http://user/7' }
     };
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.review_comment(request);
 
     const links = {
@@ -455,7 +455,7 @@ describe('Issue processing', () => {
       user: { id: 7, url: 'http://user/7' },
       closed_by: { id: 15, url: 'http://user/15' }
     };
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.issue(request);
 
     const links = {
@@ -494,7 +494,7 @@ describe('Issue comment processing', () => {
       id: 37,
       user: { id: 7, url: 'http://user/7' }
     };
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.issue_comment(request);
 
     const links = {
@@ -524,7 +524,7 @@ describe('Team processing', () => {
       repositories_url: 'http://teams/66/repos',
       organization: { id: 9, url: 'http://orgs/9'}
     };
-    const processor = new Processor();
+    const processor = new GitHubProcessor();
     const document = processor.team(request);
 
     const links = {

@@ -283,6 +283,7 @@ function createBaseOptions(logger = createBaseLog()) {
   return {
     fetcher: {
       logger: logger,
+      on: () => { },
       tokenLowerBound: 50,
       forbiddenDelay: 120000
     }
