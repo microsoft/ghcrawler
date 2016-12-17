@@ -4,7 +4,6 @@ module.exports.eventFinder = require('./lib/eventFinder');
 module.exports.githubFetcher = require('./lib/githubFetcher');
 module.exports.githubProcessor = require('./lib/githubProcessor');
 module.exports.policy = require('./lib/traversalPolicy');
-module.exports.processor = require('./lib/processor');
 module.exports.queueSet = require('./lib/queueSet');
 module.exports.request = require('./lib/request');
 module.exports.traversalPolicy = require('./lib/traversalPolicy');
