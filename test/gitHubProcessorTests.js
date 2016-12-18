@@ -206,7 +206,7 @@ describe('URN building', () => {
 describe('Org processing', () => {
   it('should link and queue correctly', () => {
     const request = new Request('org', 'http://org/9');
-    request.context = {  };
+    request.context = {};
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
     request.document = {
@@ -241,7 +241,7 @@ describe('Org processing', () => {
 describe('User processing', () => {
   it('should link and queue correctly', () => {
     const request = new Request('user', 'http://user/9');
-    request.context = {  };
+    request.context = {};
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
     request.document = {
@@ -270,7 +270,7 @@ describe('User processing', () => {
 describe('Repo processing', () => {
   it('should link and queue correctly', () => {
     const request = new Request('repo', 'http://foo/repo/12');
-    request.context = {  };
+    request.context = {};
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
     request.document = {
@@ -313,7 +313,37 @@ describe('Repo processing', () => {
       { type: 'contributors', url: 'http://contributors' },
       { type: 'subscribers', url: 'http://subscribers' },
       { type: 'issues', url: 'http://issues' },
-      { type: 'commits', url: 'http://commits' },
+      { type: 'commits', url: 'http://commits' }
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue CreateEvent', () => {
+    const request = new Request('CreateEvent', 'http://foo');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      repository: { id: 4, url: 'http://repo/4' }
+    }
+    request.document = createEvent('CreateEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.CreateEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:CreateEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:CreateEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      repository: { href: 'urn:repo:4', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' }
     ];
     expectQueued(queue, queued);
   });
@@ -329,6 +359,7 @@ describe('Commit processing', () => {
       _metadata: { links: {} },
       sha: '6dcb09b5b5',
       url: 'http://repo/12/commits/6dcb09b5b5',
+      comments_url: 'http://comments',
       author: { id: 7, url: 'http://user/7' },
       committer: { id: 15, url: 'http://user/15' }
     };
@@ -338,6 +369,7 @@ describe('Commit processing', () => {
     const links = {
       self: { href: 'urn:repo:12:commit:6dcb09b5b5', type: 'resource' },
       siblings: { href: 'urn:repo:12:commits', type: 'collection' },
+      commit_comments: { href: 'urn:repo:12:commit:6dcb09b5b5:commit_comments', type: 'collection' },
       author: { href: 'urn:user:7', type: 'resource' },
       committer: { href: 'urn:user:15', type: 'resource' },
       repo: { href: 'urn:repo:12', type: 'resource' },
@@ -347,7 +379,101 @@ describe('Commit processing', () => {
     const queued = [
       { type: 'user', url: 'http://user/7' },
       { type: 'user', url: 'http://user/15' },
-      { type: 'repo', url: 'http://repo/12' }
+      { type: 'repo', url: 'http://repo/12' },
+      { type: 'commit_comments', url: 'http://comments' }
+    ];
+    expectQueued(queue, queued);
+  });
+});
+
+describe('Commit comment processing', () => {
+  it('should link and queue correctly', () => {
+    const request = new Request('commit_comment', 'http://repo/commit/comment');
+    request.context = { qualifier: 'urn:repo:12:commit:a1b1' };
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.document = {
+      _metadata: { links: {} },
+      id: 37,
+      user: { id: 7, url: 'http://user/7' }
+    };
+    const processor = new GitHubProcessor();
+    const document = processor.commit_comment(request);
+
+    const links = {
+      self: { href: 'urn:repo:12:commit:a1b1:commit_comment:37', type: 'resource' },
+      siblings: { href: 'urn:repo:12:commit:a1b1:commit_comments', type: 'collection' },
+      commit: { href: 'urn:repo:12:commit:a1b1', type: 'resource' },
+      user: { href: 'urn:user:7', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/7' },
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue CommitCommentEvent', () => {
+    const request = new Request('CommitCommentEvent', 'http://foo/pull');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      comment: { id: 7, url: 'http://commit_comment/7', commit_id: 'a1b1' },
+      repository: { commits_url: 'http://commit{/sha}', comments_url: 'http://comment{/number}' }
+    }
+    request.document = createEvent('PullRequestReviewCommentEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.CommitCommentEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:CommitCommentEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:CommitCommentEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      commit_comment: { href: 'urn:repo:4:commit:a1b1:commit_comment:7', type: 'resource' },
+      commit: { href: 'urn:repo:4:commit:a1b1', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'commit_comment', url: 'http://comment/7' },
+      { type: 'commit', url: 'http://commit/a1b1' }
+    ];
+    expectQueued(queue, queued);
+  });
+});
+
+describe('Deployment processing', () => {
+  it('should link and queue correctly', () => {
+    const request = new Request('deployment', 'http://foo');
+    request.context = { qualifier: 'urn:repo:12' };
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.document = {
+      _metadata: { links: {} },
+      id: 3,
+      sha: '6dcb09b5b5',
+      creator: { id: 7, url: 'http://user/7' }
+    };
+    const processor = new GitHubProcessor();
+    const document = processor.deployment(request);
+
+    const links = {
+      self: { href: 'urn:repo:12:deployment:3', type: 'resource' },
+      siblings: { href: 'urn:repo:12:deployments', type: 'collection' },
+      creator: { href: 'urn:user:7', type: 'resource' },
+      commit: { href: 'urn:repo:12:commit:6dcb09b5b5', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/7' }
     ];
     expectQueued(queue, queued);
   });
@@ -390,7 +516,7 @@ describe('Pull Request processing', () => {
       commits: { href: 'urn:repo:12:pull_request:13:commits', type: 'collection' },
       statuses: { href: 'urn:repo:12:commit:funkySHA:statuses', type: 'collection' },
       issue: { href: 'urn:repo:12:issue:13', type: 'resource' },
-      issue_comments: { href: 'urn:repo:12:issue:13:issue_comments', type: 'collection' },
+      issue_comments: { href: 'urn:repo:12:issue:13:issue_comments', type: 'collection' }
     }
     expectLinks(document._metadata.links, links);
 
@@ -404,6 +530,68 @@ describe('Pull Request processing', () => {
       { type: 'commits', url: 'http://commits' },
       { type: 'statuses', url: 'http://statuses/funkySHA' },
       { type: 'issue', url: 'http://issue/13' }
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue PullRequestEvent', () => {
+    const request = new Request('PullRequestEvent', 'http://foo/pull');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      pull_request: { id: 1, url: 'http://pull_request/1' }
+    }
+    request.document = createEvent('PullRequestEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.PullRequestEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:PullRequestEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:PullRequestEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      pull_request: { href: 'urn:repo:4:pull_request:1', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'pull_request', url: 'http://pull_request/1' }
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue PullRequestReviewEvent', () => {
+    const request = new Request('PullRequestReviewEvent', 'http://foo/pull');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      pull_request: { id: 1, url: 'http://pull_request/1' }
+    }
+    request.document = createEvent('PullRequestReviewEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.PullRequestReviewEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:PullRequestReviewEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:PullRequestReviewEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      pull_request: { href: 'urn:repo:4:pull_request:1', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'pull_request', url: 'http://pull_request/1' }
     ];
     expectQueued(queue, queued);
   });
@@ -426,12 +614,47 @@ describe('Pull request/review comment processing', () => {
     const links = {
       self: { href: 'urn:repo:12:pull_request:27:review_comment:37', type: 'resource' },
       siblings: { href: 'urn:repo:12:pull_request:27:review_comments', type: 'collection' },
+      pull_request: { href: 'urn:repo:12:pull_request:27', type: 'resource' },
       user: { href: 'urn:user:7', type: 'resource' },
     }
     expectLinks(document._metadata.links, links);
 
     const queued = [
       { type: 'user', url: 'http://user/7' },
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue PullRequestReviewCommentEvent', () => {
+    const request = new Request('PullRequestReviewCommentEvent', 'http://foo/pull');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      comment: { id: 7, url: 'http://review_comment/7' },
+      pull_request: { id: 1, url: 'http://pull_request/1' }
+    }
+    request.document = createEvent('PullRequestReviewCommentEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.PullRequestReviewCommentEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:PullRequestReviewCommentEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:PullRequestReviewCommentEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      comment: { href: 'urn:repo:4:pull_request:1:review_comment:7', type: 'resource' },
+      pull_request: { href: 'urn:repo:4:pull_request:1', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'review_comment', url: 'http://review_comment/7' },
+      { type: 'pull_request', url: 'http://pull_request/1' }
     ];
     expectQueued(queue, queued);
   });
@@ -449,6 +672,7 @@ describe('Issue processing', () => {
       assignee: { id: 1, url: 'http://user/1' },
       assignees: [{ id: 50 }, { id: 51 }],
       milestone: { id: 26 },
+      labels: [{ id: 88 }, { id: 99 }],
       repo: { id: 45, url: 'http://repo/45' },
       comments_url: 'http://issue/27/comments',
       pull_request: { url: 'http://pull_request/27' },
@@ -462,6 +686,7 @@ describe('Issue processing', () => {
       self: { href: 'urn:repo:12:issue:27', type: 'resource' },
       siblings: { href: 'urn:repo:12:issues', type: 'collection' },
       user: { href: 'urn:user:7', type: 'resource' },
+      labels: { hrefs: ['urn:repo:12:label:88', 'urn:repo:12:label:99'], type: 'resource' },
       closed_by: { href: 'urn:user:15', type: 'resource' },
       assignee: { href: 'urn:user:1', type: 'resource' },
       repo: { href: 'urn:repo:12', type: 'resource' },
@@ -478,6 +703,43 @@ describe('Issue processing', () => {
       { type: 'repo', url: 'http://repo/45' },
       { type: 'issue_comments', url: 'http://issue/27/comments' },
       { type: 'pull_request', url: 'http://pull_request/27' }
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue IssuesEvent', () => {
+    const request = new Request('IssuesEvent', 'http://foo/pull');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      assignee: { id: 2, url: 'http://user/2' },
+      issue: { id: 1, url: 'http://issue/1' },
+      label: { id: 8, url: 'http://label/8' }
+    }
+    request.document = createEvent('IssuesEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.IssuesEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:IssuesEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:IssuesEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      assignee: { href: 'urn:user:2', type: 'resource' },
+      issue: { href: 'urn:repo:4:issue:1', type: 'resource' },
+      label: { href: 'urn:repo:4:label:8', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'user', url: 'http://user/2' },
+      { type: 'issue', url: 'http://issue/1' },
+      { type: 'label', url: 'http://label/8' }
     ];
     expectQueued(queue, queued);
   });
@@ -500,12 +762,79 @@ describe('Issue comment processing', () => {
     const links = {
       self: { href: 'urn:repo:12:issue:27:issue_comment:37', type: 'resource' },
       siblings: { href: 'urn:repo:12:issue:27:issue_comments', type: 'collection' },
+      issue: { href: 'urn:repo:12:issue:27', type: 'resource' },
       user: { href: 'urn:user:7', type: 'resource' },
     }
     expectLinks(document._metadata.links, links);
 
     const queued = [
       { type: 'user', url: 'http://user/7' },
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue IssueCommentEvent', () => {
+    const request = new Request('IssueCommentEvent', 'http://foo/');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      comment: { id: 7, url: 'http://issue_comment/7' },
+      issue: { id: 1, url: 'http://issue/1' }
+    }
+    request.document = createEvent('IssueCommentEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.IssueCommentEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:IssueCommentEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:IssueCommentEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      comment: { href: 'urn:repo:4:issue:1:issue_comment:7', type: 'resource' },
+      issue: { href: 'urn:repo:4:issue:1', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'issue_comment', url: 'http://issue_comment/7' },
+      { type: 'issue', url: 'http://issue/1' }
+    ];
+    expectQueued(queue, queued);
+  });
+});
+
+describe('Status processing', () => {
+  it('should link and queue StatusEvent', () => {
+    const request = new Request('StatusEvent', 'http://foo/');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      sha: 'a1b2'
+    }
+    request.document = createEvent('StatusEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.StatusEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:StatusEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:StatusEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      commit: { href: 'urn:repo:4:commit:a1b2', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' }
     ];
     expectQueued(queue, queued);
   });
@@ -522,7 +851,7 @@ describe('Team processing', () => {
       id: 66,
       members_url: 'http://teams/66/members{/member}',
       repositories_url: 'http://teams/66/repos',
-      organization: { id: 9, url: 'http://orgs/9'}
+      organization: { id: 9, url: 'http://orgs/9' }
     };
     const processor = new GitHubProcessor();
     const document = processor.team(request);
@@ -532,7 +861,7 @@ describe('Team processing', () => {
       siblings: { href: 'urn:org:9:teams', type: 'collection' },
       organization: { href: 'urn:org:9', type: 'resource' },
       members: { href: 'urn:team:66:members:pages:*', type: 'relation' },
-      repos: { href: 'urn:team:66:repos:pages:*', type: 'relation' },
+      repos: { href: 'urn:team:66:repos:pages:*', type: 'relation' }
     }
     expectLinks(document._metadata.links, links);
 
@@ -543,7 +872,137 @@ describe('Team processing', () => {
     ];
     expectQueued(queue, queued);
   });
+
+  it('should link and queue TeamEvent', () => {
+    const request = new Request('TeamEvent', 'http://foo/team');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      team: { id: 7, url: 'http://team/7' },
+      organization: { id: 5, url: 'http://org/5' }
+    }
+    request.document = createOrgEvent('TeamEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.TeamEvent(request);
+
+    const links = {
+      self: { href: 'urn:team:7:TeamEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:team:7:TeamEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      team: { href: 'urn:team:7', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'team', url: 'http://team/7' }
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue TeamEvent with repository', () => {
+    const request = new Request('TeamEvent', 'http://foo/team');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      team: { id: 7, url: 'http://team/7' },
+      organization: { id: 5, url: 'http://org/5' },
+      repository: { id: 6, url: 'http://repo/6' }
+    }
+    request.document = createOrgEvent('TeamEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.TeamEvent(request);
+
+    const links = {
+      self: { href: 'urn:team:7:TeamEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:team:7:TeamEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      repository: { href: 'urn:repo:6', type: 'resource' },
+      team: { href: 'urn:team:7', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'repo', url: 'http://repo/6' },
+      { type: 'team', url: 'http://team/7' }
+    ];
+    expectQueued(queue, queued);
+  });
+
+  it('should link and queue TeamAddEvent', () => {
+    const request = new Request('TeamAddEvent', 'http://foo/team');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      team: { id: 7, url: 'http://team/7' },
+      organization: { id: 5, url: 'http://org/5' },
+      repository: { id: 6, url: 'http://repo/6' }
+    }
+    request.document = createOrgEvent('TeamAddEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.TeamAddEvent(request);
+
+    const links = {
+      self: { href: 'urn:team:7:TeamAddEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:team:7:TeamAddEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      repository: { href: 'urn:repo:6', type: 'resource' },
+      team: { href: 'urn:team:7', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'org', url: 'http://org/5' },
+      { type: 'repo', url: 'http://repo/6' },
+      { type: 'team', url: 'http://team/7' }
+    ];
+    expectQueued(queue, queued);
+  });
 });
+
+describe('Watch processing', () => {
+  it('should link and queue WatchEvent', () => {
+    const request = new Request('WatchEvent', 'http://foo/watch');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    const payload = {
+      repository: { id: 4, url: 'http://repo/4' }
+    }
+    request.document = createEvent('WatchEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.WatchEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:WatchEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:WatchEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      repository: { href: 'urn:repo:4', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const queued = [
+      { type: 'user', url: 'http://user/3' },
+      { type: 'repo', url: 'http://repo/4' },
+      { type: 'org', url: 'http://org/5' }
+    ];
+    expectQueued(queue, queued);
+  });
+});
+
+// =========================== HELPERS =========================
 
 function expectLinks(actual, expected) {
   expect(Object.getOwnPropertyNames(actual).length).to.be.equal(Object.getOwnPropertyNames(expected).length);
@@ -568,65 +1027,27 @@ function expectQueued(actual, expected) {
   })
 }
 
-
-
-
-
-
-function expectLinkUrn(document, name, urn, linkType, startsWith = false) {
-  if (startsWith) {
-    expect(document._metadata.links[name].href.startsWith(urn)).to.be.true;
-  } else {
-    expect(document._metadata.links[name].href).to.be.equal(urn);
-  }
-  expect(document._metadata.links[name].type).to.be.equal(linkType);
+function createEvent(type, payload) {
+  return {
+    _metadata: { links: {} },
+    type: type,
+    id: 12345,
+    payload: payload,
+    actor: { id: 3, url: 'http://user/3' },
+    repo: { id: 4, url: 'http://repo/4' },
+    org: { id: 5, url: 'http://org/5' }
+  };
 }
 
-function expectRootLink(document, name, type, id, linkType) {
-  expectLinkUrn(document, name, `urn:${type}:${id}`, linkType);
-}
-
-function expectRootAdded(queue, document, name, type, id, linkType) {
-  expectRootLink(document, name, type, id, linkType);
-  expect(queue.some(r => r.type === type && r.url === `http://${type}/${id}`)).to.be.true;
-}
-
-function expectChildLink(document, name, type, id, linkType, repoId) {
-  expectLinkUrn(document, name, `urn:repo:${repoId}:${type}:${id}`, linkType);
-}
-
-function expectResourceAdded(queue, document, name, type, id, repoId) {
-  expectChildLink(document, name, type, id, 'resource', repoId);
-  expect(queue.some(r => r.type === type && r.url === `http://${type}/${id}`)).to.be.true;
-}
-
-function expectRelationAdded(queue, document, name, type, repoId) {
-  expectLinkUrn(document, name, `urn:repo:${repoId}:${name}:pages:`, 'relation', true);
-  expect(queue.some(r => r.type === type && r.url === `http://${name}`)).to.be.true;
-}
-
-function expectCollectionAdded(queue, document, name, type, id, repoId = null, parent = null) {
-  if (!repoId) {
-    urn = `urn:repo:${repoId}:${parent}:${id}:${type}`;
-  }
-  expectLinkUrn(document, name, `urn:repo:${repoId}:${parent}:${id}:${type}`, 'collection');
-  expect(queue.some(r => r.type === type && r.url === `http://${name}`)).to.be.true;
-}
-
-function expectSelfLink(document, type, id, repoId) {
-  expectLinkUrn(document, 'self', `urn:repo:${repoId}:${type}:${id}`, 'resource');
-}
-
-function expectRootSelfLink(document, type, id) {
-  expectLinkUrn(document, 'self', `urn:${type}:${id}`, 'resource');
-}
-
-function expectSiblingsLink(document, type, repoId) {
-  expectLinkUrn(document, 'siblings', `urn:repo:${repoId}:${type}`, 'collection');
-}
-
-function expectRootSiblingsLink(document, parentType, parentId, name) {
-  expectLinkUrn(document, 'siblings', `urn:${parentType}:${parentId}:${name}`, 'collection');
+function createOrgEvent(type, payload) {
+  return {
+    _metadata: { links: {} },
+    type: type,
+    id: 12345,
+    payload: payload,
+    actor: { id: 3, url: 'http://user/3' },
+    org: { id: 5, url: 'http://org/5' }
+  };
 }
 
 function createLinkHeader(target, previous, next, last) {

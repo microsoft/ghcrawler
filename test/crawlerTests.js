@@ -262,20 +262,21 @@ describe('Crawler queue', () => {
   it('should not queue if filtered', () => {
     const options = createBaseOptions();
     options.crawler.orgList = ['test'];
-    const queue = [];
+    let queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     const crawler = createBaseCrawler({ queues: queues, options: options });
     crawler.queue(request);
     expect(request.promises.length).to.be.equal(0);
+    queue = [].concat.apply([], queue);
     expect(queue.length).to.be.equal(0);
   });
 
   it('should queue if not filtered', () => {
     const options = createBaseOptions();
     options.crawler.orgList = ['microsoft'];
-    const queue = [];
+    let queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
@@ -283,7 +284,7 @@ describe('Crawler queue', () => {
     request.track(crawler.queue(request));
     expect(request.promises.length).to.be.equal(1);
     expect(queue.length).to.be.equal(1);
-    expect(queue[0] !== request).to.be.true;
+    queue = [].concat.apply([], queue);
     expect(queue[0].type === request.type).to.be.true;
     expect(queue[0].url === request.url).to.be.true;
   });
@@ -292,15 +293,15 @@ describe('Crawler queue', () => {
   it('should queue in supplied queue', () => {
     const options = createBaseOptions();
     options.crawler.orgList = ['microsoft'];
-    const queue = [];
+    let queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     const crawler = createBaseCrawler({ queues: queues, options: options });
     request.track(crawler.queue(request));
     expect(request.promises.length).to.be.equal(1);
+    queue = [].concat.apply([], queue);
     expect(queue.length).to.be.equal(1);
-    expect(queue[0] !== request).to.be.true;
     expect(queue[0].type === request.type).to.be.true;
     expect(queue[0].url === request.url).to.be.true;
   });
@@ -315,7 +316,7 @@ describe('Crawler requeue', () => {
   });
 
   it('should requeue in same queue as before', () => {
-    const queue = [];
+    let queue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const queues = createBaseQueues({ normal: normal });
     const crawler = createBaseCrawler({ queues: queues });
@@ -324,6 +325,7 @@ describe('Crawler requeue', () => {
     request._originQueue = normal;
     return crawler._requeue(request).then(() => {
       // expect(request.promises.length).to.be.equal(1);
+      queue = [].concat.apply([], queue);
       expect(queue.length).to.be.equal(1);
       expect(queue[0] !== request).to.be.true;
       expect(queue[0].type === request.type).to.be.true;
@@ -333,7 +335,7 @@ describe('Crawler requeue', () => {
   });
 
   it('should requeue in deadletter queue after 5 attempts', () => {
-    const queue = [];
+    let queue = [];
     const deadletterQueue = [];
     const normal = createBaseQueue('normal', { push: request => { queue.push(request); return Q(); } });
     const deadletter = createBaseQueue('deadletter', { push: request => { deadletterQueue.push(request); return Q(); } });
@@ -344,6 +346,7 @@ describe('Crawler requeue', () => {
     request._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues });
     return crawler._requeue(request).then(() => {
+      queue = [].concat.apply([], queue);
       expect(queue.length).to.be.equal(0);
       expect(deadletterQueue.length).to.be.equal(1);
       expect(deadletterQueue[0] !== request).to.be.true;
@@ -859,9 +862,8 @@ describe('Crawler whole meal deal', () => {
         expect(lock.callCount).to.be.equal(1);
         expect(lock.getCall(0).args[0]).to.be.equal('http://test.com/users/user1');
 
-        const push = normal.push;
-        expect(push.callCount).to.be.equal(1);
-        const newRequest = push.getCall(0).args[0];
+        expect(normal.queue.length).to.be.equal(1);
+        const newRequest = normal.queue[0];
         expect(newRequest.type).to.be.equal('user');
         expect(newRequest.attemptCount).to.be.equal(1);
 
@@ -886,9 +888,9 @@ describe('Crawler whole meal deal', () => {
     crawler.processor = { process: () => { throw new Error('bad processor') } };
     const priority = crawler.queues.queueTable['priority'];
     const normal = crawler.queues.queueTable['normal'];
-
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
         expect(priority.pop.callCount).to.be.equal(1);
@@ -904,9 +906,8 @@ describe('Crawler whole meal deal', () => {
 
         expect(crawler._errorHandler.callCount).to.be.equal(1);
 
-        const push = normal.push;
-        expect(push.callCount).to.be.equal(1);
-        const newRequest = push.getCall(0).args[0];
+        expect(normal.queue.length).to.be.equal(1);
+        const newRequest = normal.queue[0];
         expect(newRequest.type).to.be.equal('user');
         expect(newRequest.attemptCount).to.be.equal(1);
 
@@ -930,9 +931,9 @@ describe('Crawler whole meal deal', () => {
     const crawler = createFullCrawler();
     crawler.store = { upsert: () => { throw new Error('bad upsert') } };
     const normal = crawler.queues.queueTable['normal'];
-
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+
     return Q.try(() => {
       return crawler.processOne({ name: 'test' });
     }).then(
@@ -943,11 +944,10 @@ describe('Crawler whole meal deal', () => {
 
         expect(normal.done.callCount).to.be.equal(1);
 
-        const push = normal.push;
-        expect(push.callCount).to.be.equal(2);
-        const newRequest = push.getCall(0).args[0];
+        expect(normal.queue.length).to.be.equal(2);
+        const newRequest = normal.queue[0];
         expect(newRequest.type).to.be.equal('repos');
-        const requeue = push.getCall(1).args[0];
+        const requeue = normal.queue[1];
         expect(requeue.type).to.be.equal('user');
         expect(requeue.attemptCount).to.be.equal(1);
 
@@ -962,14 +962,13 @@ describe('Crawler whole meal deal', () => {
     const crawler = createFullCrawler();
     crawler.locker = { unlock: () => { throw new Error('bad unlock') } };
     const normal = crawler.queues.queueTable['normal'];
-
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
     crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
-        const push = normal.push;
-        expect(push.callCount).to.be.equal(1);
-        const newRequest = push.getCall(0).args[0];
+        expect(normal.queue.length).to.be.equal(1);
+        const newRequest = normal.queue[0];
         expect(newRequest.type).to.be.equal('user');
         expect(newRequest.attemptCount).to.be.equal(1);
 
@@ -994,8 +993,13 @@ function createFullCrawler() {
 
   const normal = createBaseQueue('normal');
   normal.requests = [];
+  const queue = [];
+  normal.queue = queue;
   sinon.stub(normal, 'pop', () => { return Q(normal.requests.shift()); });
-  sinon.stub(normal, 'push', request => { return Q(); });
+  sinon.stub(normal, 'push', request => {
+    Array.prototype.push.apply(queue, Array.isArray(request) ? request : [request]);
+    return Q();
+  });
   sinon.stub(normal, 'done', request => { return Q(); });
 
   const queues = createBaseQueues({ priority: priority, normal: normal });
