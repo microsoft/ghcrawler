@@ -164,7 +164,7 @@ describe('URN building', () => {
     expect(teamsRequest.context.qualifier).to.be.equal('urn:repo:42');
     expect(!!teamsRequest.context.relation.guid).to.be.true;
     delete teamsRequest.context.relation.guid;
-    expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', name: 'teams', type: 'team' });
+    expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', qualifier: 'urn:repo:42:teams', type: 'team' });
 
     request.crawler.queue.reset();
     teamsRequest.type = 'teams';
@@ -193,13 +193,13 @@ describe('URN building', () => {
     expect(membersRequest.context.qualifier).to.be.equal('urn:team:54');
     expect(!!membersRequest.context.relation.guid).to.be.true;
     delete membersRequest.context.relation.guid;
-    expect(membersRequest.context.relation).to.be.deep.equal({ name: 'members', origin: 'team', type: 'user' });
+    expect(membersRequest.context.relation).to.be.deep.equal({ qualifier: 'urn:team:54:team_members', origin: 'team', type: 'user' });
     const reposRequest = request.crawler.queue.getCall(2).args[0];
     expect(reposRequest.url).to.be.equal('http://team1/repos');
     expect(reposRequest.context.qualifier).to.be.equal('urn:team:54');
     expect(!!reposRequest.context.relation.guid).to.be.true;
     delete reposRequest.context.relation.guid;
-    expect(reposRequest.context.relation).to.be.deep.equal({ name: 'repos', origin: 'team', type: 'repo' });
+    expect(reposRequest.context.relation).to.be.deep.equal({ qualifier: 'urn:team:54:repos', origin: 'team', type: 'repo' });
   });
 });
 
@@ -225,7 +225,7 @@ describe('Org processing', () => {
       siblings: { href: 'urn:orgs', type: 'collection' },
       user: { href: 'urn:user:9', type: 'resource' },
       repos: { href: 'urn:user:9:repos', type: 'collection' },
-      members: { href: 'urn:org:9:members:pages:*', type: 'relation' },
+      members: { href: 'urn:org:9:org_members:pages:*', type: 'relation' },
     }
     expectLinks(document._metadata.links, links);
 
@@ -860,7 +860,7 @@ describe('Team processing', () => {
       self: { href: 'urn:team:66', type: 'resource' },
       siblings: { href: 'urn:org:9:teams', type: 'collection' },
       organization: { href: 'urn:org:9', type: 'resource' },
-      members: { href: 'urn:team:66:members:pages:*', type: 'relation' },
+      members: { href: 'urn:team:66:team_members:pages:*', type: 'relation' },
       repos: { href: 'urn:team:66:repos:pages:*', type: 'relation' }
     }
     expectLinks(document._metadata.links, links);
