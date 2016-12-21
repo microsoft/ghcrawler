@@ -118,7 +118,7 @@ describe('Crawler get request', () => {
     return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => {
         expect(request.shouldRequeue()).to.be.true;
-        expect(request.outcome).to.be.equal('Requeued');
+        expect(request.outcome).to.be.equal('Collision');
         expect(request.message).to.be.equal('Could not lock');
       },
       request => assert.fail());

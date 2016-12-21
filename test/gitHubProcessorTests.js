@@ -2,6 +2,7 @@ const assert = require('chai').assert;
 const chai = require('chai');
 const expect = require('chai').expect;
 const GitHubProcessor = require('../lib/githubProcessor.js');
+const Q = require('q');
 const Request = require('../lib/request.js');
 const sinon = require('sinon');
 const TraversalPolicy = require('../lib/traversalPolicy');
@@ -998,6 +999,22 @@ describe('Watch processing', () => {
       { type: 'org', url: 'http://org/5' }
     ];
     expectQueued(queue, queued);
+  });
+});
+
+describe('Event Finder', () => {
+  it('will skip duplicates', () => {
+    const docs = { 'http://repo1/events/3': '{ id: 3 }', 'http://repo1/events/4': '{ id: 4}' };
+    const store = { get: (type, url) => { return Q(docs[url]); } }
+    const events = [];
+    for (let i = 0; i < 20; i++) {
+      events.push({ id: i, repo: { url: 'http://repo1' } })
+    }
+    const processor = new GitHubProcessor();
+    processor.store = store;
+    processor._findNew(events).then(newEvents => {
+      expect(newEvents.length).to.be.equal(18);
+    });
   });
 });
 
