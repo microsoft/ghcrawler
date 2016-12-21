@@ -52,9 +52,9 @@ describe('QueueSet weighting', () => {
 
     return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
       expect(first.type).to.be.equal('priority');
-      expect(first._retryQueue === 'priority').to.be.true;
+      expect(first._originQueue === priority).to.be.true;
       expect(second.type).to.be.equal('priority');
-      expect(second._retryQueue === 'priority').to.be.true;
+      expect(second._originQueue === priority).to.be.true;
     });
   });
 
@@ -65,9 +65,9 @@ describe('QueueSet weighting', () => {
 
     return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
       expect(first.type).to.be.equal('priority');
-      expect(first._retryQueue === 'priority').to.be.true;
+      expect(first._originQueue === priority).to.be.true;
       expect(second.type).to.be.equal('normal');
-      expect(second._retryQueue === 'normal').to.be.true;
+      expect(second._originQueue === normal).to.be.true;
     });
   });
 
@@ -78,9 +78,9 @@ describe('QueueSet weighting', () => {
 
     return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
       expect(first.type).to.be.equal('normal');
-      expect(first._retryQueue === 'normal').to.be.true;
+      expect(first._originQueue === normal).to.be.true;
       expect(second.type).to.be.equal('normal');
-      expect(second._retryQueue === 'normal').to.be.true;
+      expect(second._originQueue === normal).to.be.true;
     });
   });
 
@@ -92,9 +92,9 @@ describe('QueueSet weighting', () => {
 
     return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
       expect(first.type).to.be.equal('priority');
-      expect(first._retryQueue === 'priority').to.be.true;
+      expect(first._originQueue === priority).to.be.true;
       expect(second.type).to.be.equal('priority');
-      expect(second._retryQueue === 'priority').to.be.true;
+      expect(second._originQueue === priority).to.be.true;
     });
   });
 });
@@ -130,7 +130,7 @@ describe('QueueSet pushing', () => {
 
     return queues.pop().then(request => {
       return queues.repush(request, request).then(() => {
-        expect(request._retryQueue === 'priority').to.be.true;
+        expect(request._originQueue === priority).to.be.true;
         expect(priority.push.callCount).to.be.equal(1);
         expect(priority.push.getCall(0).args[0].type).to.be.equal('test');
       });

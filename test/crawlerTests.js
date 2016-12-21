@@ -21,7 +21,7 @@ describe('Crawler get request', () => {
     const requestBox = [];
     return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
       expect(request.type).to.be.equal('priority');
-      expect(request._retryQueue === 'priority').to.be.true;
+      expect(request._originQueue === priority).to.be.true;
       expect(request.lock).to.be.equal('locked');
       expect(request.loopName).to.be.equal('test');
       expect(request).to.be.equal(requestBox[0]);
@@ -37,7 +37,7 @@ describe('Crawler get request', () => {
     const requestBox = [];
     return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
       expect(request.type).to.be.equal('normal');
-      expect(request._retryQueue === 'normal').to.be.true;
+      expect(request._originQueue === normal).to.be.true;
       expect(request.lock).to.be.equal('locked');
       expect(request.loopName).to.be.equal('test');
       expect(request).to.be.equal(requestBox[0]);
@@ -118,7 +118,7 @@ describe('Crawler get request', () => {
     return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => {
         expect(request.shouldRequeue()).to.be.true;
-        expect(request.outcome).to.be.equal('Requeued');
+        expect(request.outcome).to.be.equal('Collision');
         expect(request.message).to.be.equal('Could not lock');
       },
       request => assert.fail());
@@ -366,7 +366,7 @@ describe('Crawler complete request', () => {
     const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     return crawler._completeRequest(originalRequest).then(request => {
       expect(request === originalRequest).to.be.true;
@@ -391,7 +391,7 @@ describe('Crawler complete request', () => {
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.markRequeue();
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     return crawler._completeRequest(originalRequest).then(request => {
       expect(request === originalRequest).to.be.true;
@@ -415,7 +415,7 @@ describe('Crawler complete request', () => {
     const originalRequest = new Request('test', null);
     originalRequest.markRequeue();
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues });
     return crawler._completeRequest(originalRequest).then(request => {
       expect(request === originalRequest).to.be.true;
@@ -445,7 +445,7 @@ describe('Crawler complete request', () => {
     });
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     originalRequest.promises = [Q.delay(1).then(() => promiseValue[0] = 13)];
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     return crawler._completeRequest(originalRequest).then(
@@ -467,7 +467,7 @@ describe('Crawler complete request', () => {
     const locker = createBaseLocker({ unlock: sinon.spy(() => { return Q(); }) });
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     originalRequest.promises = [Q.reject(13)];
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     return crawler._completeRequest(originalRequest).then(
@@ -490,7 +490,7 @@ describe('Crawler complete request', () => {
     const locker = createBaseLocker({ unlock: () => { throw new Error('sigh'); } });
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     return crawler._completeRequest(originalRequest).then(
       request => {
@@ -511,7 +511,7 @@ describe('Crawler complete request', () => {
     const locker = createBaseLocker({ unlock: request => { unlock.push(request); return Q(); } });
     const originalRequest = new Request('test', 'http://test.com');
     originalRequest.lock = 42;
-    originalRequest._retryQueue = 'normal';
+    originalRequest._originQueue = normal;
     const crawler = createBaseCrawler({ queues: queues, locker: locker });
     return crawler._completeRequest(originalRequest).then(
       request => assert.fail(),
