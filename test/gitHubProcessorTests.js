@@ -281,6 +281,7 @@ describe('Repo processing', () => {
       collaborators_url: 'http://collaborators{/collaborator}',
       commits_url: 'http://commits{/sha}',
       contributors_url: 'http://contributors',
+      events_url: 'http://events',
       issues_url: 'http://issues{/number}',
       pulls_url: 'http://pulls{/number}',
       subscribers_url: 'http://subscribers',
@@ -296,6 +297,7 @@ describe('Repo processing', () => {
       siblings: { href: 'urn:user:45:repos', type: 'collection' },
       owner: { href: 'urn:user:45', type: 'resource' },
       organization: { href: 'urn:org:24', type: 'resource' },
+      events: { href: 'urn:repo:12:events', type: 'collection' },
       pull_requests: { href: 'urn:repo:12:pull_requests', type: 'collection' },
       teams: { href: 'urn:repo:12:teams:pages:*', type: 'relation' },
       collaborators: { href: 'urn:repo:12:collaborators:pages:*', type: 'relation' },
@@ -314,7 +316,8 @@ describe('Repo processing', () => {
       { type: 'contributors', url: 'http://contributors' },
       { type: 'subscribers', url: 'http://subscribers' },
       { type: 'issues', url: 'http://issues' },
-      { type: 'commits', url: 'http://commits' }
+      { type: 'commits', url: 'http://commits' },
+      { type: 'events', url: 'http://events' }
     ];
     expectQueued(queue, queued);
   });
@@ -528,8 +531,7 @@ describe('Pull Request processing', () => {
       { type: 'repo', url: 'http://repo/17' },
       { type: 'review_comments', url: 'http://review_comments' },
       { type: 'commits', url: 'http://commits' },
-      { type: 'statuses', url: 'http://statuses/funkySHA' },
-      { type: 'issue', url: 'http://issue/13' }
+      { type: 'statuses', url: 'http://statuses/funkySHA' }
     ];
     expectQueued(queue, queued);
   });
