@@ -23,7 +23,7 @@ describe('Crawler get request', () => {
       expect(request.type).to.be.equal('priority');
       expect(request._originQueue === priority).to.be.true;
       expect(request.lock).to.be.equal('locked');
-      expect(request.loopName).to.be.equal('test');
+      expect(request.meta.correlationId).to.be.not.null;
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -39,7 +39,7 @@ describe('Crawler get request', () => {
       expect(request.type).to.be.equal('normal');
       expect(request._originQueue === normal).to.be.true;
       expect(request.lock).to.be.equal('locked');
-      expect(request.loopName).to.be.equal('test');
+      expect(request.meta.correlationId).to.be.not.null;
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -55,7 +55,7 @@ describe('Crawler get request', () => {
       expect(request.lock).to.be.undefined;
       expect(request.shouldSkip()).to.be.true;
       expect(request.nextRequestTime - Date.now()).to.be.approximately(2000, 4);
-      expect(request.loopName).to.be.equal('test');
+      expect(request.meta.correlationId).to.be.not.null;
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -94,8 +94,8 @@ describe('Crawler get request', () => {
     return crawler._getRequest(requestBox, { name: 'test' }).then(
       request => {
         expect(request.shouldRequeue()).to.be.true;
-        expect(request.outcome).to.be.equal('Error');
-        expect(request.message.message).to.be.equal('locker error');
+        expect(request.outcome).to.be.equal('Internal Error');
+        expect(request.message).to.be.equal('locker error');
       },
       error => assert.fail()
     );
@@ -175,7 +175,7 @@ describe('Crawler error handler', () => {
     const request = crawler._errorHandler(box, error);
     expect(request.shouldSkip()).to.be.true;
     expect(request.shouldRequeue()).to.be.true;
-    expect(request.outcome).to.be.equal('Error');
+    expect(request.outcome).to.be.equal('Processing Error');
     expect(request.message).to.be.equal(error);
   });
 
@@ -222,40 +222,39 @@ describe('Crawler log outcome', () => {
     expect(error.length).to.be.equal(0);
   });
 
-  it('should log errors', () => {
-    const info = [];
-    const error = [];
-    const logger = createBaseLog({
-      info: value => info.push(value),
-      error: value => error.push(value)
-    });
-    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    newRequest.markSkip('Error', 'message');
-    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
-    crawler._logOutcome(newRequest);
-    expect(error.length).to.be.equal(1);
-    expect(error[0] instanceof Error).to.be.true;
-    expect(error[0].message).to.be.equal('message');
-    expect(info.length).to.be.equal(0);
-  });
+  // it('should log errors', () => {
+  //   const info = [];
+  //   const error = [];
+  //   const logger = createBaseLog({
+  //     info: value => info.push(value),
+  //     error: value => error.push(value)
+  //   });
+  //   const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+  //   newRequest.markSkip('Error', 'message');
+  //   const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
+  //   crawler._logOutcome(newRequest);
+  //   expect(error.length).to.be.equal(1);
+  //   expect(error[0] instanceof Error).to.be.true;
+  //   expect(error[0].message).to.be.equal('message');
+  //   expect(info.length).to.be.equal(0);
+  // });
 
-
-  it('should log errors cases with Error objects', () => {
-    const info = [];
-    const error = [];
-    const logger = createBaseLog({
-      info: value => info.push(value),
-      error: value => error.push(value)
-    });
-    const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    newRequest.markSkip('Error', new Error('message'));
-    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
-    crawler._logOutcome(newRequest);
-    expect(error.length).to.be.equal(1);
-    expect(error[0] instanceof Error).to.be.true;
-    expect(error[0].message).to.be.equal('message');
-    expect(info.length).to.be.equal(0);
-  });
+  // it('should log errors cases with Error objects', () => {
+  //   const info = [];
+  //   const error = [];
+  //   const logger = createBaseLog({
+  //     info: value => info.push(value),
+  //     error: value => error.push(value)
+  //   });
+  //   const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
+  //   newRequest.markSkip('Error', new Error('message'));
+  //   const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
+  //   crawler._logOutcome(newRequest);
+  //   expect(error.length).to.be.equal(1);
+  //   expect(error[0] instanceof Error).to.be.true;
+  //   expect(error[0].message).to.be.equal('message');
+  //   expect(info.length).to.be.equal(0);
+  // });
 });
 
 describe('Crawler queue', () => {
