@@ -23,7 +23,7 @@ describe('QueueSet weighting', () => {
   });
 
   it('should create a default startMap if no weights given', () => {
-    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, { on: () => {}});
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, { _emitter: { on: () => { } } });
     expect(set.startMap.length).to.be.equal(1);
     expect(set.startMap[0]).to.be.equal(0);
   });
@@ -71,7 +71,7 @@ describe('QueueSet weighting', () => {
     });
   });
 
-    it('should pop from subsequent if previous queue is empty', () => {
+  it('should pop from subsequent if previous queue is empty', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(null); } });
     const normal = createBaseQueue('normal', { pop: () => { return Q(new Request('normal', 'http://test')); } });
     const queues = createBaseQueues([priority, normal], null, [1, 1]);
@@ -243,7 +243,7 @@ describe('QueueSet subscription management', () => {
 function createOptions(weights) {
   return {
     weights: weights,
-    on: () => { }
+    _emitter: { on: () => { } }
   };
 }
 
