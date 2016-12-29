@@ -1,5 +1,6 @@
-const assert = require('chai').assert;
-const chai = require('chai');
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 const expect = require('chai').expect;
 const GitHubProcessor = require('../lib/githubProcessor.js');
 const Q = require('q');
