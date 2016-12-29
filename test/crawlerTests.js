@@ -193,12 +193,14 @@ describe('Crawler log outcome', () => {
   it('should log the Processed case', () => {
     const info = [];
     const error = [];
-    const logger = createBaseLog({
+    const options = createBaseOptions();
+    options.crawler.logger = createBaseLog({
       info: value => info.push(value),
       error: value => error.push(value)
     });
+
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
-    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
+    const crawler = createBaseCrawler({ options: options });
     crawler._logOutcome(newRequest);
     expect(info.length).to.be.equal(1);
     expect(info[0].includes('Processed')).to.be.true;
@@ -208,13 +210,14 @@ describe('Crawler log outcome', () => {
   it('should log explicit outcomes', () => {
     const info = [];
     const error = [];
-    const logger = createBaseLog({
+    const options = createBaseOptions();
+    options.crawler.logger = createBaseLog({
       info: value => info.push(value),
       error: value => error.push(value)
     });
     const newRequest = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     newRequest.markSkip('test', 'message');
-    const crawler = createBaseCrawler({ options: { crawler: { logger: logger } } });
+    const crawler = createBaseCrawler({ options: options });
     crawler._logOutcome(newRequest);
     expect(info.length).to.be.equal(1);
     expect(info[0].includes('test')).to.be.true;
@@ -1069,10 +1072,8 @@ function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore
 }
 
 function createBaseOptions(logger = createBaseLog()) {
-  return {
+  const result = {
     queuing: {
-      logger: logger,
-      on: () => { },
       weights: [1],
       parallelPush: 10,
       attenuation: {
@@ -1083,30 +1084,28 @@ function createBaseOptions(logger = createBaseLog()) {
       }
     },
     storage: {
-      logger: logger,
-      on: () => { },
       ttl: 60000
     },
     locker: {
-      logger: logger,
-      on: () => { },
       retryCount: 3,
       retryDelay: 200
     },
     crawler: {
-      logger: logger,
-      on: () => { },
       processingTtl: 60 * 1000,
       promiseTrace: false,
       orgList: []
     },
     fetcher: {
-      logger: logger,
-      on: () => { },
       tokenLowerBound: 50,
       forbiddenDelay: 120000
     }
   };
+  for (let name in result) {
+    const subsystemOptions = result[name];
+    subsystemOptions._emitter = { on: () => { } };
+    subsystemOptions.logger = logger;
+  }
+  return result;
 }
 
 function createBaseQueues({ priority = null, normal = null, deadletter = null, options = null} = {}) {
