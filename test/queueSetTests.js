@@ -25,7 +25,7 @@ describe('QueueSet weighting', () => {
   });
 
   it('should create a default startMap if no weights given', () => {
-    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, { _emitter: { on: () => { } } });
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, { _config: { on: () => { } } });
     expect(set.startMap.length).to.be.equal(1);
     expect(set.startMap[0]).to.be.equal(0);
   });
@@ -245,7 +245,7 @@ describe('QueueSet subscription management', () => {
 function createOptions(weights) {
   return {
     weights: weights,
-    _emitter: { on: () => { } }
+    _config: { on: () => { } }
   };
 }
 
