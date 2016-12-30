@@ -1105,7 +1105,7 @@ function createBaseOptions(logger = createBaseLog()) {
   };
   for (let name in result) {
     const subsystemOptions = result[name];
-    subsystemOptions._emitter = { on: () => { } };
+    subsystemOptions._config = { on: () => { } };
     subsystemOptions.logger = logger;
   }
   return result;
