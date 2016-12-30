@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 const assert = require('chai').assert;
 const chai = require('chai');
 const Crawler = require('../lib/crawler');

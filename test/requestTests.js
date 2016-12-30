@@ -1,5 +1,7 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 const assert = require('chai').assert;
-const chai = require('chai');
 const expect = require('chai').expect;
 const Request = require('../lib/request.js');
 const sinon = require('sinon');
