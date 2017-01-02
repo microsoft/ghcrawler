@@ -273,7 +273,7 @@ describe('Crawler queue', () => {
     const request = new Request('repo', 'http://api.github.com/repo/microsoft/test');
     const crawler = createBaseCrawler({ queues: queues, options: options });
     crawler.queue(request);
-    expect(request.promises.length).to.be.equal(0);
+    expect(request.promises).to.be.undefined;
     queue = [].concat.apply([], queue);
     expect(queue.length).to.be.equal(0);
   });
