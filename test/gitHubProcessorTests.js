@@ -6,7 +6,11 @@ const GitHubProcessor = require('../lib/githubProcessor.js');
 const Q = require('q');
 const Request = require('../lib/request.js');
 const sinon = require('sinon');
+const testHelpers = require('./processorTestHelpers');
 const TraversalPolicy = require('../lib/traversalPolicy');
+
+const expectLinks = testHelpers.expectLinks;
+const expectQueued = testHelpers.expectQueued;
 
 describe('GitHubProcessor reprocessing', () => {
   it('will skip if at same version', () => {
@@ -14,10 +18,8 @@ describe('GitHubProcessor reprocessing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy.freshness = 'version';
     request.document = { _metadata: { version: processor.version } };
-    sinon.stub(processor, 'user', () => { });
-    processor.process(request);
-    expect(request.shouldSkip()).to.be.true;
-    expect(processor.user.callCount).to.be.equal(0);
+    const result = processor.canHandle(request);
+    expect(result).to.be.equal(false);
   });
 
   it('will skip and warn if at greater version', () => {
@@ -25,11 +27,8 @@ describe('GitHubProcessor reprocessing', () => {
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy.freshness = 'version';
     request.document = { _metadata: { version: processor.version + 1 } };
-    sinon.stub(processor, 'user', () => { });
-    processor.process(request);
-    expect(request.shouldSkip()).to.be.true;
-    expect(request.outcome).to.be.equal('Excluded');
-    expect(processor.user.callCount).to.be.equal(0);
+    const result = processor.canHandle(request);
+    expect(result).to.be.equal(false);
   });
 
   it('will process and update if at lesser version', () => {
@@ -39,7 +38,6 @@ describe('GitHubProcessor reprocessing', () => {
     request.document = { _metadata: { version: processor.version - 1 } };
     sinon.stub(processor, 'user', () => { return request.document; });
     const document = processor.process(request);
-    expect(request.shouldSkip()).to.be.false;
     expect(processor.user.callCount).to.be.equal(1);
     expect(document._metadata.version).to.be.equal(processor.version);
   });
@@ -1022,29 +1020,6 @@ describe('Event Finder', () => {
 });
 
 // =========================== HELPERS =========================
-
-function expectLinks(actual, expected) {
-  expect(Object.getOwnPropertyNames(actual).length).to.be.equal(Object.getOwnPropertyNames(expected).length);
-  Object.getOwnPropertyNames(actual).forEach(name => {
-    const expectedElement = expected[name];
-    const actualElement = actual[name];
-    expect(actualElement.type).to.be.equal(expectedElement.type);
-    if (expectedElement.hrefs) {
-      expect(actualElement.hrefs).to.be.deep.equal(expectedElement.hrefs);
-    } else if (expectedElement.href.endsWith('*')) {
-      expect(actualElement.href.startsWith(expectedElement.href.slice(0, -1))).to.be.true;
-    } else {
-      expect(actualElement.href).to.be.equal(expectedElement.href);
-    }
-  });
-}
-
-function expectQueued(actual, expected) {
-  expect(actual.length).to.be.equal(expected.length);
-  actual.forEach(element => {
-    expect(expected.some(r => r.type === element.type && r.url === element.url)).to.be.true;
-  })
-}
 
 function createEvent(type, payload) {
   return {

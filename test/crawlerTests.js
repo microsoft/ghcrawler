@@ -595,7 +595,7 @@ describe('Crawler process document', () => {
     originalRequest.document = doc;
     const crawler = createBaseCrawler();
     const processorBox = [];
-    crawler.processor.test = request => {
+    crawler.processors[0].test = request => {
       processorBox[0] = 42;
       request.document.cool = 'content';
       return request.document;
@@ -625,7 +625,7 @@ describe('Crawler process document', () => {
     const doc = { _metadata: {} };
     originalRequest.document = doc;
     const crawler = createBaseCrawler();
-    crawler.processor.test = request => { throw new Error('bummer'); };
+    crawler.processors[0].test = request => { throw new Error('bummer'); };
     return Q.try(() => {
       return crawler._processDocument(originalRequest)
     }).then(
@@ -777,7 +777,7 @@ describe('Crawler whole meal deal', () => {
         expect(fetch.callCount).to.be.equal(1);
         expect(fetch.getCall(0).args[0].url).to.be.equal('http://test.com/users/user1');
 
-        const process = crawler.processor.process;
+        const process = crawler.processors[0].process;
         expect(process.callCount).to.be.equal(1);
         expect(process.getCall(0).args[0].type).to.be.equal('user');
 
@@ -890,7 +890,7 @@ describe('Crawler whole meal deal', () => {
 
   it('should handle process document reject', () => {
     const crawler = createFullCrawler();
-    crawler.processor = { process: () => { throw new Error('bad processor') } };
+    crawler.processors[0] = { process: () => { throw new Error('bad processor') } };
     const priority = crawler.queues.queueTable['priority'];
     const normal = crawler.queues.queueTable['normal'];
     normal.requests = [new Request('user', 'http://test.com/users/user1')];
@@ -1032,7 +1032,7 @@ function createFullCrawler() {
   sinon.spy(processor, 'process');
 
   const result = createBaseCrawler({ queues: queues, fetcher: fetcher, store: store, locker: locker, options: options });
-  result.processor = processor;
+  result.processors[0] = processor;
 
   sinon.spy(result, '_errorHandler');
 
