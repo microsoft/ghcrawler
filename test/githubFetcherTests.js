@@ -132,10 +132,9 @@ describe('GitHub fetcher', () => {
     });
   });
 
-  it('should return cached content and headers for 304 with force', () => {
+  it('should return cached content and headers for 304', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -151,18 +150,6 @@ describe('GitHub fetcher', () => {
       expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
       expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
       expect(getArgs.url).to.be.equal(url);
-    });
-  });
-
-  it('should skip for 304 without force', () => {
-    const request = new Request('foo', 'http://test');
-    const responses = [createResponse(null, 304, 42)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q('test'); } });
-    const fetcher = createBaseFetcher({ requestor: requestor, store: store });
-    return fetcher.fetch(request).then(request => {
-      expect(request.document).to.be.undefined;
-      expect(request.shouldSkip()).to.be.true;
     });
   });
 

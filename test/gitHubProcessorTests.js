@@ -228,13 +228,15 @@ describe('Org processing', () => {
       user: { href: 'urn:user:9', type: 'resource' },
       repos: { href: 'urn:user:9:repos', type: 'collection' },
       members: { href: 'urn:org:9:org_members:pages:*', type: 'relation' },
+      teams: { href: 'urn:org:9:org_teams:pages:*', type: 'relation' }
     }
     expectLinks(document._metadata.links, links);
 
     const queued = [
       { type: 'user', url: 'http://users/9' },
       { type: 'repos', url: 'http://repos' },
-      { type: 'members', url: 'http://members' }
+      { type: 'members', url: 'http://members' },
+      { type: 'teams', url: 'http://orgs/9/teams' }
     ];
     expectQueued(queue, queued);
   });
