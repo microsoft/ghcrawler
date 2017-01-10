@@ -114,7 +114,7 @@ describe('GitHub fetcher', () => {
   it('should return cached content and not save and response for 304 with force', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
+    request.policy = TraversalPolicy.refresh();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -135,7 +135,7 @@ describe('GitHub fetcher', () => {
   it('should return cached content and headers for 304 with force', () => {
     const url = 'http://test';
     const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
+    request.policy = TraversalPolicy.refresh();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -158,11 +158,11 @@ describe('GitHub fetcher', () => {
     const request = new Request('foo', 'http://test');
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q('test'); } });
+    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ id: 13, _metadata: { fetchedAt: 3, version: 7 } }); } });
     const fetcher = createBaseFetcher({ requestor: requestor, store: store });
     return fetcher.fetch(request).then(request => {
-      expect(request.document).to.be.undefined;
-      expect(request.shouldSkip()).to.be.true;
+      expect(request.document.id).to.be.equal(13);
+      expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
     });
   });
 
@@ -229,7 +229,7 @@ describe('GitHub fetcher', () => {
 
   it('should throw for store get errors', () => {
     const request = new Request('repos', 'http://test');
-    request.policy = TraversalPolicy.update();
+    request.policy = TraversalPolicy.refresh();
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
