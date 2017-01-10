@@ -36,7 +36,7 @@ describe('File Processing', () => {
         }
       ]
     };
-    const processor = new FileProcessor(null, ['msmetadata.yaml']);
+    const processor = new FileProcessor(['msmetadata.yaml']);
     const document = processor.commit(request);
 
     const links = {
