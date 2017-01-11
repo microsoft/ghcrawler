@@ -12,105 +12,105 @@ describe('Request transitivity', () => {
   it('will queue contains relationship correctly for broad transitivity', () => {
     let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
+    const queue = sinon.spy(request.crawler, 'queue');
 
     request.relationship = 'contains';
     request.queue('contains', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('broad');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('broad');
 
     request.relationship = 'belongsTo';
     request.queue('contains', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(2);
-    expect(request.crawler.queue.getCall(1).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'isa';
     request.queue('contains', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(3);
-    expect(request.crawler.queue.getCall(2).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'reference';
     request.queue('contains', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(4);
-    expect(request.crawler.queue.getCall(3).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 
   it('will queue belongsTo relationship correctly for broad transitivity', () => {
     let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
+    const queue = sinon.spy(request.crawler, 'queue');
 
     request.relationship = 'contains';
     request.queue('belongsTo', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'belongsTo';
     request.queue('belongsTo', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(2);
-    expect(request.crawler.queue.getCall(1).args[0].policy.transitivity).to.be.equal('broad');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('broad');
 
     request.relationship = 'isa';
     request.queue('belongsTo', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(3);
-    expect(request.crawler.queue.getCall(2).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'reference';
     request.queue('belongsTo', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(4);
-    expect(request.crawler.queue.getCall(3).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 
   it('will queue isa relationship correctly for broad transitivity', () => {
     let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
+    const queue = sinon.spy(request.crawler, 'queue');
 
     request.relationship = 'contains';
     request.queue('isa', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'belongsTo';
     request.queue('isa', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(2);
-    expect(request.crawler.queue.getCall(1).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'isa';
     request.queue('isa', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(3);
-    expect(request.crawler.queue.getCall(2).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'reference';
     request.queue('isa', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(4);
-    expect(request.crawler.queue.getCall(3).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 
   it('will queue reference relationship correctly for broad transitivity', () => {
     let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
+    const queue = sinon.spy(request.crawler, 'queue');
 
     request.relationship = 'contains';
     request.queue('reference', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'belongsTo';
     request.queue('reference', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(2);
-    expect(request.crawler.queue.getCall(1).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'isa';
     request.queue('reference', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(3);
-    expect(request.crawler.queue.getCall(2).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
 
     request.relationship = 'reference';
     request.queue('reference', 'foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(4);
-    expect(request.crawler.queue.getCall(3).args[0].policy.transitivity).to.be.equal('only');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 });
 
