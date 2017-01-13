@@ -80,6 +80,7 @@ describe('Collection processing', () => {
 describe('URN building', () => {
   it('should create urn for team members', () => {
     const request = new Request('repo', 'http://test.com/foo');
+    request.policy = TraversalPolicy.refresh();
     request.document = { _metadata: { links: {} }, id: 42, owner: { url: 'http://test.com/test' }, teams_url: 'http://test.com/teams', issues_url: 'http://test.com/issues', commits_url: 'http://test.com/commits', collaborators_url: 'http://test.com/collaborators' };
     request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
     const queue = sinon.spy(request.crawler, 'queue');
@@ -108,7 +109,27 @@ describe('URN building', () => {
     expect(links.origin.type).to.be.equal('resource');
     expect(links.origin.href).to.be.equal('urn:repo:42');
 
-    expect(queue.callCount).to.be.equal(0);
+    expect(queue.callCount).to.be.equal(1);
+    const teamRequest = queue.getCall(0).args[0][0];
+    expect(teamRequest.type).to.be.equal('team');
+    expect(teamRequest.context.qualifier).to.be.equal('urn:');
+
+    queue.reset();
+    teamRequest.document = { _metadata: { links: {} }, id: 54, organization: { id: 87 }, members_url: "http://team1/members", repositories_url: "http://team1/repos" };
+    teamRequest.crawler = request.crawler;
+    processor.team(teamRequest);
+    const membersRequest = queue.getCall(1).args[0][0];
+    expect(membersRequest.url).to.be.equal('http://team1/members');
+    expect(membersRequest.context.qualifier).to.be.equal('urn:team:54');
+    expect(!!membersRequest.context.relation.guid).to.be.true;
+    delete membersRequest.context.relation.guid;
+    expect(membersRequest.context.relation).to.be.deep.equal({ qualifier: 'urn:team:54:team_members', origin: 'team', type: 'user' });
+    const reposRequest = queue.getCall(2).args[0][0];
+    expect(reposRequest.url).to.be.equal('http://team1/repos');
+    expect(reposRequest.context.qualifier).to.be.equal('urn:team:54');
+    expect(!!reposRequest.context.relation.guid).to.be.true;
+    delete reposRequest.context.relation.guid;
+    expect(reposRequest.context.relation).to.be.deep.equal({ qualifier: 'urn:team:54:repos', origin: 'team', type: 'repo' });
   });
 });
 
@@ -142,8 +163,8 @@ describe('Org processing', () => {
     const queued = [
       { type: 'user', url: 'http://users/9', relationship: 'reference', transitivity: 'only' },
       { type: 'repos', url: 'http://repos', relationship: 'contains', transitivity: 'broad' },
-      { type: 'members', url: 'http://members', relationship: 'reference', transitivity: 'only' },
-      { type: 'teams', url: 'http://orgs/9/teams', relationship: 'reference', transitivity: 'only' }
+      { type: 'members', url: 'http://members', relationship: 'contains', transitivity: 'broad' },
+      { type: 'teams', url: 'http://orgs/9/teams', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -221,10 +242,10 @@ describe('Repo processing', () => {
     const queued = [
       { type: 'user', url: 'http://user/45', relationship: 'reference', transitivity: 'only' },
       { type: 'org', url: 'http://org/24', relationship: 'belongsTo', transitivity: 'only' },
-      { type: 'teams', url: 'http://teams', relationship: 'reference', transitivity: 'only' },
-      { type: 'collaborators', url: 'http://collaborators', relationship: 'reference', transitivity: 'only' },
-      { type: 'contributors', url: 'http://contributors', relationship: 'reference', transitivity: 'only' },
-      { type: 'subscribers', url: 'http://subscribers', relationship: 'reference', transitivity: 'only' },
+      { type: 'teams', url: 'http://teams', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:teams', type: 'team' } },
+      { type: 'collaborators', url: 'http://collaborators', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:collaborators', type: 'user' } },
+      { type: 'contributors', url: 'http://contributors', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:contributors', type: 'user' } },
+      { type: 'subscribers', url: 'http://subscribers', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:subscribers', type: 'user' } },
       { type: 'issues', url: 'http://issues', relationship: 'contains', transitivity: 'broad' },
       { type: 'commits', url: 'http://commits', relationship: 'contains', transitivity: 'broad' },
       { type: 'events', url: 'http://events', relationship: 'contains', transitivity: 'broad' }
@@ -273,10 +294,13 @@ describe('Commit processing', () => {
       _metadata: { links: {} },
       sha: '6dcb09b5b5',
       url: 'http://repo/12/commits/6dcb09b5b5',
+      commit: { comment_count: 1 },
       comments_url: 'http://comments',
       author: { id: 7, url: 'http://user/7' },
       committer: { id: 15, url: 'http://user/15' }
     };
+    request.processMode = 'process';
+
     const processor = new GitHubProcessor();
     const document = processor.commit(request);
 
@@ -779,8 +803,8 @@ describe('Team processing', () => {
 
     const queued = [
       { type: 'org', url: 'http://orgs/9', relationship: 'belongsTo', transitivity: 'only' },
-      { type: 'repos', url: 'http://teams/66/repos', relationship: 'reference', transitivity: 'only' },
-      { type: 'members', url: 'http://teams/66/members', relationship: 'reference', transitivity: 'only' }
+      { type: 'repos', url: 'http://teams/66/repos', relationship: 'contains', transitivity: 'broad' },
+      { type: 'members', url: 'http://teams/66/members', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -951,11 +975,15 @@ function expectLinks(actual, expected) {
 function expectQueued(actual, expected) {
   expect(actual.length).to.be.equal(expected.length);
   actual.forEach(a => {
-    expect(expected.some(e =>
-      e.type === a.type
-      && e.url === a.url
-      && (!e.relationship || e.relationship === a.relationship)
-      && (!e.transitivity || e.transitivity === a.policy.transitivity))).to.be.true;
+    const ar = a.context.relation;
+    expect(expected.some(e => {
+      const er = e.context ? e.context.relation : null;
+      return e.type === a.type
+        && e.url === a.url
+        && (!e.relationship || e.relationship === a.relationship)
+        && (!e.transitivity || e.transitivity === a.policy.transitivity)
+        && (!er || (er.origin === ar.orgin && er.qualifier === ar.qualifier && er.type === ar.type));
+    })).to.be.true;
   })
 }
 
