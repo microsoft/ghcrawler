@@ -8,129 +8,109 @@ const sinon = require('sinon');
 const TraversalPolicy = require('../lib/traversalPolicy');
 
 describe('Request transitivity', () => {
-  it('will not queueRoot if documentOnly processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.processing = 'documentOnly';
+
+  it('will queue contains relationship correctly for broad transitivity', () => {
+    let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoot('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(0);
+    const queue = sinon.spy(request.crawler, 'queue');
+
+    request.relationship = 'contains';
+    request.queue('contains', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('broad');
+
+    request.relationship = 'belongsTo';
+    request.queue('contains', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'isa';
+    request.queue('contains', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'reference';
+    request.queue('contains', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 
-  it('will not queueRoots if documentOnly processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.processing = 'documentOnly';
+  it('will queue belongsTo relationship correctly for broad transitivity', () => {
+    let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoots('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(0);
+    const queue = sinon.spy(request.crawler, 'queue');
+
+    request.relationship = 'contains';
+    request.queue('belongsTo', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'belongsTo';
+    request.queue('belongsTo', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('broad');
+
+    request.relationship = 'isa';
+    request.queue('belongsTo', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'reference';
+    request.queue('belongsTo', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 
-  it('will not queueChild if documentOnly processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.processing = 'documentOnly';
+  it('will queue isa relationship correctly for broad transitivity', () => {
+    let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChild('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(0);
+    const queue = sinon.spy(request.crawler, 'queue');
+
+    request.relationship = 'contains';
+    request.queue('isa', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'belongsTo';
+    request.queue('isa', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'isa';
+    request.queue('isa', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
+
+    request.relationship = 'reference';
+    request.queue('isa', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 
-  it('will not queueChildren if documentOnly processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.processing = 'documentOnly';
+  it('will queue reference relationship correctly for broad transitivity', () => {
+    let request = new Request('user', 'http://test.com/users/user1');
     request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChildren('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(0);
-  });
+    const queue = sinon.spy(request.crawler, 'queue');
 
-  it('will queueRoot shallow if documentAndRelated processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoot('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('shallow');
-  });
+    request.relationship = 'contains';
+    request.queue('reference', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(1);
+    expect(queue.getCall(0).args[0][0].policy.transitivity).to.be.equal('only');
 
-  it('will not queueRoot if documentAndChildren processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.processing = 'documentAndChildren';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoot('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(0);
-  });
+    request.relationship = 'belongsTo';
+    request.queue('reference', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(1).args[0][0].policy.transitivity).to.be.equal('only');
 
-  it('will queueRoot shallow if deepShallow transitivity', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.transitivity = 'deepShallow';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoot('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('shallow');
-  });
+    request.relationship = 'isa';
+    request.queue('reference', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(3);
+    expect(queue.getCall(2).args[0][0].policy.transitivity).to.be.equal('only');
 
-  it('will queueRoot deepShallow if deepDeep transitivity', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.transitivity = 'deepDeep';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoot('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('deepShallow');
-  });
-
-  it('queueRoots will not change policy ', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy = TraversalPolicy.update();
-    request.document = { _metadata: { links: { self: { href: 'urn:pick:me' } } } };
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueRoots('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.policy).to.be.deep.equal(TraversalPolicy.update());
-  });
-
-  it('will not queueChild if documentOnly processing', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.processing = 'documentOnly';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChild('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(0);
-  });
-
-  it('will queueChild shallow if shallow transitivity', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.transitivity = 'shallow';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChild('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('shallow');
-  });
-
-  it('will queueChild deepShallow if deepShallow transitivity', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.transitivity = 'deepShallow';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChild('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('deepShallow');
-  });
-
-  it('will queueChild deepShallow if deepDeep transitivity', () => {
-    const request = new Request('user', 'http://test.com/users/user1');
-    request.policy.transitivity = 'deepDeep';
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    request.queueChild('foo', 'http://');
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    expect(request.crawler.queue.getCall(0).args[0].policy.transitivity).to.be.equal('deepShallow');
+    request.relationship = 'reference';
+    request.queue('reference', 'foo', 'http://');
+    expect(queue.callCount).to.be.equal(4);
+    expect(queue.getCall(3).args[0][0].policy.transitivity).to.be.equal('only');
   });
 });
 

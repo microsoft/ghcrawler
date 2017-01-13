@@ -13,6 +13,7 @@ describe('GitHubProcessor reprocessing', () => {
     const processor = new GitHubProcessor();
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy.freshness = 'version';
+    request.policy.transitivity = 'only';
     request.document = { _metadata: { version: processor.version } };
     sinon.stub(processor, 'user', () => { });
     processor.process(request);
@@ -24,6 +25,7 @@ describe('GitHubProcessor reprocessing', () => {
     const processor = new GitHubProcessor();
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy.freshness = 'version';
+    request.policy.transitivity = 'only';
     request.document = { _metadata: { version: processor.version + 1 } };
     sinon.stub(processor, 'user', () => { });
     processor.process(request);
@@ -46,129 +48,54 @@ describe('GitHubProcessor reprocessing', () => {
 });
 
 describe('Collection processing', () => {
-  it('should queue collection pages as deepShallow and elements as deepShallow', () => {
+  it('should queue collection pages as broad and elements as broad', () => {
     const request = new Request('issues', 'http://test.com/issues', { elementType: 'issue' });
-    request.policy.transitivity = 'deepShallow';
     request.response = {
       headers: { link: createLinkHeader(request.url, null, 2, 2) }
     };
     request.document = { _metadata: { links: {} }, elements: [{ type: 'issue', url: 'http://child1' }] };
-    request.crawler = { queue: () => { }, queues: { push: () => { } } };
-    sinon.spy(request.crawler, 'queue');
-    const push = sinon.spy(request.crawler.queues, 'push');
+    request.crawler = { queue: () => { } };
+    const queue = sinon.spy(request.crawler, 'queue');
     const processor = new GitHubProcessor();
 
     processor.process(request);
 
-    expect(request.crawler.queues.push.callCount).to.be.equal(1);
-    expect(push.getCall(0).args[1]).to.be.equal('soon');
-    const newPages = request.crawler.queues.push.getCall(0).args[0];
+    expect(queue.callCount).to.be.equal(2);
+    expect(queue.getCall(0).args[1]).to.be.equal('soon');
+    const newPages = queue.getCall(0).args[0];
     expect(newPages.length).to.be.equal(1);
-    expect(newPages[0].policy.transitivity).to.be.equal('deepShallow');
+    expect(newPages[0].policy.transitivity).to.be.equal('broad');
     expect(newPages[0].url).to.be.equal('http://test.com/issues?page=2&per_page=100');
     expect(newPages[0].type).to.be.equal('issues');
 
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.policy.transitivity).to.be.equal('deepShallow');
+    let newRequest = queue.getCall(1).args[0];
+    expect(newRequest.length).to.be.equal(1);
+    newRequest = newRequest[0];
+    expect(newRequest.policy.transitivity).to.be.equal('broad');
     expect(newRequest.url).to.be.equal('http://child1');
     expect(newRequest.type).to.be.equal('issue');
-  });
-
-  it('should queue deepShallow root collections as deepShallow and elements as shallow', () => {
-    const request = new Request('orgs', 'http://test.com/orgs', { elementType: 'org' });
-    request.policy.transitivity = 'deepShallow';
-    request.response = {
-      headers: { link: createLinkHeader(request.url, null, 2, 2) }
-    };
-    request.document = { _metadata: { links: {} }, elements: [{ type: 'org', url: 'http://child1' }] };
-    request.crawler = { queue: () => { }, queues: { push: () => { } } };
-    sinon.spy(request.crawler, 'queue');
-    const push = sinon.spy(request.crawler.queues, 'push');
-    const processor = new GitHubProcessor();
-
-    processor.process(request);
-
-    expect(push.callCount).to.be.equal(1);
-    expect(push.getCall(0).args[1]).to.be.equal('soon');
-
-    const newPages = push.getCall(0).args[0];
-    expect(newPages.length).to.be.equal(1);
-    expect(newPages[0].policy.transitivity).to.be.equal('deepShallow');
-    expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
-    expect(newPages[0].type).to.be.equal('orgs');
-
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.policy.transitivity).to.be.equal('shallow');
-    expect(newRequest.url).to.be.equal('http://child1');
-    expect(newRequest.type).to.be.equal('org');
-  });
-
-  it('should queue forceForce root collection pages as forceForce and elements as forceNormal', () => {
-    const request = new Request('orgs', 'http://test.com/orgs', { elementType: 'org' });
-    request.policy = TraversalPolicy.update();
-    request.response = {
-      headers: { link: createLinkHeader(request.url, null, 2, 2) }
-    };
-    request.document = { _metadata: { links: {} }, elements: [{ type: 'org', url: 'http://child1' }] };
-    request.crawler = { queue: () => { }, queues: { push: () => { } } };
-    sinon.spy(request.crawler, 'queue');
-    const push = sinon.spy(request.crawler.queues, 'push');
-    const processor = new GitHubProcessor();
-
-    processor.process(request);
-
-    expect(push.callCount).to.be.equal(1);
-    expect(push.getCall(0).args[1]).to.be.equal('soon');
-    const newPages = push.getCall(0).args[0];
-    expect(newPages.length).to.be.equal(1);
-    expect(newPages[0].policy.transitivity).to.be.equal('deepDeep');
-    expect(newPages[0].url).to.be.equal('http://test.com/orgs?page=2&per_page=100');
-    expect(newPages[0].type).to.be.equal('orgs');
-
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.policy.transitivity).to.be.equal('deepShallow');
-    expect(newRequest.url).to.be.equal('http://child1');
-    expect(newRequest.type).to.be.equal('org');
-  });
-
-  it('should queue forceForce page elements with forceNormal transitivity', () => {
-    const request = new Request('orgs', 'http://test.com/orgs?page=2&per_page=100', { elementType: 'org' });
-    request.policy = TraversalPolicy.update();
-    request.document = { _metadata: { links: {} }, elements: [{ url: 'http://child1' }] };
-    request.crawler = { queue: () => { } };
-    sinon.spy(request.crawler, 'queue');
-    const processor = new GitHubProcessor();
-
-    processor.page(2, request);
-    expect(request.crawler.queue.callCount).to.be.equal(1);
-    const newRequest = request.crawler.queue.getCall(0).args[0];
-    expect(newRequest.policy.transitivity).to.be.equal('deepShallow');
-    expect(newRequest.url).to.be.equal('http://child1');
-    expect(newRequest.type).to.be.equal('org');
   });
 });
 
 describe('URN building', () => {
   it('should create urn for team members', () => {
     const request = new Request('repo', 'http://test.com/foo');
+    request.policy = TraversalPolicy.refresh();
     request.document = { _metadata: { links: {} }, id: 42, owner: { url: 'http://test.com/test' }, teams_url: 'http://test.com/teams', issues_url: 'http://test.com/issues', commits_url: 'http://test.com/commits', collaborators_url: 'http://test.com/collaborators' };
     request.crawler = { queue: () => { }, queues: { pushPriority: () => { } } };
-    sinon.spy(request.crawler, 'queue');
-    sinon.spy(request.crawler.queues, 'pushPriority');
+    const queue = sinon.spy(request.crawler, 'queue');
+    // sinon.spy(request.crawler.queues, 'pushPriority');
     const processor = new GitHubProcessor();
 
     processor.repo(request);
-    expect(request.crawler.queue.callCount).to.be.at.least(4);
-    const teamsRequest = request.crawler.queue.getCall(1).args[0];
+    expect(queue.callCount).to.be.at.least(4);
+    const teamsRequest = queue.getCall(1).args[0][0];
     expect(teamsRequest.context.qualifier).to.be.equal('urn:repo:42');
     expect(!!teamsRequest.context.relation.guid).to.be.true;
     delete teamsRequest.context.relation.guid;
     expect(teamsRequest.context.relation).to.be.deep.equal({ origin: 'repo', qualifier: 'urn:repo:42:teams', type: 'team' });
 
-    request.crawler.queue.reset();
+    queue.reset();
     teamsRequest.type = 'teams';
     teamsRequest.document = { _metadata: { links: {} }, elements: [{ id: 13, url: 'http://team1' }] };
     teamsRequest.crawler = request.crawler;
@@ -182,21 +109,22 @@ describe('URN building', () => {
     expect(links.origin.type).to.be.equal('resource');
     expect(links.origin.href).to.be.equal('urn:repo:42');
 
-    const teamRequest = request.crawler.queue.getCall(0).args[0];
+    expect(queue.callCount).to.be.equal(1);
+    const teamRequest = queue.getCall(0).args[0][0];
     expect(teamRequest.type).to.be.equal('team');
     expect(teamRequest.context.qualifier).to.be.equal('urn:');
 
-    request.crawler.queue.reset();
+    queue.reset();
     teamRequest.document = { _metadata: { links: {} }, id: 54, organization: { id: 87 }, members_url: "http://team1/members", repositories_url: "http://team1/repos" };
     teamRequest.crawler = request.crawler;
     processor.team(teamRequest);
-    const membersRequest = request.crawler.queue.getCall(1).args[0];
+    const membersRequest = queue.getCall(1).args[0][0];
     expect(membersRequest.url).to.be.equal('http://team1/members');
     expect(membersRequest.context.qualifier).to.be.equal('urn:team:54');
     expect(!!membersRequest.context.relation.guid).to.be.true;
     delete membersRequest.context.relation.guid;
     expect(membersRequest.context.relation).to.be.deep.equal({ qualifier: 'urn:team:54:team_members', origin: 'team', type: 'user' });
-    const reposRequest = request.crawler.queue.getCall(2).args[0];
+    const reposRequest = queue.getCall(2).args[0][0];
     expect(reposRequest.url).to.be.equal('http://team1/repos');
     expect(reposRequest.context.qualifier).to.be.equal('urn:team:54');
     expect(!!reposRequest.context.relation.guid).to.be.true;
@@ -210,7 +138,7 @@ describe('Org processing', () => {
     const request = new Request('org', 'http://org/9');
     request.context = {};
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 9,
@@ -228,13 +156,15 @@ describe('Org processing', () => {
       user: { href: 'urn:user:9', type: 'resource' },
       repos: { href: 'urn:user:9:repos', type: 'collection' },
       members: { href: 'urn:org:9:org_members:pages:*', type: 'relation' },
+      teams: { href: 'urn:org:9:org_teams:pages:*', type: 'relation' }
     }
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://users/9' },
-      { type: 'repos', url: 'http://repos' },
-      { type: 'members', url: 'http://members' }
+      { type: 'user', url: 'http://users/9', relationship: 'reference', transitivity: 'only' },
+      { type: 'repos', url: 'http://repos', relationship: 'contains', transitivity: 'broad' },
+      { type: 'members', url: 'http://members', relationship: 'contains', transitivity: 'broad' },
+      { type: 'teams', url: 'http://orgs/9/teams', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -245,7 +175,7 @@ describe('User processing', () => {
     const request = new Request('user', 'http://user/9');
     request.context = {};
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 9,
@@ -263,7 +193,7 @@ describe('User processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'repos', url: 'http://repos' }
+      { type: 'repos', url: 'http://repos', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -274,7 +204,7 @@ describe('Repo processing', () => {
     const request = new Request('repo', 'http://foo/repo/12');
     request.context = {};
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 12,
@@ -310,15 +240,15 @@ describe('Repo processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/45' },
-      { type: 'org', url: 'http://org/24' },
-      { type: 'teams', url: 'http://teams' },
-      { type: 'collaborators', url: 'http://collaborators' },
-      { type: 'contributors', url: 'http://contributors' },
-      { type: 'subscribers', url: 'http://subscribers' },
-      { type: 'issues', url: 'http://issues' },
-      { type: 'commits', url: 'http://commits' },
-      { type: 'events', url: 'http://events' }
+      { type: 'user', url: 'http://user/45', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/24', relationship: 'belongsTo', transitivity: 'only' },
+      { type: 'teams', url: 'http://teams', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:teams', type: 'team' } },
+      { type: 'collaborators', url: 'http://collaborators', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:collaborators', type: 'user' } },
+      { type: 'contributors', url: 'http://contributors', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:contributors', type: 'user' } },
+      { type: 'subscribers', url: 'http://subscribers', relationship: 'contains', transitivity: 'broad', relation: { origin: 'repo', qualifier: 'urn:repo:12:subscribers', type: 'user' } },
+      { type: 'issues', url: 'http://issues', relationship: 'contains', transitivity: 'broad' },
+      { type: 'commits', url: 'http://commits', relationship: 'contains', transitivity: 'broad' },
+      { type: 'events', url: 'http://events', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -326,7 +256,7 @@ describe('Repo processing', () => {
   it('should link and queue CreateEvent', () => {
     const request = new Request('CreateEvent', 'http://foo');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       repository: { id: 4, url: 'http://repo/4' }
     }
@@ -346,9 +276,9 @@ describe('Repo processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -359,15 +289,18 @@ describe('Commit processing', () => {
     const request = new Request('commit', 'http://foo/commit');
     request.context = { qualifier: 'urn:repo:12' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       sha: '6dcb09b5b5',
       url: 'http://repo/12/commits/6dcb09b5b5',
+      commit: { comment_count: 1 },
       comments_url: 'http://comments',
       author: { id: 7, url: 'http://user/7' },
       committer: { id: 15, url: 'http://user/15' }
     };
+    request.processMode = 'process';
+
     const processor = new GitHubProcessor();
     const document = processor.commit(request);
 
@@ -382,10 +315,10 @@ describe('Commit processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' },
-      { type: 'user', url: 'http://user/15' },
-      { type: 'repo', url: 'http://repo/12' },
-      { type: 'commit_comments', url: 'http://comments' }
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' },
+      { type: 'user', url: 'http://user/15', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/12', relationship: 'belongsTo', transitivity: 'only' },
+      { type: 'commit_comments', url: 'http://comments', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -396,7 +329,7 @@ describe('Commit comment processing', () => {
     const request = new Request('commit_comment', 'http://repo/commit/comment');
     request.context = { qualifier: 'urn:repo:12:commit:a1b1' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 37,
@@ -414,7 +347,7 @@ describe('Commit comment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' },
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' },
     ];
     expectQueued(queue, queued);
   });
@@ -422,7 +355,7 @@ describe('Commit comment processing', () => {
   it('should link and queue CommitCommentEvent', () => {
     const request = new Request('CommitCommentEvent', 'http://foo/pull');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       comment: { id: 7, url: 'http://commit_comment/7', commit_id: 'a1b1' }
     }
@@ -443,11 +376,11 @@ describe('Commit comment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'commit_comment', url: 'http://commit_comment/7' },
-      { type: 'commit', url: 'http://repo/4/commits/a1b1' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'commit_comment', url: 'http://commit_comment/7', relationship: 'contains', transitivity: 'broad' },
+      { type: 'commit', url: 'http://repo/4/commits/a1b1', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -458,7 +391,7 @@ describe('Deployment processing', () => {
     const request = new Request('deployment', 'http://foo');
     request.context = { qualifier: 'urn:repo:12' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 3,
@@ -477,7 +410,7 @@ describe('Deployment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' }
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -488,7 +421,7 @@ describe('Pull Request processing', () => {
     const request = new Request('pull_request', 'http://foo/pull');
     request.context = { qualifier: 'urn:repo:12' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 13,
@@ -525,14 +458,14 @@ describe('Pull Request processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' },
-      { type: 'user', url: 'http://user/15' },
-      { type: 'user', url: 'http://user/1' },
-      { type: 'repo', url: 'http://repo/45' },
-      { type: 'repo', url: 'http://repo/17' },
-      { type: 'review_comments', url: 'http://review_comments' },
-      { type: 'commits', url: 'http://commits' },
-      { type: 'statuses', url: 'http://statuses/funkySHA' }
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' },
+      { type: 'user', url: 'http://user/15', relationship: 'reference', transitivity: 'only' },
+      { type: 'user', url: 'http://user/1', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/45', relationship: 'belongsTo', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/17', relationship: 'belongsTo', transitivity: 'only' },
+      { type: 'review_comments', url: 'http://review_comments', relationship: 'contains', transitivity: 'broad' },
+      { type: 'commits', url: 'http://commits', relationship: 'contains', transitivity: 'broad' },
+      { type: 'statuses', url: 'http://statuses/funkySHA', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -540,7 +473,7 @@ describe('Pull Request processing', () => {
   it('should link and queue PullRequestEvent', () => {
     const request = new Request('PullRequestEvent', 'http://foo/pull');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       pull_request: { id: 1, url: 'http://pull_request/1' }
     }
@@ -560,10 +493,10 @@ describe('Pull Request processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'pull_request', url: 'http://pull_request/1' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'pull_request', url: 'http://pull_request/1', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -571,7 +504,7 @@ describe('Pull Request processing', () => {
   it('should link and queue PullRequestReviewEvent', () => {
     const request = new Request('PullRequestReviewEvent', 'http://foo/pull');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       pull_request: { id: 1, url: 'http://pull_request/1' }
     }
@@ -591,10 +524,10 @@ describe('Pull Request processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'pull_request', url: 'http://pull_request/1' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'pull_request', url: 'http://pull_request/1', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -605,7 +538,7 @@ describe('Pull request/review comment processing', () => {
     const request = new Request('review_comment', 'http://repo/pull_request/comment');
     request.context = { qualifier: 'urn:repo:12:pull_request:27' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 37,
@@ -623,7 +556,7 @@ describe('Pull request/review comment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' },
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' },
     ];
     expectQueued(queue, queued);
   });
@@ -631,7 +564,7 @@ describe('Pull request/review comment processing', () => {
   it('should link and queue PullRequestReviewCommentEvent', () => {
     const request = new Request('PullRequestReviewCommentEvent', 'http://foo/pull');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       comment: { id: 7, url: 'http://review_comment/7' },
       pull_request: { id: 1, url: 'http://pull_request/1' }
@@ -653,11 +586,11 @@ describe('Pull request/review comment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'review_comment', url: 'http://review_comment/7' },
-      { type: 'pull_request', url: 'http://pull_request/1' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'review_comment', url: 'http://review_comment/7', relationship: 'contains', transitivity: 'broad' },
+      { type: 'pull_request', url: 'http://pull_request/1', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -668,7 +601,7 @@ describe('Issue processing', () => {
     const request = new Request('issue', 'http://repo/issue');
     request.context = { qualifier: 'urn:repo:12' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 27,
@@ -700,12 +633,12 @@ describe('Issue processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' },
-      { type: 'user', url: 'http://user/15' },
-      { type: 'user', url: 'http://user/1' },
-      { type: 'repo', url: 'http://repo/45' },
-      { type: 'issue_comments', url: 'http://issue/27/comments' },
-      { type: 'pull_request', url: 'http://pull_request/27' }
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' },
+      { type: 'user', url: 'http://user/15', relationship: 'reference', transitivity: 'only' },
+      { type: 'user', url: 'http://user/1', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/45', relationship: 'belongsTo', transitivity: 'only' },
+      { type: 'issue_comments', url: 'http://issue/27/comments', relationship: 'contains', transitivity: 'broad' },
+      { type: 'pull_request', url: 'http://pull_request/27', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -713,7 +646,7 @@ describe('Issue processing', () => {
   it('should link and queue IssuesEvent', () => {
     const request = new Request('IssuesEvent', 'http://foo/pull');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       assignee: { id: 2, url: 'http://user/2' },
       issue: { id: 1, url: 'http://issue/1' },
@@ -737,12 +670,12 @@ describe('Issue processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'user', url: 'http://user/2' },
-      { type: 'issue', url: 'http://issue/1' },
-      { type: 'label', url: 'http://label/8' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'user', url: 'http://user/2', relationship: 'reference', transitivity: 'only' },
+      { type: 'issue', url: 'http://issue/1', relationship: 'contains', transitivity: 'broad' },
+      { type: 'label', url: 'http://label/8', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -753,7 +686,7 @@ describe('Issue comment processing', () => {
     const request = new Request('issue_comment', 'http://repo/issue/comment');
     request.context = { qualifier: 'urn:repo:12:issue:27' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 37,
@@ -771,7 +704,7 @@ describe('Issue comment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/7' },
+      { type: 'user', url: 'http://user/7', relationship: 'reference', transitivity: 'only' },
     ];
     expectQueued(queue, queued);
   });
@@ -779,7 +712,7 @@ describe('Issue comment processing', () => {
   it('should link and queue IssueCommentEvent', () => {
     const request = new Request('IssueCommentEvent', 'http://foo/');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       comment: { id: 7, url: 'http://issue_comment/7' },
       issue: { id: 1, url: 'http://issue/1' }
@@ -801,11 +734,11 @@ describe('Issue comment processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'issue_comment', url: 'http://issue_comment/7' },
-      { type: 'issue', url: 'http://issue/1' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'issue_comment', url: 'http://issue_comment/7', relationship: 'contains', transitivity: 'broad' },
+      { type: 'issue', url: 'http://issue/1', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -815,7 +748,7 @@ describe('Status processing', () => {
   it('should link and queue StatusEvent', () => {
     const request = new Request('StatusEvent', 'http://foo/');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       sha: 'a1b2'
     }
@@ -835,9 +768,9 @@ describe('Status processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -848,7 +781,7 @@ describe('Team processing', () => {
     const request = new Request('team', 'http://team/66');
     request.context = { qualifier: 'urn' };
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
       _metadata: { links: {} },
       id: 66,
@@ -869,9 +802,9 @@ describe('Team processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'org', url: 'http://orgs/9' },
-      { type: 'repos', url: 'http://teams/66/repos' },
-      { type: 'members', url: 'http://teams/66/members' }
+      { type: 'org', url: 'http://orgs/9', relationship: 'belongsTo', transitivity: 'only' },
+      { type: 'repos', url: 'http://teams/66/repos', relationship: 'contains', transitivity: 'broad' },
+      { type: 'members', url: 'http://teams/66/members', relationship: 'contains', transitivity: 'broad' }
     ];
     expectQueued(queue, queued);
   });
@@ -879,7 +812,7 @@ describe('Team processing', () => {
   it('should link and queue TeamEvent', () => {
     const request = new Request('TeamEvent', 'http://foo/team');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       team: { id: 7, url: 'http://team/7' },
       organization: { id: 5, url: 'http://org/5' }
@@ -899,9 +832,9 @@ describe('Team processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'team', url: 'http://team/7' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'team', url: 'http://team/7', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -909,7 +842,7 @@ describe('Team processing', () => {
   it('should link and queue TeamEvent with repository', () => {
     const request = new Request('TeamEvent', 'http://foo/team');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       team: { id: 7, url: 'http://team/7' },
       organization: { id: 5, url: 'http://org/5' },
@@ -931,10 +864,10 @@ describe('Team processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'repo', url: 'http://repo/6' },
-      { type: 'team', url: 'http://team/7' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/6', relationship: 'reference', transitivity: 'only' },
+      { type: 'team', url: 'http://team/7', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -942,7 +875,7 @@ describe('Team processing', () => {
   it('should link and queue TeamAddEvent', () => {
     const request = new Request('TeamAddEvent', 'http://foo/team');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       team: { id: 7, url: 'http://team/7' },
       organization: { id: 5, url: 'http://org/5' },
@@ -964,10 +897,10 @@ describe('Team processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'org', url: 'http://org/5' },
-      { type: 'repo', url: 'http://repo/6' },
-      { type: 'team', url: 'http://team/7' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/6', relationship: 'reference', transitivity: 'only' },
+      { type: 'team', url: 'http://team/7', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -977,7 +910,7 @@ describe('Watch processing', () => {
   it('should link and queue WatchEvent', () => {
     const request = new Request('WatchEvent', 'http://foo/watch');
     const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push(request) }) };
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       repository: { id: 4, url: 'http://repo/4' }
     }
@@ -997,9 +930,9 @@ describe('Watch processing', () => {
     expectLinks(document._metadata.links, links);
 
     const queued = [
-      { type: 'user', url: 'http://user/3' },
-      { type: 'repo', url: 'http://repo/4' },
-      { type: 'org', url: 'http://org/5' }
+      { type: 'user', url: 'http://user/3', relationship: 'reference', transitivity: 'only' },
+      { type: 'repo', url: 'http://repo/4', relationship: 'reference', transitivity: 'only' },
+      { type: 'org', url: 'http://org/5', relationship: 'reference', transitivity: 'only' }
     ];
     expectQueued(queue, queued);
   });
@@ -1041,8 +974,16 @@ function expectLinks(actual, expected) {
 
 function expectQueued(actual, expected) {
   expect(actual.length).to.be.equal(expected.length);
-  actual.forEach(element => {
-    expect(expected.some(r => r.type === element.type && r.url === element.url)).to.be.true;
+  actual.forEach(a => {
+    const ar = a.context.relation;
+    expect(expected.some(e => {
+      const er = e.context ? e.context.relation : null;
+      return e.type === a.type
+        && e.url === a.url
+        && (!e.relationship || e.relationship === a.relationship)
+        && (!e.transitivity || e.transitivity === a.policy.transitivity)
+        && (!er || (er.origin === ar.orgin && er.qualifier === ar.qualifier && er.type === ar.type));
+    })).to.be.true;
   })
 }
 
