@@ -12,6 +12,7 @@ const QueueSet = require('../lib/queueSet');
 const Request = require('../lib/request');
 const sinon = require('sinon');
 const TraversalPolicy = require('../lib/traversalPolicy');
+const URL = require('url');
 
 describe('GitHub fetcher', () => {
 
@@ -29,7 +30,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should set proper types for collection requests', () => {
-    const url = 'http://test';
+    const url = 'http://test.com/foo';
     const request = new Request('repos', url);
     let etagArgs = null;
     let getArgs = null;
@@ -48,14 +49,18 @@ describe('GitHub fetcher', () => {
       expect(request.type).to.be.equal('repos');
       expect(etagArgs.type).to.be.equal('repos');
       expect(etagArgs.url).to.be.equal(url);
-      expect(getArgs.url).to.be.equal(url);
+      expect(getArgs.url).to.be.equal(`${url}?access_token=token`);
     });
   });
 
   it('should requeue and delay on 403 forbidden throttling', () => {
     const request = new Request('foo', 'http://test');
     const responses = [createResponse('test', 403, null, 0)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
+    const requestor = createBaseRequestor({
+      get: () => {
+        return Q(responses.shift());
+      }
+    });
     const store = createBaseStore({ etag: () => { return Q(null); } });
     const fetcher = createBaseFetcher({ requestor: requestor, store: store });
     return fetcher.fetch(request).then(request => {
@@ -63,7 +68,7 @@ describe('GitHub fetcher', () => {
       expect(request.shouldRequeue()).to.be.true;
       expect(request.nextRequestTime > Date.now()).to.be.true;
       expect(fetcher.tokenFactory.exhaust.callCount).to.be.equal(1);
-      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(Date.now() + 120000, 20);
+      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(Date.now() + 1200, 20);
     });
   });
 
@@ -112,9 +117,9 @@ describe('GitHub fetcher', () => {
   });
 
   it('should return cached content and not save and response for 304 with force', () => {
-    const url = 'http://test';
+    const url = 'http://test.com/foo';
     const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
+    request.policy = TraversalPolicy.refresh();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -128,14 +133,14 @@ describe('GitHub fetcher', () => {
       expect(request.shouldSkip()).to.be.false;
       expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
       expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
-      expect(getArgs.url).to.be.equal(url);
+      expect(getArgs.url).to.be.equal(`${url}?access_token=token`);
     });
   });
 
-  it('should return cached content and headers for 304 with force', () => {
-    const url = 'http://test';
+  it('should return cached content and headers for 304', () => {
+    const url = 'http://test.com/foo';
     const request = new Request('repos', url);
-    request.policy = TraversalPolicy.update();
+    request.policy = TraversalPolicy.refresh();
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -150,7 +155,7 @@ describe('GitHub fetcher', () => {
       expect(request.shouldSkip()).to.be.false;
       expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
       expect(getArgs.options.headers['If-None-Match']).to.be.equal(42);
-      expect(getArgs.url).to.be.equal(url);
+      expect(getArgs.url).to.be.equal(`${url}?access_token=token`);
     });
   });
 
@@ -158,11 +163,11 @@ describe('GitHub fetcher', () => {
     const request = new Request('foo', 'http://test');
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q('test'); } });
+    const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ id: 13, _metadata: { fetchedAt: 3, version: 7 } }); } });
     const fetcher = createBaseFetcher({ requestor: requestor, store: store });
     return fetcher.fetch(request).then(request => {
-      expect(request.document).to.be.undefined;
-      expect(request.shouldSkip()).to.be.true;
+      expect(request.document.id).to.be.equal(13);
+      expect(request.contentOrigin).to.be.equal('cacheOfOrigin');
     });
   });
 
@@ -229,7 +234,7 @@ describe('GitHub fetcher', () => {
 
   it('should throw for store get errors', () => {
     const request = new Request('repos', 'http://test');
-    request.policy = TraversalPolicy.update();
+    request.policy = TraversalPolicy.refresh();
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { throw new Error('test'); } });
@@ -288,7 +293,7 @@ function createBaseOptions(logger = createBaseLog()) {
       logger: logger,
       _config: { on: () => { } },
       tokenLowerBound: 50,
-      forbiddenDelay: 120000
+      forbiddenDelay: 1200
     }
   };
 }

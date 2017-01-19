@@ -26,7 +26,7 @@ describe('Crawler get request', () => {
       expect(request.type).to.be.equal('priority');
       expect(request._originQueue === priority).to.be.true;
       expect(request.lock).to.be.equal('locked');
-      expect(request.meta.correlationId).to.be.not.null;
+      expect(request.meta.cid).to.be.not.null;
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -42,7 +42,7 @@ describe('Crawler get request', () => {
       expect(request.type).to.be.equal('normal');
       expect(request._originQueue === normal).to.be.true;
       expect(request.lock).to.be.equal('locked');
-      expect(request.meta.correlationId).to.be.not.null;
+      expect(request.meta.cid).to.be.not.null;
       expect(request).to.be.equal(requestBox[0]);
     });
   });
@@ -58,7 +58,7 @@ describe('Crawler get request', () => {
       expect(request.lock).to.be.undefined;
       expect(request.shouldSkip()).to.be.true;
       expect(request.nextRequestTime - Date.now()).to.be.approximately(2000, 4);
-      expect(request.meta.correlationId).to.be.not.null;
+      expect(request.meta.cid).to.be.not.null;
       expect(request).to.be.equal(requestBox[0]);
     });
   });
