@@ -17,7 +17,7 @@ const URL = require('url');
 describe('GitHub fetcher', () => {
 
   it('should fetch one unseen document', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     const responses = [createResponse('test')];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
@@ -31,7 +31,7 @@ describe('GitHub fetcher', () => {
 
   it('should set proper types for collection requests', () => {
     const url = 'http://test.com/foo';
-    const request = new Request('repos', url);
+    const request = createRequest('repos', url);
     let etagArgs = null;
     let getArgs = null;
     const responses = [createResponse('test')];
@@ -54,7 +54,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should requeue and delay on 403 forbidden throttling', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     const responses = [createResponse('test', 403, null, 0)];
     const requestor = createBaseRequestor({
       get: () => {
@@ -73,8 +73,8 @@ describe('GitHub fetcher', () => {
   });
 
   it('should delay on backoff throttling', () => {
-    const request = new Request('foo', 'http://test');
-    const resetTime = Date.now() + 2000;
+    const request = createRequest('foo', 'http://test');
+    const resetTime = Math.floor(Date.now() / 1000) + 2;
     const responses = [createResponse('bar', 200, null, 30, resetTime)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
@@ -83,15 +83,14 @@ describe('GitHub fetcher', () => {
       expect(request.document).to.be.equal('bar');
       expect(request.shouldRequeue()).to.be.false;
       expect(request.shouldSkip()).to.be.false;
-      expect(request.nextRequestTime).to.be.equal(resetTime);
+      expect(request.nextRequestTime).to.be.equal(resetTime * 1000);
     });
   });
 
   it('should delay on Retry-After throttling', () => {
-    const request = new Request('foo', 'http://test');
-    const resetTime = Date.now() + 3000;
-    const headers = { 'Retry-After': 3 };
-    const responses = [createResponse('bar', 200, null, 30, resetTime, headers)];
+    const request = createRequest('foo', 'http://test');
+    const headers = { 'retry-after': 3 };
+    const responses = [createResponse('bar', 200, null, 300, 244123412, headers)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
     const fetcher = createBaseFetcher({ requestor: requestor, store: store });
@@ -100,12 +99,13 @@ describe('GitHub fetcher', () => {
       expect(request.shouldRequeue()).to.be.false;
       expect(request.shouldSkip()).to.be.false;
       // give at most 100ms for the test to run
+      const resetTime = Date.now() + 3000;
       expect(request.nextRequestTime).to.be.within(resetTime, resetTime + 100);
     });
   });
 
   it('should skip 409s', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     const responses = [createResponse('test', 409)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
@@ -118,8 +118,8 @@ describe('GitHub fetcher', () => {
 
   it('should return cached content and not save and response for 304 with force', () => {
     const url = 'http://test.com/foo';
-    const request = new Request('repos', url);
-    request.policy = TraversalPolicy.refresh();
+    const request = createRequest('repos', url);
+    request.policy = TraversalPolicy.refresh('self');
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -140,7 +140,7 @@ describe('GitHub fetcher', () => {
   it('should return cached content and headers for 304', () => {
     const url = 'http://test.com/foo';
     const request = new Request('repos', url);
-    request.policy = TraversalPolicy.refresh();
+    request.policy = TraversalPolicy.refresh('self');
     let getArgs = null;
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({
@@ -160,7 +160,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should skip for 304 without force', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(42); }, get: () => { return Q({ id: 13, _metadata: { fetchedAt: 3, version: 7 } }); } });
@@ -172,7 +172,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should get from origin with originOnly fetch policy', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     request.policy.fetch = 'originOnly';
     const responses = [createResponse('hey there')];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
@@ -184,7 +184,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should pull from storage only storageOnly fetch policy', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     request.policy.fetch = 'storageOnly';
     const store = createBaseStore({ get: () => { return Q({ _metadata: {}, id: 'test' }); } });
     const fetcher = createBaseFetcher({ store: store });
@@ -195,7 +195,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should throw for bad codes', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     const responses = [createResponse('test', 500)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
     const store = createBaseStore({ etag: () => { return Q(null); } });
@@ -208,7 +208,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should throw for store etag errors', () => {
-    const request = new Request('foo', 'http://test');
+    const request = createRequest('foo', 'http://test');
     const store = createBaseStore({ etag: () => { throw new Error('test'); } });
     const fetcher = createBaseFetcher({ store: store });
     return Q.try(() => {
@@ -220,7 +220,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should throw for requestor get errors', () => {
-    const request = new Request('repos', 'http://test');
+    const request = createRequest('repos', 'http://test');
     const requestor = createBaseRequestor({ get: () => { throw new Error('test'); } });
     const store = createBaseStore({ etag: () => { return Q(42); } });
     const fetcher = createBaseFetcher({ requestor: requestor, store: store });
@@ -233,7 +233,7 @@ describe('GitHub fetcher', () => {
   });
 
   it('should throw for store get errors', () => {
-    const request = new Request('repos', 'http://test');
+    const request = createRequest('repos', 'http://test');
     request.policy = TraversalPolicy.refresh();
     const responses = [createResponse(null, 304, 42)];
     const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
@@ -248,6 +248,11 @@ describe('GitHub fetcher', () => {
   });
 });
 
+function createRequest(type, url) {
+  const result = new Request(type, url);
+  result.policy = TraversalPolicy.default('self');
+  return result;
+}
 
 function createResponse(body, code = 200, etag = null, remaining = 4000, reset = 0, headers = {}) {
   return {
@@ -269,8 +274,8 @@ function createBaseStore({etag = null, upsert = null, get = null} = {}) {
   return result;
 }
 
-function createBaseFetcher({ requestor = createBaseRequestor(), store = createBaseStore(), tokenFactory = createBaseTokenFactory(), options = createBaseOptions() } = {}) {
-  return new GitHubFetcher(requestor, store, tokenFactory, options.fetcher);
+function createBaseFetcher({ requestor = createBaseRequestor(), store = createBaseStore(), tokenFactory = createBaseTokenFactory(), limiter = createBaseLimiter(), options = createBaseOptions() } = {}) {
+  return new GitHubFetcher(requestor, store, tokenFactory, limiter, options.fetcher);
 }
 
 function createBaseRequestor({ get = null, getAll = null } = {}) {
@@ -285,6 +290,14 @@ function createBaseTokenFactory() {
     getToken: () => { return 'token'; },
     exhaust: sinon.spy(() => { })
   };
+}
+
+function createBaseLimiter() {
+  return {
+    run: (key, operation) => {
+      return operation();
+    }
+  }
 }
 
 function createBaseOptions(logger = createBaseLog()) {
