@@ -178,7 +178,7 @@ describe('Crawler error handler', () => {
     const request = crawler._errorHandler(box, error);
     expect(request.shouldSkip()).to.be.true;
     expect(request.shouldRequeue()).to.be.true;
-    expect(request.outcome).to.be.equal('Processing Error');
+    expect(request.outcome).to.be.equal('Error');
     expect(request.message).to.be.equal(error);
   });
 
@@ -350,6 +350,7 @@ describe('Crawler requeue', () => {
     request.markRequeue();
     request._retryQueue = 'normal';
     const crawler = createBaseCrawler({ queues: queues });
+    request.crawler = crawler;
     return crawler._requeue(request).then(() => {
       queue = [].concat.apply([], queue);
       expect(queue.length).to.be.equal(0);
@@ -590,13 +591,14 @@ describe('Crawler process document', () => {
   });
 
   it('should invoke a handler', () => {
-    const originalRequest = new Request('test', 'http://test.com');
+    const originalRequest = new Request('user', 'http://test.com');
+    originalRequest.policy = TraversalPolicy.always('user');
     const doc = { _metadata: {} };
     originalRequest.document = doc;
     const crawler = createBaseCrawler();
     const processorBox = [];
-    crawler.processor.test = request => {
-      processorBox[0] = 42;
+    crawler.processor.user = request => {
+      processorBox.push(42);
       request.document.cool = 'content';
       return request.document;
     };
@@ -621,11 +623,13 @@ describe('Crawler process document', () => {
   });
 
   it('should throw if the handler throws', () => {
-    const originalRequest = new Request('test', 'http://test.com');
+    const originalRequest = new Request('user', 'http://test.com');
+    originalRequest.policy = TraversalPolicy.reload('user');
+    originalRequest.policy.freshness = 'always';
     const doc = { _metadata: {} };
     originalRequest.document = doc;
     const crawler = createBaseCrawler();
-    crawler.processor.test = request => { throw new Error('bummer'); };
+    crawler.processor.user = request => { throw new Error('bummer'); };
     return Q.try(() => {
       return crawler._processDocument(originalRequest)
     }).then(
@@ -762,7 +766,9 @@ describe('Crawler whole meal deal', () => {
     const normal = crawler.queues.queueTable['normal'];
     const priority = crawler.queues.queueTable['priority'];
 
-    normal.requests = [new Request('user', 'http://test.com/users/user1')];
+    const request = new Request('user', 'http://test.com/users/user1');
+    request.policy = TraversalPolicy.reload('user');
+    normal.requests = [request];
     crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
@@ -936,7 +942,9 @@ describe('Crawler whole meal deal', () => {
     const crawler = createFullCrawler();
     crawler.store = { upsert: () => { throw new Error('bad upsert') } };
     const normal = crawler.queues.queueTable['normal'];
-    normal.requests = [new Request('user', 'http://test.com/users/user1')];
+    const request = new Request('user', 'http://test.com/users/user1');
+    request.policy = TraversalPolicy.reload('user');
+    normal.requests = [request];
     crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
 
     return Q.try(() => {
@@ -1133,8 +1141,9 @@ function createBaseStore({etag = null, upsert = null, get = null} = {}) {
   return result;
 }
 
-function createBaseLog({info = null, warn = null, error = null, verbose = null, silly = null} = {}) {
+function createBaseLog({log = null, info = null, warn = null, error = null, verbose = null, silly = null} = {}) {
   const result = {};
+  result.log = log || (() => { });
   result.info = info || (() => { });
   result.warn = warn || (() => { });
   result.error = error || (() => { });
