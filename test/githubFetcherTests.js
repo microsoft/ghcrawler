@@ -55,7 +55,7 @@ describe('GitHub fetcher', () => {
 
   it('should requeue and delay on 403 forbidden throttling', () => {
     const request = createRequest('foo', 'http://test');
-    const responses = [createResponse('test', 403, null, 0)];
+    const responses = [createResponse('test', 403, null, 0, 0, { 'retry-after': 60 })];
     const requestor = createBaseRequestor({
       get: () => {
         return Q(responses.shift());
@@ -66,9 +66,9 @@ describe('GitHub fetcher', () => {
     return fetcher.fetch(request).then(request => {
       expect(request.document).to.be.undefined;
       expect(request.shouldRequeue()).to.be.true;
-      expect(request.nextRequestTime > Date.now()).to.be.true;
+      expect(request.meta.secondaryDelay > Date.now()).to.be.true;
       expect(fetcher.tokenFactory.exhaust.callCount).to.be.equal(1);
-      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(Date.now() + 1200, 20);
+      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(Date.now() + 60000, 20);
     });
   });
 
@@ -83,24 +83,8 @@ describe('GitHub fetcher', () => {
       expect(request.document).to.be.equal('bar');
       expect(request.shouldRequeue()).to.be.false;
       expect(request.shouldSkip()).to.be.false;
-      expect(request.nextRequestTime).to.be.equal(resetTime * 1000);
-    });
-  });
-
-  it('should delay on Retry-After throttling', () => {
-    const request = createRequest('foo', 'http://test');
-    const headers = { 'retry-after': 3 };
-    const responses = [createResponse('bar', 200, null, 300, 244123412, headers)];
-    const requestor = createBaseRequestor({ get: () => { return Q(responses.shift()); } });
-    const store = createBaseStore({ etag: () => { return Q(null); } });
-    const fetcher = createBaseFetcher({ requestor: requestor, store: store });
-    return fetcher.fetch(request).then(request => {
-      expect(request.document).to.be.equal('bar');
-      expect(request.shouldRequeue()).to.be.false;
-      expect(request.shouldSkip()).to.be.false;
-      // give at most 100ms for the test to run
-      const resetTime = Date.now() + 3000;
-      expect(request.nextRequestTime).to.be.within(resetTime, resetTime + 100);
+      expect(fetcher.tokenFactory.exhaust.callCount).to.be.equal(1);
+      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(resetTime * 1000, 20);
     });
   });
 
@@ -287,16 +271,17 @@ function createBaseRequestor({ get = null, getAll = null } = {}) {
 
 function createBaseTokenFactory() {
   return {
-    getToken: () => { return 'token'; },
-    exhaust: sinon.spy(() => { })
+    getToken: () => { return Q('token'); },
+    exhaust: sinon.spy((token, until) => {
+      return until;
+    })
   };
 }
 
 function createBaseLimiter() {
   return {
-    run: (key, operation) => {
-      return operation();
-    }
+    allocate: (key, amount, exhaust) => { return Q({ remaining: 4 }) },
+    consume: (key, amount, preallocate, exhaust) => { return Q({ remaining: 4 }) }
   }
 }
 
