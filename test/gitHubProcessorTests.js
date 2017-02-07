@@ -458,7 +458,7 @@ describe('Pull Request processing', () => {
       repo: { href: 'urn:repo:17', type: 'resource' },
       reviews: { href: 'urn:repo:12:pull_request:13:reviews', type: 'collection' },
       review_comments: { href: 'urn:repo:12:pull_request:13:review_comments', type: 'collection' },
-      pull_request_commits: { href: 'urn:repo:12:pull_request:13:pull_request_commits', type: 'collection' },
+      commits: { href: 'urn:repo:12:pull_request:13:commits:pages:*', type: 'relation' },
       statuses: { href: 'urn:repo:12:commit:funkySHA:statuses', type: 'collection' },
       issue: { href: 'urn:repo:12:issue:13', type: 'resource' },
       issue_comments: { href: 'urn:repo:12:issue:13:issue_comments', type: 'collection' }
@@ -474,7 +474,7 @@ describe('Pull Request processing', () => {
       { type: 'reviews', url: 'http://pull_request/13/reviews', qualifier: 'urn:repo:12:pull_request:13', path: '/reviews' },
       { type: 'review_comments', url: 'http://review_comments', qualifier: 'urn:repo:12:pull_request:13', path: '/review_comments' },
       { type: 'statuses', url: 'http://statuses/funkySHA', qualifier: 'urn:repo:12:pull_request:13', path: '/statuses' },
-      { type: 'pull_request_commits', url: 'http://commits', qualifier: 'urn:repo:12:pull_request:13', path: '/pull_request_commits' }
+      { type: 'commits', url: 'http://commits', qualifier: 'urn:repo:12:pull_request:13', path: '/commits' }
     ];
     expectQueued(queue, expected);
   });
