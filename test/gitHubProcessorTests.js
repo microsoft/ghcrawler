@@ -570,18 +570,11 @@ describe('Pull request/review comment processing', () => {
     expectQueued(queue, expected);
   });
 
-  it('should link and queue PullRequestReviewCommentEvent', () => {
-    const request = createRequest('PullRequestReviewCommentEvent', 'http://foo/pull');
+  function testPullRequestReviewCommentEvent(request, method) {
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
-    const payload = {
-      comment: { id: 7, url: 'http://review_comment/7' },
-      pull_request: { id: 1, url: 'http://pull_request/1' }
-    }
-    request.document = createEvent('PullRequestReviewCommentEvent', payload);
-
     const processor = new GitHubProcessor();
-    const document = processor.PullRequestReviewCommentEvent(request);
+    const document = processor[method](request);
 
     const links = {
       self: { href: 'urn:repo:4:PullRequestReviewCommentEvent:12345', type: 'resource' },
@@ -602,6 +595,35 @@ describe('Pull request/review comment processing', () => {
       { type: 'pull_request', url: 'http://pull_request/1', qualifier: 'urn:repo:4', path: '/pull_request' }
     ];
     expectQueued(queue, expected);
+  }
+
+  it('should link and queue PullRequestReviewCommentEvent', () => {
+    const request = createRequest('PullRequestReviewCommentEvent', 'http://foo/pull');
+    const payload = {
+      comment: { id: 7, url: 'http://review_comment/7' },
+      pull_request: { id: 1, url: 'http://pull_request/1' }
+    }
+    request.document = createEvent('PullRequestReviewCommentEvent', payload);
+    testPullRequestReviewCommentEvent(request, 'PullRequestReviewCommentEvent');
+  });
+
+  it('should link and queue LegacyPullRequestReviewCommentEvent', () => {
+    const request = createRequest('PullRequestReviewCommentEvent', 'http://foo/pull');
+    const payload = {
+      comment: { id: 7, url: 'http://review_comment/7', pull_request_url: 'http://pull_request/1' }
+    }
+    request.document = createEvent('PullRequestReviewCommentEvent', payload);
+
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    const processor = new GitHubProcessor();
+    const document = processor.PullRequestReviewCommentEvent(request);
+
+    // test that the new request got queued and that the doc has the right stuff
+
+    const newRequest = queue.pop();
+    newRequest.document = {id: 1, url: 'http://pull_request/1'}
+    testPullRequestReviewCommentEvent(newRequest, 'LegacyPullRequestReviewCommentEvent');
   });
 });
 
