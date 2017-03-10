@@ -1,0 +1,56 @@
+mongo:
+  image: mongo:latest
+  ports:
+    - "27017:27017"
+    - "28017:28017"
+redis:
+  image: redis:latest
+  ports:
+    - "6379:6379"
+rabbitmq:
+  image: rabbitmq:management
+  ports:
+    - "5672:5672"
+    - "15672:15672"
+metabase:
+  image: metabase/metabase:latest
+  ports:
+    - "5000:3000"
+  links:
+    - mongo
+dashboard:
+  build: ../../crawler-dashboard
+  ports:
+    - "4000:4000"
+  environment:
+    - NODE_ENV=localhost
+    - DEBUG_ALLOW_HTTP=1
+    - CRAWLER_REDIS_URL=redis
+    - CRAWLER_NAME=crawlerdocker
+  links:
+    - redis
+crawler:
+  build: ..
+  command: node --debug=5858 ./bin/www.js
+  links:
+     - mongo
+     - redis
+     - rabbitmq
+     - dashboard
+  ports:
+    - "3000:3000"
+    - "5858:5858"
+  volumes:
+    - ../..:/opt
+  environment:
+    - NODE_ENV=localhost
+    - CRAWLER_NAME=crawlerdocker
+    - CRAWLER_QUEUE_PREFIX=crawlerdocker
+    - CRAWLER_MODE=StandardWithoutEvents
+    - CRAWLER_REDIS_URL=redis
+    - CRAWLER_STORE_PROVIDER=mongo
+    - CRAWLER_MONGO_URL=mongodb://mongo:27017/ghcrawler
+    - CRAWLER_QUEUE_PROVIDER=amqp
+    - CRAWLER_AMQP_URL=amqp://rabbitmq:5672
+    - CRAWLER_GITHUB_TOKENS=${CRAWLER_GITHUB_TOKENS}
+    - CRAWLER_OPTIONS_PROVIDER=redis

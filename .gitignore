@@ -2,3 +2,5 @@ node_modules/
 typings/
 npm-debug.log
 coverage/
+.DS_Store
+nohup*

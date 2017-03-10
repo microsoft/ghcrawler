@@ -3,9 +3,9 @@
 
 const assert = require('chai').assert;
 const expect = require('chai').expect;
-const Request = require('../lib/request.js');
+const Request = require('../../lib/request.js');
 const Q = require('q');
-const QueueSet = require('../lib/queueSet.js');
+const QueueSet = require('../../providers/queuing/queueSet.js');
 const sinon = require('sinon');
 
 describe('QueueSet construction', () => {
@@ -253,7 +253,7 @@ function createBaseQueues(queues, deadletter, weights = [1]) {
   return new QueueSet(queues, deadletter || createBaseQueue('deadletter'), createOptions(weights));
 }
 
-function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null, subscribe = null, unsubscribe = null} = {}) {
+function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null, subscribe = null, unsubscribe = null } = {}) {
   const result = { name: name };
   result.getName = () => { return name; };
   result.pop = pop || (() => assert.fail('should not pop'));
