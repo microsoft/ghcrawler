@@ -3,16 +3,16 @@
 
 const assert = require('chai').assert;
 const chai = require('chai');
-const Crawler = require('../lib/crawler');
+const Crawler = require('../../lib/crawler');
 const expect = require('chai').expect;
 const extend = require('extend');
-const GitHubFetcher = require('../lib/githubFetcher');
-const GitHubProcessor = require('../lib/githubProcessor');
+const GitHubFetcher = require('../../providers/fetcher/githubFetcher');
+const GitHubProcessor = require('../../providers/fetcher/githubProcessor');
 const Q = require('q');
-const QueueSet = require('../lib/queueSet');
-const Request = require('../lib/request');
+const QueueSet = require('../../providers/queuing/queueSet');
+const Request = require('../../lib/request');
 const sinon = require('sinon');
-const TraversalPolicy = require('../lib/traversalPolicy');
+const TraversalPolicy = require('../../lib/traversalPolicy');
 
 describe('Crawler get request', () => {
   it('should get from the priority queue first', () => {
@@ -1074,7 +1074,7 @@ function createErrorResponse(error) {
   };
 }
 
-function createBaseCrawler({queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker(), requestor = createBaseRequestor(), fetcher = null, options = createBaseOptions() } = {}) {
+function createBaseCrawler({ queues = createBaseQueues(), store = createBaseStore(), locker = createBaseLocker(), requestor = createBaseRequestor(), fetcher = null, options = createBaseOptions() } = {}) {
   if (!fetcher) {
     fetcher = createBaseFetcher();
   }
@@ -1119,11 +1119,11 @@ function createBaseOptions(logger = createBaseLog()) {
   return result;
 }
 
-function createBaseQueues({ priority = null, normal = null, deadletter = null, options = null} = {}) {
+function createBaseQueues({ priority = null, normal = null, deadletter = null, options = null } = {}) {
   return new QueueSet([priority || createBaseQueue('priority'), normal || createBaseQueue('normal')], deadletter || createBaseQueue('deadletter'), (options || createBaseOptions()).queuing);
 }
 
-function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null} = {}) {
+function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null } = {}) {
   const result = { name: name };
   result.getName = () => { return name; };
   result.pop = pop || (() => assert.fail('should not pop'));
@@ -1133,7 +1133,7 @@ function createBaseQueue(name, { pop = null, push = null, done = null, abandon =
   return result;
 }
 
-function createBaseStore({etag = null, upsert = null, get = null} = {}) {
+function createBaseStore({ etag = null, upsert = null, get = null } = {}) {
   const result = {};
   result.etag = etag || (() => { assert.fail('should not etag'); });
   result.upsert = upsert || (() => { assert.fail('should not upsert'); });
@@ -1141,7 +1141,7 @@ function createBaseStore({etag = null, upsert = null, get = null} = {}) {
   return result;
 }
 
-function createBaseLog({log = null, info = null, warn = null, error = null, verbose = null, silly = null} = {}) {
+function createBaseLog({ log = null, info = null, warn = null, error = null, verbose = null, silly = null } = {}) {
   const result = {};
   result.log = log || (() => { });
   result.info = info || (() => { });
@@ -1153,7 +1153,7 @@ function createBaseLog({log = null, info = null, warn = null, error = null, verb
   return result;
 }
 
-function createBaseLocker({lock = null, unlock = null} = {}) {
+function createBaseLocker({ lock = null, unlock = null } = {}) {
   const result = {};
   result.lock = lock || (() => assert.fail('should not lock'));
   result.unlock = unlock || (() => assert.fail('should not unlock'));

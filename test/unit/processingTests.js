@@ -4,7 +4,7 @@
 const expect = require('chai').expect;
 const CrawlerFactory = require('../../lib/crawlerFactory');
 const Q = require('q');
-const Request = require('ghcrawler').request;
+const Request = require('../../index').request;
 const sinon = require('sinon');
 
 let crawler = null;

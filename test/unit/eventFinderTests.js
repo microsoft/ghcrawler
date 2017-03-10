@@ -3,7 +3,7 @@
 
 const expect = require('chai').expect;
 const extend = require('extend');
-const finder = require('../lib/eventFinder.js');
+const finder = require('../../lib/eventFinder.js');
 const Q = require('q');
 
 describe('Event Finder', () => {

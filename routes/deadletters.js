@@ -4,7 +4,7 @@
 const auth = require('../middleware/auth');
 const express = require('express');
 const expressJoi = require('express-joi');
-const Request = require('ghcrawler').request;
+const Request = require('../index').request;
 const wrap = require('../middleware/promiseWrap');
 
 let crawlerService = null;

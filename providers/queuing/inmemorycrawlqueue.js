@@ -3,7 +3,7 @@
 
 const extend = require('extend');
 const Q = require('q');
-const Request = require('ghcrawler').request;
+const Request = require('../../index').request;
 
 class InMemoryCrawlQueue {
   constructor(name, options) {

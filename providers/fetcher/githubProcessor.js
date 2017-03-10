@@ -3,10 +3,10 @@
 
 const moment = require('moment');
 const parse = require('parse-link-header');
-const Request = require('./request');
+const Request = require('../../lib/request');
 const Q = require('q');
 const qlimit = require('qlimit');
-const TraversalPolicy = require('./traversalPolicy');
+const TraversalPolicy = require('../../lib/traversalPolicy');
 const URL = require('url');
 const uuid = require('node-uuid');
 

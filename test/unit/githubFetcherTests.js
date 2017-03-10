@@ -3,15 +3,15 @@
 
 const assert = require('chai').assert;
 const chai = require('chai');
-const Crawler = require('../lib/crawler');
+const Crawler = require('../../lib/crawler');
 const expect = require('chai').expect;
 const extend = require('extend');
-const GitHubFetcher = require('../lib/githubFetcher');
+const GitHubFetcher = require('../../providers/fetcher/githubFetcher');
 const Q = require('q');
-const QueueSet = require('../lib/queueSet');
-const Request = require('../lib/request');
+const QueueSet = require('../../providers/queuing/queueSet');
+const Request = require('../../lib/request');
 const sinon = require('sinon');
-const TraversalPolicy = require('../lib/traversalPolicy');
+const TraversalPolicy = require('../../lib/traversalPolicy');
 const URL = require('url');
 
 describe('GitHub fetcher', () => {
@@ -250,7 +250,7 @@ function createResponse(body, code = 200, etag = null, remaining = 4000, reset =
   };
 }
 
-function createBaseStore({etag = null, upsert = null, get = null} = {}) {
+function createBaseStore({ etag = null, upsert = null, get = null } = {}) {
   const result = {};
   result.etag = etag || (() => { assert.fail('should not etag'); });
   result.upsert = upsert || (() => { assert.fail('should not upsert'); });
@@ -296,7 +296,7 @@ function createBaseOptions(logger = createBaseLog()) {
   };
 }
 
-function createBaseLog({info = null, warn = null, error = null, verbose = null, silly = null} = {}) {
+function createBaseLog({ info = null, warn = null, error = null, verbose = null, silly = null } = {}) {
   const result = {};
   result.info = info || (() => { });
   result.warn = warn || (() => { });

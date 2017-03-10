@@ -4,8 +4,8 @@
 const auth = require('../middleware/auth');
 const express = require('express');
 const expressJoi = require('express-joi');
-const Request = require('ghcrawler').request;
-const TraversalPolicy = require('ghcrawler').traversalPolicy;
+const Request = require('../index').request;
+const TraversalPolicy = require('../index').traversalPolicy;
 const wrap = require('../middleware/promiseWrap');
 
 const requestsSchema = {

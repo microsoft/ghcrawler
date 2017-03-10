@@ -4,7 +4,7 @@
 const crypto = require('crypto');
 const express = require('express');
 const moment = require('moment');
-const Request = require('ghcrawler').request;
+const Request = require('../index').request;
 const wrap = require('../middleware/promiseWrap');
 
 let crawlerService = null;
@@ -15,7 +15,7 @@ router.post('/', wrap(function* (request, response, next) {
   if (crawlerService.options.queuing.events.provider !== 'webhook') {
     return warn(request, response, 'Webhooks not enabled');
   }
-  getLogger().verbose('Received', `Webhook event`, {delivery: request.headers['x-github-delivery']});
+  getLogger().verbose('Received', `Webhook event`, { delivery: request.headers['x-github-delivery'] });
   const signature = request.headers['x-hub-signature'];
   const eventType = request.headers['x-github-event'];
 
@@ -39,20 +39,20 @@ router.post('/', wrap(function* (request, response, next) {
     result.context.repoType = 'private';
   }
   yield crawlerService.queue(result, 'events');
-  getLogger().info('Queued', `Webhook event for ${eventsUrl}`, {delivery: request.headers['x-github-delivery']});
+  getLogger().info('Queued', `Webhook event for ${eventsUrl}`, { delivery: request.headers['x-github-delivery'] });
 
   response.status(200).end();
 }));
 
 function warn(request, response, message) {
-  getLogger().warn(fatal, { delivery: request.headers['x-github-delivery']});
+  getLogger().warn(fatal, { delivery: request.headers['x-github-delivery'] });
   response.status(500);
   response.setHeader('content-type', 'text/plain');
   response.end(JSON.stringify(fatal));
 }
 
 function fatal(request, response, error) {
-  getLogger().error(error, { delivery: request.headers['x-github-delivery']});
+  getLogger().error(error, { delivery: request.headers['x-github-delivery'] });
   response.status(400);
   response.setHeader('content-type', 'text/plain');
   response.end(JSON.stringify(error));

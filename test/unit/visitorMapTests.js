@@ -4,7 +4,7 @@
 const assert = require('chai').assert;
 const expect = require('chai').expect;
 const sinon = require('sinon');
-const VisitorMap = require('../lib/visitorMap');
+const VisitorMap = require('../../lib/visitorMap');
 
 describe('Visitor Map', () => {
 

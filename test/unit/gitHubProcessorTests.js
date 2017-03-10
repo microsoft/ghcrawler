@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 const expect = require('chai').expect;
-const GitHubProcessor = require('../lib/githubProcessor.js');
+const GitHubProcessor = require('../../providers/fetcher/githubProcessor.js');
 const Q = require('q');
-const Request = require('../lib/request.js');
+const Request = require('../../lib/request.js');
 const sinon = require('sinon');
-const TraversalPolicy = require('../lib/traversalPolicy');
+const TraversalPolicy = require('../../lib/traversalPolicy');
 
 describe('GitHubProcessor reprocessing', () => {
   it('will skip if at same version', () => {
@@ -435,7 +435,7 @@ describe('Pull Request processing', () => {
       head: { repo: { id: 45, url: 'http://repo/45' } },
       base: { repo: { id: 17, url: 'http://repo/17' } },
       _links: {
-        self: { href: 'http://pull_request/13'},
+        self: { href: 'http://pull_request/13' },
         issue: { href: 'http://issue/13' },
         review_comments: { href: 'http://review_comments' },
         commits: { href: 'http://commits' },
@@ -622,7 +622,7 @@ describe('Pull request/review comment processing', () => {
     // test that the new request got queued and that the doc has the right stuff
 
     const newRequest = queue.pop();
-    newRequest.document = {id: 1, url: 'http://pull_request/1'}
+    newRequest.document = { id: 1, url: 'http://pull_request/1' }
     testPullRequestReviewCommentEvent(newRequest, 'LegacyPullRequestReviewCommentEvent');
   });
 });
