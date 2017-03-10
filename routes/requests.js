@@ -4,8 +4,8 @@
 const auth = require('../middleware/auth');
 const express = require('express');
 const expressJoi = require('express-joi');
-const Request = require('../index').request;
-const TraversalPolicy = require('../index').traversalPolicy;
+const Request = require('../lib/request');
+const TraversalPolicy = require('../lib/traversalPolicy');
 const wrap = require('../middleware/promiseWrap');
 
 const requestsSchema = {

@@ -5,7 +5,7 @@ const AmqpQueue = require('./amqpQueue');
 const AttenuatedQueue = require('./attenuatedQueue');
 const Q = require('q');
 const request = require('request');
-const Request = require('../../index').request;
+const Request = require('../../lib/request');
 const TrackedQueue = require('./trackedQueue');
 
 class RabbitQueueManager {

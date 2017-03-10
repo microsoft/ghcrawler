@@ -6,7 +6,7 @@ const config = require('painless-config');
 const expect = require('chai').expect;
 const CrawlerFactory = require('../../lib/crawlerFactory');
 const Q = require('q');
-const Request = require('../../index').request;
+const Request = require('../../lib/request');
 
 const url = config.get('CRAWLER_AMQP10_URL'); // URL should be: amqps://<keyName>:<key>@<host>
 const name = 'test';

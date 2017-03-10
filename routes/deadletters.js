@@ -4,7 +4,7 @@
 const auth = require('../middleware/auth');
 const express = require('express');
 const expressJoi = require('express-joi');
-const Request = require('../index').request;
+const Request = require('../lib/request');
 const wrap = require('../middleware/promiseWrap');
 
 let crawlerService = null;

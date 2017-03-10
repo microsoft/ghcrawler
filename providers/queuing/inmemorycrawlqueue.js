@@ -3,7 +3,7 @@
 
 const extend = require('extend');
 const Q = require('q');
-const Request = require('../../index').request;
+const Request = require('../../lib/request');
 
 class InMemoryCrawlQueue {
   constructor(name, options) {

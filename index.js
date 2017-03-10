@@ -3,6 +3,7 @@
 
 module.exports.crawler = require('./lib/crawler');
 module.exports.crawlerService = require('./lib/crawlerService');
+module.exports.crawlerFactory = require('./lib/crawlerFactory');
 module.exports.eventFinder = require('./lib/eventFinder');
 module.exports.githubFetcher = require('./providers/fetcher/githubFetcher');
 module.exports.githubProcessor = require('./providers/fetcher/githubProcessor');

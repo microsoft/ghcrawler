@@ -7,7 +7,7 @@ const expect = require('chai').expect;
 const extend = require('extend');
 const Q = require('q');
 const redlock = require('redlock');
-const Request = require('../../index').request;
+const Request = require('../../lib/request');
 const RequestTracker = require('../../providers/queuing/redisRequestTracker.js');
 const sinon = require('sinon');
 
