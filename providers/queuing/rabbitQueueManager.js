@@ -9,9 +9,10 @@ const Request = require('../../index').request;
 const TrackedQueue = require('./trackedQueue');
 
 class RabbitQueueManager {
-  constructor(amqpUrl, managementEndpoint) {
+  constructor(amqpUrl, managementEndpoint, ca) {
     this.url = amqpUrl;
     this.managementEndpoint = managementEndpoint;
+    this.ca = ca;
   }
 
   createQueueChain(name, tracker, options) {
@@ -43,6 +44,9 @@ class RabbitQueueManager {
     }
     if (body) {
       options.body = body;
+    }
+    if (this.ca) {
+      options.ca = this.ca;
     }
     request[method](url, options, (error, response, body) => {
       if (error || response.statusCode > 299) {
