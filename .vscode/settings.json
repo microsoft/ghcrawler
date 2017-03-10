@@ -5,5 +5,8 @@
   },
   "editor.folding": false,
   "editor.tabSize": 2,
-  "editor.detectIndentation": false
+  "editor.detectIndentation": false,
+  "editor.formatOnType": true,
+  "editor.insertSpaces": true,
+  "files.trimTrailingWhitespace": true
 }
