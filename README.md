@@ -2,13 +2,23 @@
 ![License](https://img.shields.io/github/license/Microsoft/ghcrawler.svg)
 ![Downloads](https://img.shields.io/npm/dt/ghcrawler.svg)
 
-# OSPO GHCrawler
-[GHCrawler](https://github.com/Microsoft/ghcrawler) is a service that systematically walks GitHub APIs and harvests data about a specified set of repos and orgs.  The function here is the *getting started* infrastructure for running that system. The crawler can be configured to use a variety of different queuing (e.g., AMQP 1.0 and AMQP 0.9 compatible queues like Azure ServiceBus and Rabbit MQ, respectively) and storage technologies (e.g., Azure Blob and MongoDB). You can create your own infrastructure plugins to use different technologies.
+# GHCrawler
+A robust GitHub API crawler that walks a queue of GitHub entities transitively retrieving and storing their contents. GHCrawler is great for:
+
+* Retreiving all GitHub entities related to an org, repo, or user
+* Efficiently storing and the retrieved entities
+* Keeping the stored data up to date when used in conjunction with a GitHub webhook to track events
+
+GHCrawler focuses on successively retrieving and walking GitHub API resources supplied on a (set of) queues. Each resource is fetched, processed, plumbed
+for more resources to fetch and ultimately stored. Discovered resources are themselves queued for further processing. The crawler is careful to not
+repeatedly fetch the same resource. It makes heavy use of etags, Redis, client-side rate limiting, and GitHub token pooling and rotation to optimize use of your API tokens and not beat up the GitHub API.
+
+The crawler can be configured to use a variety of different queuing (e.g., AMQP 1.0 and AMQP 0.9 compatible queues like Azure ServiceBus and Rabbit MQ, respectively) and storage technologies (e.g., Azure Blob and MongoDB). You can create your own infrastructure plugins to use different technologies.
 
 # Running in-memory
 The easiest way try our the crawler is to run it in memory. You can get up and running in a couple minutes.  This approach does not scale and is not persistent but it's dead simple.
 
-1. Clone the [Microsoft/ospo-ghcrawler](https://github.com/Microsoft/ospo-ghcrawler.git) repo.
+1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) repo.
 1. Run ```npm install``` in the clone repo directory to install the prerequisites.
 1. Run the crawler using ```node bin/www.js```.
 
@@ -19,8 +29,8 @@ If you want to persist the data gathered and create some insight dashboards in s
 
 ***NOTE*** This is an evolving solution and the steps for running will be simplified published, ready-to-use images on Docker Hub. For now, follow these steps
 
-1. Clone the [Microsoft/ospo-ghcrawler](https://github.com/Microsoft/ospo-ghcrawler.git) and [Microsoft/crawler-dashboard](https://github.com/Microsoft/crawler-dashboard.git) repos.
-1. In a command prompt go to ```ospo-ghcrawler/docker``` and run ```docker-compose up```.
+1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/crawler-dashboard](https://github.com/Microsoft/crawler-dashboard.git) repos.
+1. In a command prompt go to ```ghcrawler/docker``` and run ```docker-compose up```.
 
 Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the ```cc``` command line tool or a brower-based dashboard both of which are described below.
 
@@ -68,12 +78,6 @@ The crawler dashboard gives you live feedback on what the crawler is doing as we
 Once the dashboard service is up and running, point your browser at the dashboard endpoing (http://localhost:4000 by default).
 
 Note that the dashboard does not report queue message rates (top right graph) when used with the memory-based crawler service as that mechanism requires Redis to talk record activity.
-
-# Tips
-
-* Clearing queues -- In its normal redis configuration, the crawler uses redis to keep track of what is in the queues. This deduplicates queuing and dramatically reduces the number of requests needing to be processed.  In the crawler dashboard is is possible to recreate the queues.  This is a convenient way to clear them out.  When doing this however, you must also clear the associated keys from redis that cache the queue content.  Typically those keys are of the form ```<environment>:<queue provider>:<path>```.  So for an AMPQ (i.e., RabbitMQ) setup running on the local machine the keys would look like ```localhost:amqp:<path>```. Use whatever redis client you like to clear these keys (possibly thousands).  We use Redis Desktop Manager but any tool that does the job will do.  Adding this redis clearing to the dashboard's recreate function is on the list of things to implement.
-
-* Starting the crawler -- Due to some caching issues, you may need to ```Stop``` the crawler in the dashboard before you can start it using the update button as described above.
 
 # Known issues
 
@@ -152,37 +156,6 @@ Production Docker deployment using Kubernetes or the like has been discussed but
   "CRAWLER_DOCLOG_STORAGE_KEY": "[SECRET]"
 }
 ```
-
-# Contributing
-
-The project team is more than happy to take contributions and suggestions.
-
-To start working, run ```npm install``` in the repository folder to install the required dependencies. See the usage section for pointers on how to run.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-# GHCrawler
-A robust GitHub API crawler that walks a queue of GitHub entities transitively retrieving and storing their contents. GHCrawler is great for:
-
-* Retreiving all GitHub entities related to an org, repo, or user
-* Efficiently storing and the retrieved entities
-* Keeping the stored data up to date when used in conjunction with a GitHub webhook to track events
-
-GHCrawler focuses on successively retrieving and walking GitHub API resources supplied on a (set of) queues. Each resource is fetched, processed, plumbed
-for more resources to fetch and ultimately stored. Discovered resources are themselves queued for further processing. The crawler is careful to not
-repeatedly fetch the same resource. It makes heavy use of etags, Redis, client-side rate limiting, and GitHub token pooling and rotation to optimize use of your API tokens and not beat up the GitHub API.
-
-# Usage
-
-The crawler in this repo is not particularly runnable -- it has all the business logic but little of the infrastructure. It needs to be configured with:
-
-1. Queuing infrastructure that can take and supply *requests* to process the response from an API URL. Typically RabbitMQ or Azure Service Bus.
-1. A *store* used to store the processed documents. Typically a document store such as MongoDB or Azure blob.
-1. A *token factory* to manage and hand out GitHub API tokens.
-1. Various *rate limiters* to suit your particular scenario.
-1. An *event webhook handler* if needed.
-
-The good news is that the [OSPO-ghcrawler](https://github.com/Microsoft/ospo-ghcrawler) repo provides everything you need as well as various configurations and a factory for creating running systems. Head over there to actually get the crawler running.
 
 # Contributing
 
