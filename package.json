@@ -4,7 +4,9 @@
   "description": "A robust GitHub API crawler that walks a queue of GitHub entities retrieving and storing their contents.",
   "main": "./index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha test/**/*.js"
+    "start": "node ./bin/www.js",
+    "test": "./node_modules/mocha/bin/mocha test/unit/**/*.js",
+    "integration": "./node_modules/mocha/bin/mocha test/integration/**/*.js --timeout 20000"
   },
   "keywords": [
     "github",
