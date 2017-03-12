@@ -9,11 +9,16 @@ A robust GitHub API crawler that walks a queue of GitHub entities transitively r
 * Efficiently storing and the retrieved entities
 * Keeping the stored data up to date when used in conjunction with a GitHub webhook to track events
 
-GHCrawler focuses on successively retrieving and walking GitHub API resources supplied on a (set of) queues. Each resource is fetched, processed, plumbed
-for more resources to fetch and ultimately stored. Discovered resources are themselves queued for further processing. The crawler is careful to not
-repeatedly fetch the same resource. It makes heavy use of etags, Redis, client-side rate limiting, and GitHub token pooling and rotation to optimize use of your API tokens and not beat up the GitHub API.
+GHCrawler focuses on successively retrieving and walking GitHub API resources supplied on a (set of) queues. Each resource is fetched, processed, plumbed for more resources to fetch and ultimately stored. Discovered resources are themselves queued for further processing. The crawler is careful to not repeatedly fetch the same resource. It makes heavy use of etags, Redis, client-side rate limiting, and GitHub token pooling and rotation to optimize use of your API tokens and not beat up the GitHub API.
 
 The crawler can be configured to use a variety of different queuing (e.g., AMQP 1.0 and AMQP 0.9 compatible queues like Azure ServiceBus and Rabbit MQ, respectively) and storage technologies (e.g., Azure Blob and MongoDB). You can create your own infrastructure plugins to use different technologies.
+
+# Documentation
+This page is essentially the Quick Start Guide for using the crawler. Detailed and complete documentation is maintained in
+
+* This [project's wiki](https://github.com/Microsoft/ghcrawler/wiki) for documentation on the crawler itself
+* The [Dashboard repo](https://github.com/Microsoft/ghcrawler-dashboard), for information on the browser-based crawler management dashboard
+* The [Command line repo](https://github.com/Microsoft/ghcrawler-cli), for details of controlling the crawler from the command line
 
 # Running in-memory
 The easiest way try our the crawler is to run it in memory. You can get up and running in a couple minutes.  This approach does not scale and is not persistent but it's dead simple.
