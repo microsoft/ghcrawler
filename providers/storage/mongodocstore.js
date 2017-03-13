@@ -59,19 +59,33 @@ class MongoDocStore {
     });
   }
 
-  listDocuments(pattern) {
-    // TODO implement
-    return Q([]);
+  list(pattern) {
+    return this.db.collections()
+      .then(collections => {
+        return Q.all(collections.map(collection => {
+          // TODO: Return a subset of the document (project?)
+          return collection.find({}, { extra: 1 }).toArray();
+        }));
+      }).then(collectionDocuments => {
+        return Array.prototype.concat.apply([], collectionDocuments);
+      });
   }
 
   delete(type, url) {
-    // TODO implement
-    return Q(true);
+    return this.db.collection(type).deleteOne({ $or: [{ '_metadata.url': url }, { '_metadata.urn': url }] });
   }
 
   count(pattern) {
-    // TODO implement
-    return Q(0);
+    return this.db.collections()
+      .then(collections => {
+        return Q.all(collections.map(collection => {
+          return collection.count();
+        }));
+      }).then(collectionCounts => {
+        return collectionCounts.reduce((acc, val) => {
+          acc += val;
+        }, 0);
+      });
   }
 
   close() {

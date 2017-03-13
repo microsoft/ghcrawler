@@ -44,10 +44,10 @@ class InmemoryDocStore {
     return Q(result);
   }
 
-  listDocuments(pattern) {
+  list(pattern) {
     const result = [];
     for (let collection in collections) {
-      for (let document in collection.for) {
+      for (let document in collection) {
         result.push(document._metadata);
       }
     }
