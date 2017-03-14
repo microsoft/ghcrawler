@@ -26,7 +26,7 @@ class UrltoUrnMappingStore {
   }
 
   get(type, url) {
-    return this._getUrnForUrl(url).then(urn => {
+    return this._getBlobNameForUrl(url).then(urn => {
       if (!urn) {
         throw new Error(`Document not found at ${url}`);
       }
@@ -35,7 +35,7 @@ class UrltoUrnMappingStore {
   }
 
   etag(type, url) {
-    return this._getUrnForUrl(url).then(urn => {
+    return this._getBlobNameForUrl(url).then(urn => {
       return urn ? this.baseStore.etag(type, urn) : null;
     });
   }
@@ -56,7 +56,7 @@ class UrltoUrnMappingStore {
     return this.baseStore.close();
   }
 
-  _getUrnForUrl(url) {
+  _getBlobNameForUrl(url) {
     const deferred = Q.defer();
     this.redisClient.hget(this.name, url, this._callbackToPromise(deferred));
     return deferred.promise;
