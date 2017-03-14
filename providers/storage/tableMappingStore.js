@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const azure = require('azure-storage');
 const Q = require('q');
 
 class AzureTableMappingStore {
