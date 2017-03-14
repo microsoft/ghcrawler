@@ -72,10 +72,13 @@ class AzureTableMappingStore {
   _getBlobNameForUrl(url) {
     const deferred = Q.defer();
     this.service.retrieveEntity(this.name, this.name, encodeURIComponent(url), (error, result) => {
-      if (error) {
-        return deferred.reject(error);
+      if (!error) {
+        return deferred.resolve(result.blobName._);
       }
-      deferred.resolve(result.blobName._);
+      if (error && error.code === 'ResourceNotFound') {
+        return deferred.resolve(null);
+      }
+      deferred.reject(error);
     });
     return deferred.promise;
   }
