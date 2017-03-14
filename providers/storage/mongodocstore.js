@@ -36,7 +36,7 @@ class MongoDocStore {
     if (cached) {
       return Q(cached.document);
     }
-    return this.db.collection(type).findOne({ '_metadata.url': url }).then(value => {
+    return this.db.collection(type).findOne({ '$or': [{ '_metadata.url': url }, { '_metadata.links.self.href': url }] }).then(value => {
       if (value) {
         memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
         return value;
@@ -59,33 +59,30 @@ class MongoDocStore {
     });
   }
 
-  list(pattern) {
-    return this.db.collections()
-      .then(collections => {
-        return Q.all(collections.map(collection => {
-          // TODO: Return a subset of the document (project?)
-          return collection.find({}, { extra: 1 }).toArray();
-        }));
-      }).then(collectionDocuments => {
-        return Array.prototype.concat.apply([], collectionDocuments);
-      });
+  list(type) {
+    return this.db.collection(type).find({}, { '_metadata': 1 }).toArray().then(docs => {
+      return docs.map(doc => {
+        const metadata = doc._metadata;
+        Object.keys(metadata).forEach(key => {
+          if (key !== key.toLowerCase()) {
+            metadata[key.toLowerCase()] = metadata[key];
+            delete metadata[key];
+          }
+        });
+        metadata.urn = metadata.links.self.href;
+        return metadata;
+      })
+    });
   }
 
   delete(type, url) {
-    return this.db.collection(type).deleteOne({ $or: [{ '_metadata.url': url }, { '_metadata.urn': url }] });
+    return this.db.collection(type).deleteOne({ $or: [{ '_metadata.url': url }, { '_metadata.links.self.href': url }] }).then(result => {
+      return result;
+    });
   }
 
-  count(pattern) {
-    return this.db.collections()
-      .then(collections => {
-        return Q.all(collections.map(collection => {
-          return collection.count();
-        }));
-      }).then(collectionCounts => {
-        return collectionCounts.reduce((acc, val) => {
-          acc += val;
-        }, 0);
-      });
+  count(type) {
+    return this.db.collection(type).count()
   }
 
   close() {

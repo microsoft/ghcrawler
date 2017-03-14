@@ -44,14 +44,8 @@ class InmemoryDocStore {
     return Q(result);
   }
 
-  list(pattern) {
-    const result = [];
-    for (let collection in collections) {
-      for (let document in collection) {
-        result.push(document._metadata);
-      }
-    }
-    return Q(result);
+  list(type) {
+    return Q(this.collections[type]);
   }
 
   delete(type, url) {
@@ -63,8 +57,8 @@ class InmemoryDocStore {
     return Q(true);
   }
 
-  count(pattern) {
-    return this.list(pattern).then(results => { return results.length });
+  count(type) {
+    return this.list(type).then(results => { return results.length });
   }
 
   close() {

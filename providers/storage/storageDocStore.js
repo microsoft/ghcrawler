@@ -90,8 +90,8 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
-  list(pattern) {
-    const blobPattern = this._getBlobPathFromUrn(null, pattern);
+  list(type) {
+    const blobPattern = this._getBlobPathFromUrn(null, type);
     var entries = [];
     var continuationToken = null;
     const deferred = Q.defer();
@@ -140,15 +140,15 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
-  count(pattern, force = false) {
-    const key = `${this.name}:count:${pattern || ''}`;
+  count(type, force = false) {
+    const key = `${this.name}:count:${type || ''}`;
     if (!force) {
       const cachedCount = memoryCache.get(key);
       if (cachedCount) {
         return Q(cachedCount);
       }
     }
-    const blobPattern = this._getBlobPathFromUrn(null, pattern);
+    const blobPattern = this._getBlobPathFromUrn(null, type);
     var entryCount = 0;
     var continuationToken = null;
     const deferred = Q.defer();
