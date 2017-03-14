@@ -21,7 +21,6 @@ router.get('/:name/info', auth.validate, wrap(function* (request, response) {
   try {
     info = yield crawlerService.getQueueInfo(request.params.name);
   } catch (error) {
-    return response.sendStatus(404);
   }
   if (!info) {
     return response.sendStatus(404);
