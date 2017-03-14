@@ -17,7 +17,12 @@ router.put('/:name', auth.validate, wrap(function* (request, response) {
 }));
 
 router.get('/:name/info', auth.validate, wrap(function* (request, response) {
-  const info = yield crawlerService.getQueueInfo(request.params.name);
+  let info = null;
+  try {
+    info = yield crawlerService.getQueueInfo(request.params.name);
+  } catch (error) {
+    return response.sendStatus(404);
+  }
   if (!info) {
     return response.sendStatus(404);
   }
