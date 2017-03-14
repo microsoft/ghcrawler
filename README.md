@@ -24,10 +24,10 @@ This page is essentially the Quick Start Guide for using the crawler. Detailed a
 The easiest way try our the crawler is to run it in memory. You can get up and running in a couple minutes.  This approach does not scale and is not persistent but it's dead simple.
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) repo.
-1. Run ```npm install``` in the clone repo directory to install the prerequisites.
-1. Run the crawler using ```node bin/www.js```.
+1. Run `npm install` in the clone repo directory to install the prerequisites.
+1. Run the crawler using `node bin/www.js`.
 
-Once the service is up and running, you should see some crawler related messages in the console output every few seconds. You can control the crawler either using the ```cc``` command line tool or a brower-based dashboard both of which are described below. Note that since you are running in memory, if you kill the crawler process, all work will be lost. This mode is great for playing around with the crawler or testing.
+Once the service is up and running, you should see some crawler related messages in the console output every few seconds. You can control the crawler either using the `cc` command line tool or a brower-based dashboard both of which are described below. Note that since you are running in memory, if you kill the crawler process, all work will be lost. This mode is great for playing around with the crawler or testing.
 
 # Running Crawler-In-A-Box (CIABatta)
 If you want to persist the data gathered and create some insight dashboards in small to medium production system, you can run the crawler in Docker with Mongo, Rabbit, and Redis using the Crawler-in-a-box (CIABatta) approach. This setup also includes Metabase for building browser-based insgihts and gives you a browser-based control-panel for observing and controlling the crawler service.
@@ -35,11 +35,11 @@ If you want to persist the data gathered and create some insight dashboards in s
 ***NOTE*** This is an evolving solution and the steps for running will be simplified published, ready-to-use images on Docker Hub. For now, follow these steps
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/crawler-dashboard](https://github.com/Microsoft/crawler-dashboard.git) repos.
-1. In a command prompt go to ```ghcrawler/docker``` and run ```docker-compose up```.
+1. In a command prompt go to `ghcrawler/docker` and run `docker-compose up`.
 
-Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the ```cc``` command line tool or a brower-based dashboard both of which are described below.
+Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or a brower-based dashboard both of which are described below.
 
-You can also hookup directly to the crawler infrastructure. By default the containers expose a number of endpoints at different ports on localhost. Note that if you have trouble starting the containers due to port conflicts, either shutdown your services using these ports or edit the docker/docker-compose.yml file to change the ports.
+You can also hookup directly to the crawler infrastructure. By default the containers expose a number of endpoints at different ports on localhost. Note that if you have trouble starting the containers due to port conflicts, either shutdown your services using these ports or edit the `docker/docker-compose.yml` file to change the ports.
 
 * Crawler Dashboard (4000) -- Open http://localhost:4000 in your browser to see what's happening and control some behaivors and configurations
 * Crawler (3000) -- Direct access to the REST API for the crawler
@@ -58,7 +58,7 @@ Given a running crawler service (see above), you can control it using either a s
 
 ## ```cc``` command line
 
-The *crawler-cli* (aka ```cc```) can run interactively or as a single command processor and enables a number of basic operations.  For now the crawler-cli is not published as an npm. Instead, [clone its repo]((https://github.com/Microsoft/crawler-cli.git), run ```npm install``` and run the command line using
+The *crawler-cli* (aka ```cc```) can run interactively or as a single command processor and enables a number of basic operations.  For now the crawler-cli is not published as an npm. Instead, [clone its repo]((https://github.com/Microsoft/crawler-cli.git), run `npm install` and run the command line using
 
 ```
 node bin/cc -i
@@ -84,88 +84,34 @@ Once the dashboard service is up and running, point your browser at the dashboar
 
 Note that the dashboard does not report queue message rates (top right graph) when used with the memory-based crawler service as that mechanism requires Redis to talk record activity.
 
-# Known issues
-
-It is clearly early days for the crawler so there are a number of things left to do. These will be collected in repo issues. Note that the remaining issue set has yet to be populated.
-
-Broadly speaking there are several types of work:
-
-* Documentation -- The crawler code itself is relatively straightforward but some of the architecture, control and extensibility points are not called out.
-* Ease of use -- There are a number of places where running and manaing the crawler is just clumsy and error prone
-* Completeness -- There are a few functional gaps in certain scenarios that need to be addressed.
-* Docker configuration -- Several items in making the Docker configuration real
-* Analysis and insights -- Metabase is supplied in the Docker configuration but relatively little has been done with analyzing the harvested data.
-
-
-## Runtime
-
-### Docker items
-1. Data persistence
-1. Create separate docker-compose for general usage vs development
-  * Development should use local source code and enable Node debugging
-  * Both should allow end to end crawling with a single command (e.g. crawl orgName githubToken)
-1. Publish images for Crawler Dashboard and Crawler to Docker Hub
-
-## Updating the default Metabase for Docker configuratoins:
-The Metabase configured by default has some canned queries and a dashboard. If you want to clear that out and start fresh, do the following:
-
-1. Ensure you're starting from a completely clean container (docker-compose down && docker-compose up).
-1. Crawl a small org to populate Mongo so you have schema/sample data to work with.
-1. Open the Metabase URL and configure the questions, dashboard, etc. you want
-  1. REMEMBER: Any changes you make will be persisted
-1. Copy the Metabase database by changing to the docker/metabase folder in the ospo-ghcrawler repository and running:
-  ```docker cp docker_metabase_1:/var/opt/metabase/dockercrawler.db.mv.db .```
-
-Production Docker deployment using Kubernetes or the like has been discussed but not yet planned. If you have a desire to do this, please open an issue or better yet a PR and lets see what can be done.
-
 # Working with the code
 
 ### Build
-`npm install`
+  `npm install`
 
 ### Unit test
-`npm test`
+  `npm test`
 
 ### Integration test
-`npm run integration`
+  `npm run integration`
 
 ### Run
-`node ./bin/www.js`
-
-
-
-# stale content
-1. Start the service crawling by going to Crawler Dashboard at [http://localhost:4000](http://localhost:4000). On the righthand side, change the ```crawler/count``` to 1 and click ```Update``` button.
-
-
-## Configuration
-```
-{
-  "NODE_ENV": "localhost",
-  "CRAWLER_MODE": "Standard",
-  "CRAWLER_OPTIONS_PROVIDER": ["defaults" | "memory" | "redis"],
-  "CRAWLER_INSIGHTS_KEY": "[SECRET]",
-  "CRAWLER_ORGS_FILE": "../orgs",
-  "CRAWLER_GITHUB_TOKENS": "[SECRET]",
-  "CRAWLER_REDIS_URL": "peoplesvc-dev.redis.cache.windows.net",
-  "CRAWLER_REDIS_ACCESS_KEY": "[SECRET]",
-  "CRAWLER_REDIS_PORT": 6380,
-  "CRAWLER_QUEUE_PROVIDER": "amqp10",
-  "CRAWLER_AMQP10_URL": "amqps://RootManageSharedAccessKey:[SECRET]@ghcrawlerdev.servicebus.windows.net",
-  "CRAWLER_QUEUE_PREFIX": "ghcrawlerdev",
-  "CRAWLER_STORE_PROVIDER": "azure",
-  "CRAWLER_STORAGE_NAME": "ghcrawlerdev",
-  "CRAWLER_STORAGE_ACCOUNT": "ghcrawlerdev",
-  "CRAWLER_STORAGE_KEY": "[SECRET]",
-  "CRAWLER_DOCLOG_STORAGE_ACCOUNT": "ghcrawlerdev",
-  "CRAWLER_DOCLOG_STORAGE_KEY": "[SECRET]"
-}
-```
+  `node ./bin/www.js`
 
 # Contributing
 
 The project team is more than happy to take contributions and suggestions.
 
-To start working, run ```npm install``` in the repository folder to install the required dependencies. See the usage section for pointers on how to run.
+To start working, run `npm install` in the repository folder to install the required dependencies. See the usage section for pointers on how to run.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+# Known issues
+
+It is clearly early days for the crawler so there are a number of things left to do. Most of the concrete work items are captured in repo issues. Broadly speaking there are several types of work:
+
+* Documentation -- The crawler code itself is relatively straightforward but some of the architecture, control and extensibility points are not called out.
+* Ease of use -- There are a number of places where running and managing the crawler is just clumsy and error prone
+* Completeness -- There are a few functional gaps in certain scenarios that need to be addressed.
+* Docker configuration -- Several items in making the Docker configuration real
+* Analysis and insights -- Metabase is supplied in the Docker configuration but relatively little has been done with analyzing the harvested data.
