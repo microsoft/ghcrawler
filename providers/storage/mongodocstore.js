@@ -31,6 +31,7 @@ class MongoDocStore {
     });
   }
 
+  // TODO: Consistency on whether key is a URL or URN
   get(type, url) {
     const cached = memoryCache.get(url);
     if (cached) {
@@ -62,21 +63,13 @@ class MongoDocStore {
   list(type) {
     return this.db.collection(type).find({}, { '_metadata': 1 }).toArray().then(docs => {
       return docs.map(doc => {
-        const metadata = doc._metadata;
-        Object.keys(metadata).forEach(key => {
-          if (key !== key.toLowerCase()) {
-            metadata[key.toLowerCase()] = metadata[key];
-            delete metadata[key];
-          }
-        });
-        metadata.urn = metadata.links.self.href;
-        return metadata;
+        return doc._metadata;
       })
     });
   }
 
-  delete(type, url) {
-    return this.db.collection(type).deleteOne({ $or: [{ '_metadata.url': url }, { '_metadata.links.self.href': url }] }).then(result => {
+  delete(type, urn) {
+    return this.db.collection(type).deleteOne({ '_metadata.links.self.href': urn }).then(result => {
       return result;
     });
   }
