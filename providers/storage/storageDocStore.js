@@ -92,6 +92,7 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
+  // This API can only be used for the 'deadletter' store because we cannot look up documents by type performantly
   list(type) {
     this._ensureDeadletter(type);
     var entries = [];
@@ -136,6 +137,7 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
+  // This API can only be used for the 'deadletter' store because we cannot look up documents by type performantly
   delete(type, key) {
     this._ensureDeadletter(type);
     const deferred = Q.defer();
@@ -149,6 +151,7 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
+  // This API can only be used for the 'deadletter' store because we cannot look up documents by type performantly
   count(type, force = false) {
     this._ensureDeadletter(type);
     const key = `${this.name}:count:${type || ''}`;
