@@ -63,7 +63,17 @@ class MongoDocStore {
   list(type) {
     return this.db.collection(type).find({}, { '_metadata': 1 }).toArray().then(docs => {
       return docs.map(doc => {
-        return doc._metadata;
+        const metadata = doc._metadata;
+        return {
+          version: metadata.version,
+          etag: metadata.etag,
+          type: metadata.type,
+          url: metadata.url,
+          urn: metadata.links.self.href,
+          fetchedAt: metadata.fetchedAt,
+          processedAt: metadata.processedAt,
+          extra: metadata.extra
+        };
       })
     });
   }

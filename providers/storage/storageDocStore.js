@@ -110,10 +110,16 @@ class AzureStorageDocStore {
           }
           entries = entries.concat(result.entries.map(entry => {
             const blobMetadata = entry.metadata;
-            if (blobMetadata.extra) {
-              blobMetadata.extra = JSON.parse(blobMetadata.extra);
-            }
-            return blobMetadata;
+            return {
+              version: blobMetadata.version,
+              etag: blobMetadata.etag,
+              type: blobMetadata.type,
+              url: blobMetadata.url,
+              urn: blobMetadata.urn,
+              fetchedAt: blobMetadata.fetchedat,
+              processedAt: blobMetadata.processedat,
+              extra: blobMetadata.extra ? JSON.parse(blobMetadata.extra) : undefined
+            };
           }));
           callback(null);
         });

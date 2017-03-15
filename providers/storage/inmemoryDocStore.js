@@ -45,7 +45,19 @@ class InmemoryDocStore {
   }
 
   list(type) {
-    return Q(this.collections[type]);
+    return Q(this.collections[type].map(doc => {
+      const metadata = doc._metadata;
+      return {
+        version: metadata.version,
+        etag: metadata.etag,
+        type: metadata.type,
+        url: metadata.url,
+        urn: metadata.links.self.href,
+        fetchedAt: metadata.fetchedAt,
+        processedAt: metadata.processedAt,
+        extra: metadata.extra
+      };
+    }));
   }
 
   delete(type, url) {
