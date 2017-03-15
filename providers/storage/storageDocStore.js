@@ -40,8 +40,8 @@ class AzureStorageDocStore {
       type: document._metadata.type,
       url: document._metadata.url,
       urn: document._metadata.links.self.href,
-      fetchedAt: document._metadata.fetchedAt,
-      processedAt: document._metadata.processedAt
+      fetchedat: document._metadata.fetchedAt,
+      processedat: document._metadata.processedAt
     };
     if (document._metadata.extra) {
       blobMetadata.extra = JSON.stringify(document._metadata.extra);
