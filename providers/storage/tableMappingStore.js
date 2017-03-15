@@ -56,16 +56,16 @@ class AzureTableMappingStore {
     });
   }
 
-  list(pattern) {
-    return this.baseStore.list(pattern);
+  list(type) {
+    return this.baseStore.list(type);
   }
 
   delete(type, url) {
     return this.baseStore.delete(type, url);
   }
 
-  count(pattern) {
-    return this.baseStore.count(pattern);
+  count(type) {
+    return this.baseStore.count(type);
   }
 
   close() {

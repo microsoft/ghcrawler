@@ -44,14 +44,20 @@ class InmemoryDocStore {
     return Q(result);
   }
 
-  listDocuments(pattern) {
-    const result = [];
-    for (let collection in collections) {
-      for (let document in collection.for) {
-        result.push(document._metadata);
-      }
-    }
-    return Q(result);
+  list(type) {
+    return Q(this.collections[type].map(doc => {
+      const metadata = doc._metadata;
+      return {
+        version: metadata.version,
+        etag: metadata.etag,
+        type: metadata.type,
+        url: metadata.url,
+        urn: metadata.links.self.href,
+        fetchedAt: metadata.fetchedAt,
+        processedAt: metadata.processedAt,
+        extra: metadata.extra
+      };
+    }));
   }
 
   delete(type, url) {
@@ -63,8 +69,8 @@ class InmemoryDocStore {
     return Q(true);
   }
 
-  count(pattern) {
-    return this.list(pattern).then(results => { return results.length });
+  count(type) {
+    return this.list(type).then(results => { return results.length });
   }
 
   close() {

@@ -38,6 +38,14 @@ class DeltaStore {
     return this.baseStore.etag(type, key);
   }
 
+  list(type) {
+    return this.baseStore.list(type);
+  }
+
+  count(type) {
+    return this.baseStore.count(type);
+  }
+
   close() {
     return this.baseStore.close();
   }

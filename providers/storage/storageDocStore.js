@@ -40,8 +40,8 @@ class AzureStorageDocStore {
       type: document._metadata.type,
       url: document._metadata.url,
       urn: document._metadata.links.self.href,
-      fetchedAt: document._metadata.fetchedAt,
-      processedAt: document._metadata.processedAt
+      fetchedat: document._metadata.fetchedAt,
+      processedat: document._metadata.processedAt
     };
     if (document._metadata.extra) {
       blobMetadata.extra = JSON.stringify(document._metadata.extra);
@@ -57,6 +57,7 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
+  // TODO: Consistency on whether key is a URL or URN
   get(type, key) {
     const cached = memoryCache.get(key);
     if (cached) {
@@ -76,6 +77,7 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
+  // TODO: Consistency on whether key is a URL or URN
   etag(type, key) {
     const cached = memoryCache.get(key);
     if (cached) {
@@ -90,15 +92,16 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
-  list(pattern) {
-    const blobPattern = this._getBlobPathFromUrn(null, pattern);
+  // This API can only be used for the 'deadletter' store because we cannot look up documents by type performantly
+  list(type) {
+    this._ensureDeadletter(type);
     var entries = [];
     var continuationToken = null;
     const deferred = Q.defer();
     async.doWhilst(
       callback => {
         var started = new Date().getTime();
-        this.service.listBlobsSegmentedWithPrefix(this.name, blobPattern, continuationToken, { include: azure.BlobUtilities.BlobListingDetails.METADATA, location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
+        this.service.listBlobs(this.name, continuationToken, { include: azure.BlobUtilities.BlobListingDetails.METADATA, location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
           // metricsClient.trackDependency(url.parse(blobService.host.primaryHost).hostname, 'listBlobsSegmented', (new Date().getTime() - started), !err, "Http", { 'Container name': 'download', 'Continuation token present': result == null ? false : (result.continuationToken != null), 'Blob count': result == null ? 0 : result.entries.length });
 
           if (err) {
@@ -108,10 +111,16 @@ class AzureStorageDocStore {
           }
           entries = entries.concat(result.entries.map(entry => {
             const blobMetadata = entry.metadata;
-            if (blobMetadata.extra) {
-              blobMetadata.extra = JSON.parse(blobMetadata.extra);
-            }
-            return blobMetadata;
+            return {
+              version: blobMetadata.version,
+              etag: blobMetadata.etag,
+              type: blobMetadata.type,
+              url: blobMetadata.url,
+              urn: blobMetadata.urn,
+              fetchedAt: blobMetadata.fetchedat,
+              processedAt: blobMetadata.processedat,
+              extra: blobMetadata.extra ? JSON.parse(blobMetadata.extra) : undefined
+            };
           }));
           callback(null);
         });
@@ -128,7 +137,9 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
+  // This API can only be used for the 'deadletter' store because we cannot look up documents by type performantly
   delete(type, key) {
+    this._ensureDeadletter(type);
     const deferred = Q.defer();
     const blobName = this._getBlobNameFromKey(type, key);
     this.service.deleteBlob(this.name, blobName, (error, response) => {
@@ -140,21 +151,22 @@ class AzureStorageDocStore {
     return deferred.promise;
   }
 
-  count(pattern, force = false) {
-    const key = `${this.name}:count:${pattern || ''}`;
+  // This API can only be used for the 'deadletter' store because we cannot look up documents by type performantly
+  count(type, force = false) {
+    this._ensureDeadletter(type);
+    const key = `${this.name}:count:${type || ''}`;
     if (!force) {
       const cachedCount = memoryCache.get(key);
       if (cachedCount) {
         return Q(cachedCount);
       }
     }
-    const blobPattern = this._getBlobPathFromUrn(null, pattern);
     var entryCount = 0;
     var continuationToken = null;
     const deferred = Q.defer();
     async.doWhilst(
       callback => {
-        this.service.listBlobsSegmentedWithPrefix(this.name, blobPattern, continuationToken, { location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
+        this.service.listBlobs(this.name, continuationToken, { location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
           if (err) {
             continuationToken = null;
             callback(err);
@@ -178,6 +190,12 @@ class AzureStorageDocStore {
 
   close() {
     return Q();
+  }
+
+  _ensureDeadletter(type) {
+    if (type !== 'deadletter') {
+      throw new Error('This API is only supported for deadletter.');
+    }
   }
 
   _getBlobNameFromDocument(document) {

@@ -31,12 +31,13 @@ class MongoDocStore {
     });
   }
 
+  // TODO: Consistency on whether key is a URL or URN
   get(type, url) {
     const cached = memoryCache.get(url);
     if (cached) {
       return Q(cached.document);
     }
-    return this.db.collection(type).findOne({ '_metadata.url': url }).then(value => {
+    return this.db.collection(type).findOne({ '$or': [{ '_metadata.url': url }, { '_metadata.links.self.href': url }] }).then(value => {
       if (value) {
         memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
         return value;
@@ -59,19 +60,32 @@ class MongoDocStore {
     });
   }
 
-  listDocuments(pattern) {
-    // TODO implement
-    return Q([]);
+  list(type) {
+    return this.db.collection(type).find({}, { '_metadata': 1 }).toArray().then(docs => {
+      return docs.map(doc => {
+        const metadata = doc._metadata;
+        return {
+          version: metadata.version,
+          etag: metadata.etag,
+          type: metadata.type,
+          url: metadata.url,
+          urn: metadata.links.self.href,
+          fetchedAt: metadata.fetchedAt,
+          processedAt: metadata.processedAt,
+          extra: metadata.extra
+        };
+      })
+    });
   }
 
-  delete(type, url) {
-    // TODO implement
-    return Q(true);
+  delete(type, urn) {
+    return this.db.collection(type).deleteOne({ '_metadata.links.self.href': urn }).then(result => {
+      return result;
+    });
   }
 
-  count(pattern) {
-    // TODO implement
-    return Q(0);
+  count(type) {
+    return this.db.collection(type).count()
   }
 
   close() {
