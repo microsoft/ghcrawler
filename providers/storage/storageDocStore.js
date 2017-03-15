@@ -101,7 +101,7 @@ class AzureStorageDocStore {
     async.doWhilst(
       callback => {
         var started = new Date().getTime();
-        this.service.listBlobs(this.name, continuationToken, { include: azure.BlobUtilities.BlobListingDetails.METADATA, location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
+        this.service.listBlobsSegmented(this.name, continuationToken, { include: azure.BlobUtilities.BlobListingDetails.METADATA, location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
           // metricsClient.trackDependency(url.parse(blobService.host.primaryHost).hostname, 'listBlobsSegmented', (new Date().getTime() - started), !err, "Http", { 'Container name': 'download', 'Continuation token present': result == null ? false : (result.continuationToken != null), 'Blob count': result == null ? 0 : result.entries.length });
 
           if (err) {
@@ -166,7 +166,7 @@ class AzureStorageDocStore {
     const deferred = Q.defer();
     async.doWhilst(
       callback => {
-        this.service.listBlobs(this.name, continuationToken, { location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
+        this.service.listBlobsSegmented(this.name, continuationToken, { location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
           if (err) {
             continuationToken = null;
             callback(err);
