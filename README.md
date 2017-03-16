@@ -38,16 +38,9 @@ If you want to persist the data gathered and create some insights dashboards in 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/crawler-dashboard](https://github.com/Microsoft/crawler-dashboard.git) repos.
 1. In a command prompt go to ```ghcrawler/docker``` and run ```docker-compose up```.
 
-Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the ```cc``` command line tool or the browser-based dashboard, both of which are described below.
+Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or the browser-based dashboard, both of which are described below. 
 
-You can also hookup directly to the crawler infrastructure. By default the containers expose a number of endpoints at different ports on localhost. Note that if you have trouble starting the containers due to port conflicts, either shutdown your services using these ports or edit the docker/docker-compose.yml file to change the ports.
-
-* Crawler Dashboard (4000) -- Open http://localhost:4000 in your browser to see what's happening and control some behaivors and configurations
-* Crawler (3000) -- http://localhost:3000 gives you direct access to the REST API for the crawler
-* MongoDB (27017 and 28017) -- Direct access to the Mongo DB
-* Redis (6379) -- Observe what's happening in Redis. Not much else for you to do here
-* RabbitMQ (5672 and 15672) -- Hit http://localhost:15672 with a browser to see and maange the RabbitMQ queues
-* Metabase (5000) -- Hit http://localhost:5000 to get live insights in your browser via Metabase
+Check out the [related GHCrawler wiki page](https://github.com/Microsoft/ghcrawler/wiki/Crawler-in-a-box) for more information on running in Docker.
 
 # Deploying native
 For ultimate flexibility, the crawler and associated bits can be run directly on VMs or as an app service. This structure typically uses cloud-based infrastructure for queuing, storage and redis. For example, this project comes with adapters for Azure Service Bus queuing and Azure Blob storage. The APIs on these adpaters is very slim so it is easy to for you to implement (and contribute) more.
