@@ -54,6 +54,17 @@ For ultimate flexibility, the crawler and associated bits can be run directly on
 
 ***Setting up this operating mode is a bit more involved and is not yet documented.***
 
+# Event tracking
+The crawler can hook and track GitHub events by listening webhooks.  To set this up, 
+
+1. Create a webhook on your GitHub orgs or repos and point it at the running crawler.  When events are on the webhook should point to
+```
+  https://<crawler machine>:3000/webhook
+```
+2. Set the crawler to handle webhook events by modifying the `queuing.events` property in the [Runtime configuration](https://github.com/Microsoft/ghcrawler/wiki/Configuration#runtime-configuration) or setting the `CRAWLER_EVENT_PROVIDER` [Infrastructure setting](https://github.com/Microsoft/ghcrawler/wiki/Configuration#infrastructure-settings) to have the value `webhook`.  In both cases changing the value requires a restart.  Note that you can turn off events by setting the value to `none`.
+
+If you are using signature validation, you must set the [Infrastructure setting](https://github.com/Microsoft/ghcrawler/wiki/Configuration#infrastructure-settings) `CRAWLER_WEBHOOK_SECRET` to the value you configured into the GitHub webhook.
+
 # Controlling the crawler
 Given a running crawler service (see above), you can control it using either a simple command line app or a browser-based dashboard.
 
