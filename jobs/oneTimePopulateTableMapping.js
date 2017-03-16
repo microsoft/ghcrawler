@@ -49,14 +49,15 @@ const tableService = AzureStorage.createTableService(jobConfig.azureStorage.acco
 let continuationToken = null;
 
 console.time('Populate table mapping');
+console.log(new Date(), `Populating ${jobConfig.azureStorage.name} table.`);
 
 start();
 
 function start() {
-  return Q.fcall(() => retrieveBlobNames()
+  return Q().then(retrieveBlobNames)
     .then(processBatch)
     .catch(error => console.error(error))
-    .then(startNext));
+    .then(startNext);
 }
 
 function retrieveBlobNames() {
@@ -69,6 +70,7 @@ function retrieveBlobNames() {
     }
     continuationToken = result.continuationToken;
     const blobNames = result.entries.map(entry => entry.name);
+    console.log(new Date(), `Retrieved ${blobNames.length} blob names.`);
     deferred.resolve(blobNames);
   });
   return deferred.promise;
@@ -120,9 +122,6 @@ function storeEntity(blobData) {
   ]).then(([urlResult, urnResult]) => {
     updateStats(urlResult, stats.url);
     updateStats(urnResult, stats.urn);
-    if (stats.total % 100 === 0) {
-      console.log(`Processed ${stats.total}`);
-    }
     return Q();
   });
 }
