@@ -137,6 +137,7 @@ function updateStats(result, statistics) {
       statistics.skippedReason.alreadyExists++;
     } else {
       statistics.skippedReason.errors++;
+      console.error(result.reason);
     }
   }
 }
