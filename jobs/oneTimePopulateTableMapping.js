@@ -136,7 +136,7 @@ function updateStats(result, statistics) {
     if (result.reason.code === 'EntityAlreadyExists') {
       statistics.skippedReason.alreadyExists++;
     } else {
-      statistics.skippedReason.errors;
+      statistics.skippedReason.errors++;
     }
   }
 }
