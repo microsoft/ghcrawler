@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 FROM metabase/metabase:latest
 EXPOSE 3000
 RUN mkdir -p /var/opt/metabase
