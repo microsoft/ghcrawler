@@ -245,7 +245,7 @@ describe('Repo processing', () => {
       { type: 'user', url: 'http://user/45', path: '/owner' },
       { type: 'org', url: 'http://org/24', path: '/organization' },
       { type: 'teams', url: 'http://teams', qualifier: 'urn:repo:12', path: '/teams', relation: { origin: 'repo', qualifier: 'urn:repo:12:teams', type: 'team' } },
-      { type: 'collaborators', url: 'http://collaborators?affiliation=outside', qualifier: 'urn:repo:12', path: '/collaborators', relation: { origin: 'repo', qualifier: 'urn:repo:12:collaborators', type: 'user' } },
+      { type: 'collaborators', url: 'http://collaborators?affiliation=direct', qualifier: 'urn:repo:12', path: '/collaborators', relation: { origin: 'repo', qualifier: 'urn:repo:12:collaborators', type: 'user' } },
       { type: 'contributors', url: 'http://contributors', qualifier: 'urn:repo:12', path: '/contributors', relation: { origin: 'repo', qualifier: 'urn:repo:12:contributors', type: 'user' } },
       { type: 'stargazers', url: 'http://stargazers', qualifier: 'urn:repo:12', path: '/stargazers', relation: { origin: 'repo', qualifier: 'urn:repo:12:stargazers', type: 'user' } },
       { type: 'subscribers', url: 'http://subscribers', qualifier: 'urn:repo:12', path: '/subscribers', relation: { origin: 'repo', qualifier: 'urn:repo:12:subscribers', type: 'user' } },
@@ -713,6 +713,7 @@ describe('Issue processing', () => {
   });
 });
 
+// TODO: Add additional test similar to this one for deletion
 describe('Issue comment processing', () => {
   it('should link and queue correctly', () => {
     const request = createRequest('issue_comment', 'http://repo/issue/comment');
@@ -741,8 +742,10 @@ describe('Issue comment processing', () => {
     expectQueued(queue, expected);
   });
 
+  // TODO: Add additional test similar to this one for deletion
   it('should link and queue IssueCommentEvent', () => {
     const request = createRequest('IssueCommentEvent', 'http://foo/');
+    // request.context = { deletedAt: 'todo' };
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
@@ -770,6 +773,7 @@ describe('Issue comment processing', () => {
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' },
       { type: 'issue_comment', url: 'http://issue_comment/7', qualifier: 'urn:repo:4:issue:1', path: '/comment' },
+      // { type: 'issue_comment', url: 'http://issue_comment/7', qualifier: 'urn:repo:4:issue:1', path: '/comment', deletedAt: 'todo' },
       { type: 'issue', url: 'http://issue/1', qualifier: 'urn:repo:4', path: '/issue' }
     ];
     expectQueued(queue, expected);
@@ -1019,6 +1023,7 @@ function expectQueued(actual, expected) {
       return e.type === a.type
         && e.url === a.url
         && (!e.urn || e.urn === a.context.qualifier)
+        && (!e.deletedAt || e.deletedAt === a.context.deletedAt)
         && (!e.path || e.path === a.policy.map.path)
         && (!er || (er.origin === ar.orgin && er.qualifier === ar.qualifier && er.type === ar.type));
     })).to.be.true;

@@ -182,6 +182,10 @@ class GitHubProcessor {
       this._addRoot(request, 'owner', 'user');
     }
 
+    if (request.context.deletedAt) {
+      document._metadata.deletedAt = request.context.deletedAt;
+      return document;
+    }
     this._addRelation(request, 'teams', 'team');
     // this._addRelation(request, 'collaborators', 'user', document.collaborators_url.replace('{/collaborator}', ''));
     this._addRelation(request, 'collaborators', 'user', document.collaborators_url.replace('{/collaborator}', '?affiliation=direct'));
@@ -358,6 +362,9 @@ class GitHubProcessor {
     request.linkSiblings(`${context.qualifier}:issue_comments`);
 
     this._addRoot(request, 'user', 'user');
+    if (request.context.deletedAt) {
+      document._metadata.deletedAt = request.context.deletedAt;
+    }
     return document;
   }
 
@@ -367,6 +374,10 @@ class GitHubProcessor {
     request.linkSiblings(`urn:org:${document.organization.id}:teams`);
 
     this._addRoot(request, 'organization', 'org');
+    if (request.context.deletedAt) {
+      document._metadata.deletedAt = request.context.deletedAt;
+      return document;
+    }
     this._addRelation(request, 'members', 'user', document.members_url.replace('{/member}', ''), `${this._getQualifier(request)}:team_members`);
     this._addRelation(request, 'repos', 'repo', document.repositories_url);
     return document;
@@ -519,9 +530,11 @@ class GitHubProcessor {
   }
 
   IssueCommentEvent(request) {
-    let [, repo, payload] = this._addEventBasics(request);
+    let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:issue:${payload.issue.id}`;
-    this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier);
+    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
+    this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier, context);
+    // TODO: in the delete case create a link to the issue but do not queue it!
     return this._addEventResourceContains(request, repo, 'issue');
   }
 
@@ -544,6 +557,7 @@ class GitHubProcessor {
 
   MemberEvent(request) {
     this._addEventBasics(request);
+    // TODO: How to remove from relation if a member is deleted?
     return this._addEventResourceReference(request, null, 'member', 'user');
   }
 
@@ -555,8 +569,9 @@ class GitHubProcessor {
 
   MilestoneEvent(request) {
     // TODO complete implementation and add Milestone handler
-    // let [, repo] = this._addEventBasics(request);
-    // return this._addEventResource(request, repo, 'milestone');
+    // let [document, repo] = this._addEventBasics(request);
+    // const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
+    // return this._addEventResource(request, repo, 'milestone', null, null, context);
     let [document] = this._addEventBasics(request);
     return document;
   }
@@ -595,9 +610,11 @@ class GitHubProcessor {
       request.queue('LegacyPullRequestReviewCommentEvent', request.document.payload.comment.pull_request_url, request.policy, context);
       return null;
     }
-    let [, repo, payload] = this._addEventBasics(request);
+    let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
-    this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier);
+    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
+    this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier, context);
+    // TODO: same as issue: in the delete case create a link to the pull_request but do not queue it!
     return this._addEventResourceContains(request, repo, 'pull_request');
   }
 
@@ -631,8 +648,9 @@ class GitHubProcessor {
   }
 
   RepositoryEvent(request) {
-    this._addEventBasics(request);
-    return this._addEventResourceReference(request, null, 'repository', 'repo');
+    let [document] = this._addEventBasics(request);
+    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
+    return this._addEventResourceReference(request, null, 'repository', 'repo', null, context);
   }
 
   StatusEvent(request) {
@@ -643,11 +661,12 @@ class GitHubProcessor {
   }
 
   TeamEvent(request) {
-    let [, , payload] = this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
+    let [document, , payload] = this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
     if (payload.repository) {
       this._addEventResourceReference(request, null, 'repository', 'repo');
     }
-    return this._addEventResourceReference(request, null, 'team');
+    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
+    return this._addEventResourceReference(request, null, 'team', null, null, context);
   }
 
   TeamAddEvent(request) {
@@ -718,15 +737,15 @@ class GitHubProcessor {
     return [document, repo, document.payload];
   }
 
-  _addEventResourceReference(request, repo, name, type = name, qualifier = null) {
-    return this._addEventResource(request, repo, name, type, qualifier);
+  _addEventResourceReference(request, repo, name, type = name, qualifier = null, context = {}) {
+    return this._addEventResource(request, repo, name, type, qualifier, context);
   }
 
-  _addEventResourceContains(request, repo, name, type = name, qualifier = null) {
-    return this._addEventResource(request, repo, name, type, qualifier);
+  _addEventResourceContains(request, repo, name, type = name, qualifier = null, context = {}) {
+    return this._addEventResource(request, repo, name, type, qualifier, context);
   }
 
-  _addEventResource(request, repo, name, type = name, qualifier = null) {
+  _addEventResource(request, repo, name, type = name, qualifier = null, context = {}) {
     const payload = request.document.payload;
     const target = payload[name];
     if (!target) {
@@ -734,9 +753,10 @@ class GitHubProcessor {
     }
     // if the repo is given then use it. Otherwise, assume the type is a root and construct a urn
     qualifier = qualifier || (repo ? `urn:repo:${repo}` : 'urn:');
+    context.qualifier = qualifier;
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
-    const newRequest = new Request(type, payload[name].url, { qualifier: qualifier });
+    const newRequest = new Request(type, payload[name].url, context);
     newRequest.policy = request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
