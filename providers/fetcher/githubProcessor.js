@@ -534,7 +534,9 @@ class GitHubProcessor {
     const qualifier = `urn:repo:${repo}:issue:${payload.issue.id}`;
     const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
     this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier, context);
-    // TODO: in the delete case create a link to the issue but do not queue it!
+    if (payload.action === 'deleted') { // No need to queue the issue event
+      return document;
+    }
     return this._addEventResourceContains(request, repo, 'issue');
   }
 
@@ -614,7 +616,9 @@ class GitHubProcessor {
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
     const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
     this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier, context);
-    // TODO: same as issue: in the delete case create a link to the pull_request but do not queue it!
+    if (payload.action === 'deleted') { // No need to queue the pull_request event
+      return document;
+    }
     return this._addEventResourceContains(request, repo, 'pull_request');
   }
 

@@ -665,8 +665,10 @@ describe('Pull request/review comment processing', () => {
       actor: { href: 'urn:user:3', type: 'resource' },
       repo: { href: 'urn:repo:4', type: 'resource' },
       org: { href: 'urn:org:5', type: 'resource' },
-      comment: { href: 'urn:repo:4:pull_request:1:review_comment:7', type: 'resource' },
-      pull_request: { href: 'urn:repo:4:pull_request:1', type: 'resource' },
+      comment: { href: 'urn:repo:4:pull_request:1:review_comment:7', type: 'resource' }
+    }
+    if (!isDeletion) {
+      links.pull_request = { href: 'urn:repo:4:pull_request:1', type: 'resource' };
     }
     expectLinks(document._metadata.links, links);
 
@@ -674,9 +676,11 @@ describe('Pull request/review comment processing', () => {
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' },
-      { type: 'review_comment', url: 'http://review_comment/7', qualifier: 'urn:repo:4:pull_request:1', path: '/comment',  deletedAt: isDeletion ? 'date and time' : undefined },
-      { type: 'pull_request', url: 'http://pull_request/1', qualifier: 'urn:repo:4', path: '/pull_request' }
+      { type: 'review_comment', url: 'http://review_comment/7', qualifier: 'urn:repo:4:pull_request:1', path: '/comment', deletedAt: isDeletion ? 'date and time' : undefined }
     ];
+    if (!isDeletion) {
+      expected.push({ type: 'pull_request', url: 'http://pull_request/1', qualifier: 'urn:repo:4', path: '/pull_request' });
+    }
     expectQueued(queue, expected);
   }
 
@@ -916,8 +920,7 @@ describe('Issue comment processing', () => {
       actor: { href: 'urn:user:3', type: 'resource' },
       repo: { href: 'urn:repo:4', type: 'resource' },
       org: { href: 'urn:org:5', type: 'resource' },
-      comment: { href: 'urn:repo:4:issue:1:issue_comment:7', type: 'resource' },
-      issue: { href: 'urn:repo:4:issue:1', type: 'resource' },
+      comment: { href: 'urn:repo:4:issue:1:issue_comment:7', type: 'resource' }
     }
     expectLinks(document._metadata.links, links);
 
@@ -925,8 +928,7 @@ describe('Issue comment processing', () => {
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' },
-      { type: 'issue_comment', url: 'http://issue_comment/7', qualifier: 'urn:repo:4:issue:1', path: '/comment', deletedAt: 'date and time' },
-      { type: 'issue', url: 'http://issue/1', qualifier: 'urn:repo:4', path: '/issue' }
+      { type: 'issue_comment', url: 'http://issue_comment/7', qualifier: 'urn:repo:4:issue:1', path: '/comment', deletedAt: 'date and time' }
     ];
     expectQueued(queue, expected);
   });
