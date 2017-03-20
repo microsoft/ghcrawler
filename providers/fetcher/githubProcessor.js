@@ -648,7 +648,7 @@ class GitHubProcessor {
   }
 
   RepositoryEvent(request) {
-    let [document] = this._addEventBasics(request);
+    let [document, , payload] = this._addEventBasics(request);
     const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
     return this._addEventResourceReference(request, null, 'repository', 'repo', null, context);
   }
@@ -666,7 +666,7 @@ class GitHubProcessor {
       this._addEventResourceReference(request, null, 'repository', 'repo');
     }
     const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
-    return this._addEventResourceReference(request, null, 'team', null, null, context);
+    return this._addEventResourceReference(request, null, 'team', 'team', null, context);
   }
 
   TeamAddEvent(request) {
