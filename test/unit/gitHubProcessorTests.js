@@ -934,6 +934,41 @@ describe('Issue comment processing', () => {
   });
 });
 
+describe('Member processing', () => {
+  it('should link and queue added MemberEvent', () => {
+    const request = createRequest('MemberEvent', 'http://foo/');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    const payload = {
+      action: 'added',
+      member: { id: 7, url: 'http://member/7' },
+      repository: { id: 6, url: 'http://repo/6' }
+    }
+    request.document = createEvent('MemberEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.MemberEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:MemberEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:MemberEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      repository: { href: 'urn:repo:6', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const expected = [
+      { type: 'user', url: 'http://user/3', path: '/actor' },
+      { type: 'repo', url: 'http://repo/4', path: '/repo' },
+      { type: 'repo', url: 'http://repo/6', path: '/repo' },
+      { type: 'org', url: 'http://org/5', path: '/org' }
+    ];
+    expectQueued(queue, expected);
+  });
+});
+
 describe('Status processing', () => {
   it('should link and queue StatusEvent', () => {
     const request = createRequest('StatusEvent', 'http://foo/');
@@ -1120,6 +1155,38 @@ describe('Team processing', () => {
       { type: 'org', url: 'http://org/5', path: '/org' },
       { type: 'repo', url: 'http://repo/6', path: '/repository' },
       { type: 'team', url: 'http://team/7', path: '/team' }
+    ];
+    expectQueued(queue, expected);
+  });
+
+  it('should link and queue added_to_repository TeamEvent with repository', () => {
+    const request = createRequest('TeamEvent', 'http://foo/team');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    const payload = {
+      action: 'added_to_repository',
+      team: { id: 7, url: 'http://team/7' },
+      organization: { id: 5, url: 'http://org/5' },
+      repository: { id: 6, url: 'http://repo/6' }
+    }
+    request.document = createOrgEvent('TeamEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.TeamEvent(request);
+
+    const links = {
+      self: { href: 'urn:team:7:TeamEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:team:7:TeamEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      repository: { href: 'urn:repo:6', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const expected = [
+      { type: 'user', url: 'http://user/3', path: '/actor' },
+      { type: 'org', url: 'http://org/5', path: '/org' },
+      { type: 'repo', url: 'http://repo/6', path: '/repo' }
     ];
     expectQueued(queue, expected);
   });

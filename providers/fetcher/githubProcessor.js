@@ -9,6 +9,7 @@ const qlimit = require('qlimit');
 const TraversalPolicy = require('../../lib/traversalPolicy');
 const URL = require('url');
 const uuid = require('node-uuid');
+const VisitorMap = require('../../lib/visitorMap');
 
 class GitHubProcessor {
   constructor(store) {
@@ -558,11 +559,10 @@ class GitHubProcessor {
   }
 
   MemberEvent(request) {
-    this._addEventBasics(request);
+    let [ , , payload] = this._addEventBasics(request);
     if (payload.action === 'added' || payload.action === 'deleted') {
-      // TODO
-      // const relationPolicy = ;
-      // return this._addEventResourceReference(request, null, 'repository', 'repo', null, null, relationPolicy); // traverse the repo with a different policy
+      const relationPolicy = this._getNextRelationPolicy('repo', request);
+      return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy); // Traverse the repo with a different policy. No need to traverse the user.
     }
     return this._addEventResourceReference(request, null, 'member', 'user');
   }
@@ -672,9 +672,8 @@ class GitHubProcessor {
     let [document, , payload] = this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
     if (payload.repository) {
       if (payload.action === 'added_to_repository' || payload.action === 'removed_from_repository') {
-        // TODO
-        // const relationPolicy = ;
-        // return this._addEventResourceReference(request, null, 'repository', 'repo', null, null, relationPolicy); // traverse the repo with a different policy
+        const relationPolicy = this._getNextRelationPolicy('repo', request);
+        return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy); // Traverse the repo with a different policy. No need to traverse the team.
       } else {
         this._addEventResourceReference(request, null, 'repository', 'repo');
       }
@@ -776,6 +775,14 @@ class GitHubProcessor {
       request.queueRequests(newRequest);
     }
     return request.document;
+  }
+
+  _getNextRelationPolicy(name, request) {
+    const map = VisitorMap.getMap(`relationOnly/${request.type}`);
+    if (!map) {
+      return null;
+    }
+    return request.policy.getNextPolicy(name, map);
   }
 
   _addResource(request, name, type, id, url = null, urn = null, qualifier = null) {
