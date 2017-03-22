@@ -533,11 +533,12 @@ class GitHubProcessor {
   IssueCommentEvent(request) {
     let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:issue:${payload.issue.id}`;
-    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
-    this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier, context);
-    if (payload.action === 'deleted') { // No need to queue the issue event
-      return document;
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: document.created_at };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier, context, policy);
     }
+    this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier);
     return this._addEventResourceContains(request, repo, 'issue');
   }
 
@@ -559,10 +560,10 @@ class GitHubProcessor {
   }
 
   MemberEvent(request) {
-    let [ , , payload] = this._addEventBasics(request);
+    let [, , payload] = this._addEventBasics(request);
     if (payload.action === 'added' || payload.action === 'deleted') {
       const relationPolicy = this._getNextRelationPolicy('repo', request);
-      return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy); // Traverse the repo with a different policy. No need to traverse the user.
+      return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy);
     }
     return this._addEventResourceReference(request, null, 'member', 'user');
   }
@@ -618,11 +619,12 @@ class GitHubProcessor {
     }
     let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
-    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
-    this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier, context);
-    if (payload.action === 'deleted') { // No need to queue the pull_request event
-      return document;
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: document.created_at };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier, context, policy);
     }
+    this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier);
     return this._addEventResourceContains(request, repo, 'pull_request');
   }
 
@@ -656,9 +658,13 @@ class GitHubProcessor {
   }
 
   RepositoryEvent(request) {
-    let [document, , payload] = this._addEventBasics(request);
-    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
-    return this._addEventResourceReference(request, null, 'repository', 'repo', null, context);
+    let [document, , payload] = this._addEventBasics(request, null, ['actor', 'org']);
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: document.created_at };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResourceReference(request, null, 'repository', 'repo', null, context, policy);
+    }
+    return this._addEventResourceReference(request, null, 'repository', 'repo', null);
   }
 
   StatusEvent(request) {
@@ -670,14 +676,11 @@ class GitHubProcessor {
 
   TeamEvent(request) {
     let [document, , payload] = this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
-    if (payload.repository) {
-      if (payload.action === 'added_to_repository' || payload.action === 'removed_from_repository') {
-        const relationPolicy = this._getNextRelationPolicy('repo', request);
-        return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy); // Traverse the repo with a different policy. No need to traverse the team.
-      } else {
-        this._addEventResourceReference(request, null, 'repository', 'repo');
-      }
+    if (payload.action === 'added_to_repository' || payload.action === 'removed_from_repository') {
+      const relationPolicy = this._getNextRelationPolicy('repo', request);
+      return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy);
     }
+    this._addEventResourceReference(request, null, 'repository', 'repo');
     const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
     return this._addEventResourceReference(request, null, 'team', 'team', null, context);
   }
@@ -732,7 +735,7 @@ class GitHubProcessor {
     return null;
   }
 
-  _addEventBasics(request, qualifier = null) {
+  _addEventBasics(request, qualifier = null, queueList = ['actor', 'repo', 'org']) {
     // TODO handle org event cases (no repo etc)
     const document = request.document;
     const repo = document.repo ? document.repo.id : null;
@@ -741,12 +744,11 @@ class GitHubProcessor {
     request.linkSiblings(`${qualifier}:${request.type}s`);
 
     // TODO understand if the actor is typically the same as the creator or pusher in the payload
-    this._addRoot(request, 'actor', 'user');
+    this._addRoot(request, 'actor', 'user', null, null, queueList.includes('actor'));
     if (repo) {
-      this._addRoot(request, 'repo', 'repo');
+      this._addRoot(request, 'repo', 'repo', null, null, queueList.includes('repo'));
     }
-    this._addRoot(request, 'org', 'org');
-
+      this._addRoot(request, 'org', 'org', null, null, queueList.includes('org'));
     return [document, repo, document.payload];
   }
 
@@ -770,7 +772,7 @@ class GitHubProcessor {
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
     const newRequest = new Request(type, payload[name].url, context);
-    policy ? newRequest.policy = policy : newRequest.policy = request.getNextPolicy(name);
+    newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
     }
@@ -783,6 +785,10 @@ class GitHubProcessor {
       return null;
     }
     return request.policy.getNextPolicy(name, map);
+  }
+
+  _getNextDeletedPolicy() {
+    return new TraversalPolicy('storageOnly', 'always', VisitorMap.getMap('self'));
   }
 
   _addResource(request, name, type, id, url = null, urn = null, qualifier = null) {
@@ -806,7 +812,7 @@ class GitHubProcessor {
     request.queue(name, url, newPolicy, newContext);
   }
 
-  _addRoot(request, name, type, url = null, urn = null) {
+  _addRoot(request, name, type, url = null, urn = null, queue = true) {
     const element = request.document[name];
     // If there is no element then we must have both the url and urn as otherwise we don't know how to compute them
     if ((!element || Object.getOwnPropertyNames(element).length === 0) && !(urn && url)) {
@@ -817,7 +823,9 @@ class GitHubProcessor {
     url = url || element.url;
     request.linkResource(name, urn);
     const newPolicy = request.getNextPolicy(name);
-    request.queue(type, url, newPolicy);
+    if (queue) {
+      request.queue(type, url, newPolicy);
+    }
   }
 
   /**

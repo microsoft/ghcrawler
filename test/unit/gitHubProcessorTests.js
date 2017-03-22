@@ -345,7 +345,7 @@ describe('Repo processing', () => {
   });
 
   it('should link and queue deletion of RepositoryEvent', () => {
-    const request = createRequest('repo', 'http://foo');
+    const request = createRequest('RepositoryEvent', 'http://foo');
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
@@ -358,15 +358,21 @@ describe('Repo processing', () => {
     const document = processor.RepositoryEvent(request);
 
     const links = {
-      self: { href: 'urn:repo:4:repo:12345', type: 'resource' },
-      siblings: { href: 'urn:repo:4:repos', type: 'collection' },
+      self: { href: 'urn:repo:4:RepositoryEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:RepositoryEvents', type: 'collection' },
       actor: { href: 'urn:user:3', type: 'resource' },
       repo: { href: 'urn:repo:4', type: 'resource' },
       org: { href: 'urn:org:5', type: 'resource' },
       repository: { href: 'urn:repo:4', type: 'resource' }
     }
     expectLinks(document._metadata.links, links);
-    expectQueued(queue, []);
+
+    const expected = [
+      { type: 'user', url: 'http://user/3', path: '/actor' },
+      { type: 'repo', url: 'http://repo/4', deletedAt: 'date and time' },
+      { type: 'org', url: 'http://org/5', path: '/org' }
+    ];
+    expectQueued(queue, expected);
   });
 });
 

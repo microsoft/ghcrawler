@@ -269,7 +269,7 @@ class GitHubFetcher {
   _getTypeDetails(type) {
     const result = {
       orgs: { tokenTraits: ['admin'] },
-      org: { tokenTraits: [['admin'], ['public']] },
+      org: { tokenTraits: [['admin'], ['public']], headers: { Accept: 'application/vnd.github.korra-preview+json'} },
       repos: { tokenTraits: [['admin'], ['public']] },
       repo: { tokenTraits: [['admin'], ['public']] },
       teams: { tokenTraits: ['admin'] },
