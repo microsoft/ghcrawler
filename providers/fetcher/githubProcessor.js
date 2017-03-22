@@ -748,7 +748,7 @@ class GitHubProcessor {
     if (repo) {
       this._addRoot(request, 'repo', 'repo', null, null, queueList.includes('repo'));
     }
-      this._addRoot(request, 'org', 'org', null, null, queueList.includes('org'));
+    this._addRoot(request, 'org', 'org', null, null, queueList.includes('org'));
     return [document, repo, document.payload];
   }
 
