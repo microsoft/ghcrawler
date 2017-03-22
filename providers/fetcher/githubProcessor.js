@@ -770,7 +770,7 @@ class GitHubProcessor {
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
     const newRequest = new Request(type, payload[name].url, context);
-    policy ? newRequest.policy = policy : newRequest.policy = request.getNextPolicy(name);
+    newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
     }
