@@ -683,8 +683,12 @@ class GitHubProcessor {
     if (payload.repository) {
       this._addEventResourceReference(request, null, 'repository', 'repo');
     }
-    const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
-    return this._addEventResourceReference(request, null, 'team', 'team', null, context);
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: document.created_at };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResourceContains(request, null, 'team', 'team', null, context, policy);
+    }
+    return this._addEventResourceReference(request, null, 'team', 'team');
   }
 
   TeamAddEvent(request) {

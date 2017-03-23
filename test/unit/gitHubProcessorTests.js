@@ -369,7 +369,7 @@ describe('Repo processing', () => {
 
     const expected = [
       { type: 'user', url: 'http://user/3', path: '/actor' },
-      { type: 'repo', url: 'http://repo/4', deletedAt: 'date and time' },
+      { type: 'repo', url: 'http://repo/4', path: '/', deletedAt: 'date and time' },
       { type: 'org', url: 'http://org/5', path: '/org' }
     ];
     expectQueued(queue, expected);
@@ -682,7 +682,7 @@ describe('Pull request/review comment processing', () => {
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' },
-      { type: 'review_comment', url: 'http://review_comment/7', qualifier: 'urn:repo:4:pull_request:1', path: '/comment', deletedAt: isDeletion ? 'date and time' : undefined }
+      { type: 'review_comment', url: 'http://review_comment/7', qualifier: 'urn:repo:4:pull_request:1', path: isDeletion ? '/' : '/comment', deletedAt: isDeletion ? 'date and time' : undefined }
     ];
     if (!isDeletion) {
       expected.push({ type: 'pull_request', url: 'http://pull_request/1', qualifier: 'urn:repo:4', path: '/pull_request' });
@@ -934,7 +934,7 @@ describe('Issue comment processing', () => {
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' },
-      { type: 'issue_comment', url: 'http://issue_comment/7', qualifier: 'urn:repo:4:issue:1', path: '/comment', deletedAt: 'date and time' }
+      { type: 'issue_comment', url: 'http://issue_comment/7', qualifier: 'urn:repo:4:issue:1', path: '/', deletedAt: 'date and time' }
     ];
     expectQueued(queue, expected);
   });
@@ -1127,7 +1127,7 @@ describe('Team processing', () => {
     const expected = [
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'org', url: 'http://org/5', path: '/org' },
-      { type: 'team', url: 'http://team/7', path: '/team', deletedAt: 'date and time' }
+      { type: 'team', url: 'http://team/7', path: '/', deletedAt: 'date and time' }
     ];
     expectQueued(queue, expected);
   });
