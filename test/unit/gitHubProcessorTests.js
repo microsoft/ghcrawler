@@ -947,8 +947,7 @@ describe('Member processing', () => {
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
       action: 'added',
-      member: { id: 7, url: 'http://member/7' },
-      repository: { id: 6, url: 'http://repo/6' }
+      member: { id: 7, url: 'http://member/7' }
     }
     request.document = createEvent('MemberEvent', payload);
 
@@ -960,7 +959,7 @@ describe('Member processing', () => {
       siblings: { href: 'urn:repo:4:MemberEvents', type: 'collection' },
       actor: { href: 'urn:user:3', type: 'resource' },
       repo: { href: 'urn:repo:4', type: 'resource' },
-      repository: { href: 'urn:repo:6', type: 'resource' },
+      repository: { href: 'urn:repo:4', type: 'resource' },
       org: { href: 'urn:org:5', type: 'resource' }
     }
     expectLinks(document._metadata.links, links);
@@ -968,7 +967,7 @@ describe('Member processing', () => {
     const expected = [
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
-      { type: 'repo', url: 'http://repo/6', path: '/repo' },
+      { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' }
     ];
     expectQueued(queue, expected);

@@ -560,10 +560,10 @@ class GitHubProcessor {
   }
 
   MemberEvent(request) {
-    let [, , payload] = this._addEventBasics(request);
+    let [document, repo, payload] = this._addEventBasics(request);
     if (payload.action === 'added' || payload.action === 'deleted') {
       const relationPolicy = this._getNextRelationPolicy('repo', request);
-      return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy);
+      return this._addEventResourceExplicit(request, 'repository', repo, document.repo.url, 'repo', null, {}, relationPolicy);
     }
     return this._addEventResourceReference(request, null, 'member', 'user');
   }
@@ -778,6 +778,19 @@ class GitHubProcessor {
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
     const newRequest = new Request(type, payload[name].url, context);
+    newRequest.policy = policy || request.getNextPolicy(name);
+    if (newRequest.policy) {
+      request.queueRequests(newRequest);
+    }
+    return request.document;
+  }
+
+  _addEventResourceExplicit(request, name, id, url, type = name, qualifier = null, context = {}, policy = null) {
+    qualifier = qualifier || 'urn:';
+    context.qualifier = qualifier;
+    const separator = qualifier.endsWith(':') ? '' : ':';
+    request.linkResource(name, `${qualifier}${separator}${type}:${id}`);
+    const newRequest = new Request(type, url, context);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
