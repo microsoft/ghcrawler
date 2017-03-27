@@ -42,7 +42,7 @@ const stats = {
     }
   }
 };
-const limit = qlimit(100);
+const limit = qlimit(30);
 const retryOperations = new AzureStorage.ExponentialRetryPolicyFilter();
 const blobService = AzureStorage.createBlobService(jobConfig.azureStorage.account, jobConfig.azureStorage.key).withFilter(retryOperations);
 const tableService = AzureStorage.createTableService(jobConfig.azureStorage.account, jobConfig.azureStorage.key).withFilter(retryOperations);
