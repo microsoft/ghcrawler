@@ -960,7 +960,8 @@ describe('Member processing', () => {
       actor: { href: 'urn:user:3', type: 'resource' },
       repo: { href: 'urn:repo:4', type: 'resource' },
       repository: { href: 'urn:repo:4', type: 'resource' },
-      org: { href: 'urn:org:5', type: 'resource' }
+      org: { href: 'urn:org:5', type: 'resource' },
+      member: { href: 'urn:user:7', type: 'resource' }
     }
     expectLinks(document._metadata.links, links);
 
@@ -968,7 +969,8 @@ describe('Member processing', () => {
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
-      { type: 'org', url: 'http://org/5', path: '/org' }
+      { type: 'org', url: 'http://org/5', path: '/org' },
+      { type: 'user', url: 'http://member/7', path: '/member' },
     ];
     expectQueued(queue, expected);
   });

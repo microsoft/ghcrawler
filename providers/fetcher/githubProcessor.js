@@ -65,6 +65,7 @@ class GitHubProcessor {
         const separator = request.url.includes('?') ? '&' : '?';
         const url = request.url + `${separator}page=${i}&per_page=100`;
         const newRequest = new Request(request.type, url, request.context);
+        newRequest.addHistory(request);
         // Carry this request's transitivity forward to the other pages.
         newRequest.policy = request.policy;
         requests.push(newRequest);
@@ -434,9 +435,35 @@ class GitHubProcessor {
   // This dramatically reduces the work as events in one repo tend to come in bursts.
   event_trigger(request) {
     request.markNoSave();
-    const newRequest = new Request('update_events', request.url, request.context);
-    request.queueRequests(newRequest, 'immediate');
+    // const body = request.payload.body;
+    // if (this._isEventVisibleInTimeline(body._eventmetadata.type, body.action)) {
+      const newRequest = new Request('update_events', request.url, request.context);
+      request.queueRequests(newRequest, 'immediate');
+    // } else {
+    //   const type = this._getTranslatedEvent(body._eventmetadata.type); //TODO add to body instead of eventmetadata
+    //   const newRequest = new Request(type, request.url);
+    //   newRequest.payload = request.payload;
+    //   request.queueRequests(newRequest, 'immediate');
+    // }
     return null;
+  }
+
+  _isEventVisibleInTimeline(eventType, action) {
+    if (['deployment', 'deployment_status', 'label', 'membership', 'milestone', 'organization',
+      'page_build', 'repository', 'status', 'team', 'team_add'].includes(eventType)) {
+      return false;
+    }
+    if (['deleted', 'removed'].includes(action)) { // issue_comment, pull_request_review_comment, member
+      return false;
+    }
+    return true;
+  }
+
+  _getTranslatedEvent(eventType) {
+    if (eventType == 'issue_comment') {
+      return 'IssueCommentEvent';
+    }
+    //TODO
   }
 
   // The events in a repo or org have changed.  Go get the latest events, discover any new
@@ -561,9 +588,12 @@ class GitHubProcessor {
 
   MemberEvent(request) {
     let [document, repo, payload] = this._addEventBasics(request);
-    if (payload.action === 'added' || payload.action === 'deleted') {
+    if (payload.action === 'added' || payload.action === 'removed') { // removed and not deleted as stated in documentation
       const relationPolicy = this._getNextRelationPolicy('repo', request);
-      return this._addEventResourceExplicit(request, 'repository', repo, document.repo.url, 'repo', null, {}, relationPolicy);
+      this._addEventResourceExplicit(request, 'repository', repo, document.repo.url, 'repo', null, {}, relationPolicy);
+      if (payload.action === 'removed') {
+        return document;
+      }
     }
     return this._addEventResourceReference(request, null, 'member', 'user');
   }
@@ -744,7 +774,10 @@ class GitHubProcessor {
   _addEventBasics(request, qualifier = null, queueList = ['actor', 'repo', 'org']) {
     // TODO handle org event cases (no repo etc)
     const document = request.document;
-    const repo = document.repo ? document.repo.id : null;
+    let repo = document.repo ? document.repo.id : null;
+    // if (!repo) {
+    //   repo = document.repository ? document.repository.id : null;
+    // }
     qualifier = qualifier || (repo ? `urn:repo:${repo}` : `urn:org:${document.org.id}`);
     request.linkResource('self', `${qualifier}:${request.type}:${document.id}`);
     request.linkSiblings(`${qualifier}:${request.type}s`);
@@ -778,6 +811,7 @@ class GitHubProcessor {
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
     const newRequest = new Request(type, payload[name].url, context);
+    newRequest.addHistory(request);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
@@ -791,6 +825,7 @@ class GitHubProcessor {
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${id}`);
     const newRequest = new Request(type, url, context);
+    newRequest.addHistory(request);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);

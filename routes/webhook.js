@@ -29,6 +29,7 @@ router.post('/', wrap(function* (request, response, next) {
     return fatal(request, response, 'X-Hub-Signature does not match blob signature');
   }
   const event = JSON.parse(request.body);
+  // event._eventmetadata = { type: eventType }; TODO
   const eventsUrl = event.repository ? event.repository.events_url : event.organization.events_url;
   const result = new Request('event_trigger', `${eventsUrl}`);
   result.payload = { body: event, etag: 1, fetchedAt: moment.utc().toISOString() };
