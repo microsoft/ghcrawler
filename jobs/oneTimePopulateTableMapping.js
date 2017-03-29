@@ -6,6 +6,8 @@
 
   The following variables should be set:
   CRAWLER_STORAGE_ACCOUNT, CRAWLER_STORAGE_NAME, CRAWLER_STORAGE_KEY
+  Optional argument: continuation token value.
+  Example: node jobs/oneTimePopulateTableMapping.js '{"nextMarker":"VALUE","targetLocation":0}'
 */
 
 const AzureStorage = require('azure-storage');
@@ -42,11 +44,11 @@ const stats = {
     }
   }
 };
-const limit = qlimit(30);
+const limit = qlimit(20);
 const retryOperations = new AzureStorage.ExponentialRetryPolicyFilter();
 const blobService = AzureStorage.createBlobService(jobConfig.azureStorage.account, jobConfig.azureStorage.key).withFilter(retryOperations);
 const tableService = AzureStorage.createTableService(jobConfig.azureStorage.account, jobConfig.azureStorage.key).withFilter(retryOperations);
-let continuationToken = null;
+let continuationToken = JSON.parse(process.argv[2]) || null;
 
 console.time('Populate table mapping');
 console.log(new Date(), `Populating ${jobConfig.azureStorage.name} table.`);
