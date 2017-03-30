@@ -1286,6 +1286,7 @@ describe('Event Finder', () => {
 function createRequest(type, url, context = {}) {
   const result = new Request(type, url, context);
   result.policy = TraversalPolicy.default(type);
+  result.payload = { fetchedAt: 'date and time' };
   return result;
 }
 
@@ -1314,7 +1315,7 @@ function expectQueued(actual, expected) {
       return e.type === a.type
         && e.url === a.url
         && (!e.urn || e.urn === a.context.qualifier)
-        && (!e.deletedAt || a.context.deletedAt)
+        && (!e.deletedAt || e.deletedAt === a.context.deletedAt)
         && (!e.path || e.path === a.policy.map.path)
         && (!er || (er.origin === ar.orgin && er.qualifier === ar.qualifier && er.type === ar.type));
     })).to.be.true;
