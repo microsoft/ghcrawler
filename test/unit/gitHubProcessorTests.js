@@ -1314,7 +1314,7 @@ function expectQueued(actual, expected) {
       return e.type === a.type
         && e.url === a.url
         && (!e.urn || e.urn === a.context.qualifier)
-        && (!e.deletedAt || e.deletedAt === a.context.deletedAt)
+        && (!e.deletedAt || a.context.deletedAt)
         && (!e.path || e.path === a.policy.map.path)
         && (!er || (er.origin === ar.orgin && er.qualifier === ar.qualifier && er.type === ar.type));
     })).to.be.true;
@@ -1326,7 +1326,6 @@ function createEvent(type, payload) {
     _metadata: { links: {} },
     type: type,
     id: 12345,
-    created_at: 'date and time',
     payload: payload,
     actor: { id: 3, url: 'http://user/3' },
     repo: { id: 4, url: 'http://repo/4' },
@@ -1339,7 +1338,6 @@ function createOrgEvent(type, payload) {
     _metadata: { links: {} },
     type: type,
     id: 12345,
-    created_at: 'date and time',
     payload: payload,
     actor: { id: 3, url: 'http://user/3' },
     org: { id: 5, url: 'http://org/5' }

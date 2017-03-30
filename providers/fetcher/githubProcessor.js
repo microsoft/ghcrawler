@@ -435,35 +435,50 @@ class GitHubProcessor {
   // This dramatically reduces the work as events in one repo tend to come in bursts.
   event_trigger(request) {
     request.markNoSave();
-    // const body = request.payload.body;
-    // if (this._isEventVisibleInTimeline(body._eventmetadata.type, body.action)) {
+    if (this._isEventVisibleInTimeline(request.payload.type, request.payload.body.action)) {
       const newRequest = new Request('update_events', request.url, request.context);
       request.queueRequests(newRequest, 'immediate');
-    // } else {
-    //   const type = this._getTranslatedEvent(body._eventmetadata.type); //TODO add to body instead of eventmetadata
-    //   const newRequest = new Request(type, request.url);
-    //   newRequest.payload = request.payload;
-    //   request.queueRequests(newRequest, 'immediate');
-    // }
+    } else {
+      const type = this._getTranslatedEventType(request.payload.type);
+      const newRequest = new Request(type, request.url);
+      newRequest.payload = request.payload;
+      request.queueRequests(newRequest, 'immediate');
+    }
     return null;
   }
 
-  _isEventVisibleInTimeline(eventType, action) {
+  _isEventVisibleInTimeline(type, action) {
     if (['deployment', 'deployment_status', 'label', 'membership', 'milestone', 'organization',
-      'page_build', 'repository', 'status', 'team', 'team_add'].includes(eventType)) {
+      'page_build', 'repository', 'status', 'team', 'team_add'].includes(type)) {
       return false;
     }
-    if (['deleted', 'removed'].includes(action)) { // issue_comment, pull_request_review_comment, member
+    if (['issue_comment', 'pull_request_review_comment'].includes(type) && action === 'deleted') {
+      return false;
+    }
+    if (type === 'member' && action === 'removed') {
       return false;
     }
     return true;
   }
 
-  _getTranslatedEvent(eventType) {
-    if (eventType == 'issue_comment') {
-      return 'IssueCommentEvent';
-    }
-    //TODO
+  _getTranslatedEventType(type) {
+    const eventTypes = {
+      deployment: 'DeploymentEvent',
+      deployment_status: 'DeploymentStatusEvent',
+      issue_comment: 'IssueCommentEvent',
+      label: 'LabelEvent',
+      member: 'MemberEvent',
+      membership: 'MembershipEvent',
+      milestone: 'MilestoneEvent',
+      organization: 'OrganizationEvent',
+      page_build: 'PageBuildEvent',
+      pull_request_review_comment: 'PullRequestReviewCommentEvent',
+      repository: 'RepositoryEvent',
+      status: 'StatusEvent',
+      team: 'TeamEvent',
+      team_add: 'TeamAddEvent',
+    };
+    return eventTypes[type];
   }
 
   // The events in a repo or org have changed.  Go get the latest events, discover any new
@@ -561,7 +576,7 @@ class GitHubProcessor {
     let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:issue:${payload.issue.id}`;
     if (payload.action === 'deleted') {
-      const context = { deletedAt: document.created_at };
+      const context = { deletedAt: request.payload.fetchedAt };
       const policy = this._getNextDeletedPolicy();
       return this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier, context, policy);
     }
@@ -607,8 +622,14 @@ class GitHubProcessor {
   MilestoneEvent(request) {
     // TODO complete implementation and add Milestone handler
     // let [document, repo] = this._addEventBasics(request);
-    // const context = (payload.action === 'deleted') ? { deletedAt: document.created_at } : {};
+    // const context = (payload.action === 'deleted') ? { deletedAt: request.payload.fetchedAt } : {};
     // return this._addEventResource(request, repo, 'milestone', null, null, context);
+    let [document] = this._addEventBasics(request);
+    return document;
+  }
+
+  OrganizationEvent(request) {
+    // TODO complete implementation and add organization handler
     let [document] = this._addEventBasics(request);
     return document;
   }
@@ -650,7 +671,7 @@ class GitHubProcessor {
     let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
     if (payload.action === 'deleted') {
-      const context = { deletedAt: document.created_at };
+      const context = { deletedAt: request.payload.fetchedAt };
       const policy = this._getNextDeletedPolicy();
       return this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier, context, policy);
     }
@@ -690,7 +711,7 @@ class GitHubProcessor {
   RepositoryEvent(request) {
     let [document, , payload] = this._addEventBasics(request, null, ['actor', 'org']);
     if (payload.action === 'deleted') {
-      const context = { deletedAt: document.created_at };
+      const context = { deletedAt: request.payload.fetchedAt };
       const policy = this._getNextDeletedPolicy();
       return this._addEventResourceReference(request, null, 'repository', 'repo', null, context, policy);
     }
@@ -714,7 +735,7 @@ class GitHubProcessor {
       this._addEventResourceReference(request, null, 'repository', 'repo');
     }
     if (payload.action === 'deleted') {
-      const context = { deletedAt: document.created_at };
+      const context = { deletedAt: request.payload.fetchedAt };
       const policy = this._getNextDeletedPolicy();
       return this._addEventResourceContains(request, null, 'team', 'team', null, context, policy);
     }
@@ -775,11 +796,16 @@ class GitHubProcessor {
     // TODO handle org event cases (no repo etc)
     const document = request.document;
     let repo = document.repo ? document.repo.id : null;
-    // if (!repo) {
-    //   repo = document.repository ? document.repository.id : null;
-    // }
-    qualifier = qualifier || (repo ? `urn:repo:${repo}` : `urn:org:${document.org.id}`);
-    request.linkResource('self', `${qualifier}:${request.type}:${document.id}`);
+    if (!repo) {
+      repo = document.repository ? document.repository.id : null;
+    }
+    let orgId = document.org ? document.org.id : null;
+    if (!orgId) {
+      orgId = document.organization ? document.organization.id : null;
+    }
+    qualifier = qualifier || (repo ? `urn:repo:${repo}` : `urn:org:${orgId}`);
+    const id = document.id || request.payload.guid;
+    request.linkResource('self', `${qualifier}:${request.type}:${id}`);
     request.linkSiblings(`${qualifier}:${request.type}s`);
 
     // TODO understand if the actor is typically the same as the creator or pusher in the payload
@@ -788,7 +814,7 @@ class GitHubProcessor {
       this._addRoot(request, 'repo', 'repo', null, null, queueList.includes('repo'));
     }
     this._addRoot(request, 'org', 'org', null, null, queueList.includes('org'));
-    return [document, repo, document.payload];
+    return [document, repo, document.payload || document];
   }
 
   _addEventResourceReference(request, repo, name, type = name, qualifier = null, context = {}, policy = null) {
@@ -800,7 +826,7 @@ class GitHubProcessor {
   }
 
   _addEventResource(request, repo, name, type = name, qualifier = null, context = {}, policy = null) {
-    const payload = request.document.payload;
+    const payload = request.document.payload || request.document;
     const target = payload[name];
     if (!target) {
       throw new Error(`payload[${name}] missing in ${request.toString()}`);
@@ -867,7 +893,18 @@ class GitHubProcessor {
   }
 
   _addRoot(request, name, type, url = null, urn = null, queue = true) {
-    const element = request.document[name];
+    let element = request.document[name];
+    if (!element) {
+      if (name === 'actor') {
+        element = request.document.sender;
+      }
+      if (name === 'repo') {
+        element = request.document.repository;
+      }
+      if (name === 'org') {
+        element = request.document.organization;
+      }
+    }
     // If there is no element then we must have both the url and urn as otherwise we don't know how to compute them
     if ((!element || Object.getOwnPropertyNames(element).length === 0) && !(urn && url)) {
       return;
