@@ -661,7 +661,7 @@ class GitHubProcessor {
   }
 
   PullRequestReviewCommentEvent(request) {
-    if (!request.document.payload.pull_request) {
+    if (request.document.payload && !request.document.payload.pull_request) {
       // this is a legacy event so tack on the event and queue up a fetch of the pull request to be processed
       // together so the stored event can have the right pull request link (id is missing in the old events).
       const context = { originalDocument: request.document };
@@ -726,7 +726,7 @@ class GitHubProcessor {
   }
 
   TeamEvent(request) {
-    let [document, , payload] = this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
+    let [document, , payload] = this._addEventBasics(request, `urn:team:${(request.document.payload || request.document).team.id}`);
     if (payload.action === 'added_to_repository' || payload.action === 'removed_from_repository') {
       const relationPolicy = this._getNextRelationPolicy('repo', request);
       return this._addEventResourceReference(request, null, 'repository', 'repo', null, {}, relationPolicy);
@@ -743,7 +743,7 @@ class GitHubProcessor {
   }
 
   TeamAddEvent(request) {
-    this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
+    this._addEventBasics(request, `urn:team:${(request.document.payload || request.document).team.id}`);
     this._addEventResourceReference(request, null, 'repository', 'repo');
     return this._addEventResourceReference(request, null, 'team');
   }
