@@ -974,6 +974,38 @@ describe('Member processing', () => {
     ];
     expectQueued(queue, expected);
   });
+
+  it('should link and queue deleted/removed MemberEvent', () => {
+    const request = createRequest('MemberEvent', 'http://foo/');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    const payload = {
+      action: 'removed',
+      member: { id: 7, url: 'http://member/7' }
+    }
+    request.document = createEvent('MemberEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.MemberEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:MemberEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:MemberEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      repository: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const expected = [
+      { type: 'user', url: 'http://user/3', path: '/actor' },
+      { type: 'repo', url: 'http://repo/4', path: '/repo' },
+      { type: 'repo', url: 'http://repo/4', path: '/repo' },
+      { type: 'org', url: 'http://org/5', path: '/org' }
+    ];
+    expectQueued(queue, expected);
+  });
 });
 
 describe('Status processing', () => {
