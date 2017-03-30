@@ -318,6 +318,9 @@ class GitHubProcessor {
     request.linkSiblings(`${context.qualifier}:review_comments`);
 
     this._addRoot(request, 'user', 'user');
+    if (request.context.deletedAt) {
+      document._metadata.deletedAt = request.context.deletedAt;
+    }
     return document;
   }
 
