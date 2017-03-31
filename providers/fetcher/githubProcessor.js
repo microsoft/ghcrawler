@@ -718,13 +718,13 @@ class GitHubProcessor {
   }
 
   RepositoryEvent(request) {
-    let [document, , payload] = this._addEventBasics(request, null, ['actor', 'org']);
+    let [, , payload] = this._addEventBasics(request, null, ['actor', 'org']);
     if (payload.action === 'deleted') {
       const context = { deletedAt: request.payload.fetchedAt };
       const policy = this._getNextDeletedPolicy();
       return this._addEventResourceReference(request, null, 'repository', 'repo', null, context, policy);
     }
-    return this._addEventResourceReference(request, null, 'repository', 'repo', null);
+    return this._addEventResourceReference(request, null, 'repository', 'repo');
   }
 
   StatusEvent(request) {
