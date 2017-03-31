@@ -4,10 +4,9 @@
 const Q = require('q');
 
 class AzureTableMappingStore {
-  constructor(baseStore, tableService, redisClient, name, options) { //TODO: remove "redisClient" after Redis to Azure table data migration
+  constructor(baseStore, tableService, name, options) {
     this.baseStore = baseStore;
     this.service = tableService;
-    this.redisClient = redisClient; //TODO: remove after Redis to Azure table data migration
     this.name = name;
     this.options = options;
   }
@@ -26,17 +25,13 @@ class AzureTableMappingStore {
       const deferred = Q.defer();
       const urlEntity = { PartitionKey: { '_': `url:${type}` }, RowKey: { '_': encodeURIComponent(url) }, blobName: { '_': blobName } };
       const urnEntity = { PartitionKey: { '_': `urn:${type}` }, RowKey: { '_': encodeURIComponent(urn) }, blobName: { '_': blobName } };
-      this.redisClient.hmset(this.name, [urn, blobName, url, blobName], (error) => { //TODO: remove after the data migration except for "this.service..."
+      this.service.insertOrReplaceEntity(this.name, urlEntity, (error) => {
         if (error) {
           return deferred.reject(error);
         }
-        this.service.insertOrReplaceEntity(this.name, urlEntity, (error) => {
-          if (error) {
-            return deferred.reject(error);
-          }
-          this.service.insertOrReplaceEntity(this.name, urnEntity, this._callbackToPromise(deferred));
-        });
+        this.service.insertOrReplaceEntity(this.name, urnEntity, this._callbackToPromise(deferred));
       });
+
       return deferred.promise;
     });
   }
@@ -79,16 +74,15 @@ class AzureTableMappingStore {
 
   _getBlobNameForUrl(type, url) {
     const deferred = Q.defer();
-    this.redisClient.hget(this.name, url, this._callbackToPromise(deferred)); // TODO: remove this line and uncomment below after the data migration
-    // this.service.retrieveEntity(this.name, `url:${type}`, encodeURIComponent(url), (error, result) => {
-    //   if (!error) {
-    //     return deferred.resolve(result.blobName._);
-    //   }
-    //   if (error && error.code === 'ResourceNotFound') {
-    //     return deferred.resolve(null);
-    //   }
-    //   deferred.reject(error);
-    // });
+    this.service.retrieveEntity(this.name, `url:${type}`, encodeURIComponent(url), (error, result) => {
+      if (!error) {
+        return deferred.resolve(result.blobName._);
+      }
+      if (error && error.code === 'ResourceNotFound') {
+        return deferred.resolve(null);
+      }
+      deferred.reject(error);
+    });
     return deferred.promise;
   }
 
