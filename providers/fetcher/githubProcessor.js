@@ -637,6 +637,12 @@ class GitHubProcessor {
     return document;
   }
 
+  OrgBlockEvent(request) {
+    // TODO complete implementation and add organization handler
+    let [document] = this._addEventBasics(request);
+    return document;
+  }
+
   PageBuildEvent(request) {
     // TODO complete implementation and add page_build handler
     // let [document, repo, payload] = this._addEventBasics(request);
