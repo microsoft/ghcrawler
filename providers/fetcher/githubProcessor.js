@@ -608,7 +608,7 @@ class GitHubProcessor {
     let [document, repo, payload] = this._addEventBasics(request);
     if (payload.action === 'added' || payload.action === 'removed') { // removed and not deleted as stated in documentation
       const relationPolicy = this._getNextRelationPolicy('repo', request);
-      this._addEventResourceExplicit(request, 'repository', repo, document.repo.url, 'repo', null, {}, relationPolicy);
+      this._addEventResourceExplicit(request, 'repository', repo, (document.repo || document.repository).url, 'repo', null, {}, relationPolicy);
       if (payload.action === 'removed') {
         return document;
       }
