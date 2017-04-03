@@ -576,7 +576,7 @@ class GitHubProcessor {
   }
 
   IssueCommentEvent(request) {
-    let [document, repo, payload] = this._addEventBasics(request);
+    let [, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:issue:${payload.issue.id}`;
     if (payload.action === 'deleted') {
       const context = { deletedAt: request.payload.fetchedAt };
@@ -626,7 +626,7 @@ class GitHubProcessor {
 
   MilestoneEvent(request) {
     // TODO complete implementation and add Milestone handler
-    // let [document, repo] = this._addEventBasics(request);
+    // let [, repo] = this._addEventBasics(request);
     // const context = (payload.action === 'deleted') ? { deletedAt: request.payload.fetchedAt } : {};
     // return this._addEventResource(request, repo, 'milestone', null, null, context);
     let [document] = this._addEventBasics(request);
@@ -679,7 +679,7 @@ class GitHubProcessor {
       request.queue('LegacyPullRequestReviewCommentEvent', request.document.payload.comment.pull_request_url, request.policy, context);
       return null;
     }
-    let [document, repo, payload] = this._addEventBasics(request);
+    let [, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
     if (payload.action === 'deleted') {
       const context = { deletedAt: request.payload.fetchedAt };
@@ -741,7 +741,7 @@ class GitHubProcessor {
   }
 
   TeamEvent(request) {
-    let [document, , payload] = this._addEventBasics(request, `urn:team:${(request.document.payload || request.document).team.id}`);
+    let [, , payload] = this._addEventBasics(request, `urn:team:${(request.document.payload || request.document).team.id}`);
     if (payload.action === 'added_to_repository' || payload.action === 'removed_from_repository') {
       const relationPolicy = this._getNextRelationPolicy('repo', request);
       return this._addEventResource(request, null, 'repository', 'repo', null, {}, relationPolicy);
@@ -758,7 +758,7 @@ class GitHubProcessor {
       const policy = this._getNextDeletedPolicy();
       return this._addEventResource(request, null, 'team', 'team', null, context, policy);
     }
-    return this._addEventResource(request, null, 'team', 'team');
+    return this._addEventResource(request, null, 'team');
   }
 
   TeamAddEvent(request) {
