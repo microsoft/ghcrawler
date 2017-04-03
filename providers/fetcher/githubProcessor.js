@@ -747,6 +747,10 @@ class GitHubProcessor {
     if (payload.repository) {
       this._addEventResource(request, null, 'repository', 'repo');
     }
+    if (payload.action === 'created') {
+      const policy = TraversalPolicy.reload('team');
+      return this._addEventResource(request, null, 'team', 'team', null, {}, policy);
+    }
     if (payload.action === 'deleted') {
       const context = { deletedAt: request.payload.fetchedAt };
       const policy = this._getNextDeletedPolicy();
