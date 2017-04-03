@@ -618,8 +618,10 @@ class GitHubProcessor {
 
   MembershipEvent(request) {
     this._addEventBasics(request);
-    this._addEventResource(request, null, 'member', 'user');
-    return this._addEventResource(request, null, 'team');
+    const userPolicy = TraversalPolicy.reload('user');
+    this._addEventResource(request, null, 'member', 'user', null, {}, userPolicy);
+    const teamPolicy = TraversalPolicy.reload('team');
+    return this._addEventResource(request, null, 'team', 'team', null, {}, teamPolicy);
   }
 
   MilestoneEvent(request) {
@@ -873,7 +875,9 @@ class GitHubProcessor {
     if (!map) {
       return null;
     }
-    return request.policy.getNextPolicy(name, map);
+    const policy = request.policy.getNextPolicy(name, map);
+    policy.fetch = 'originStorage';
+    return policy;
   }
 
   _getNextDeletedPolicy() {
