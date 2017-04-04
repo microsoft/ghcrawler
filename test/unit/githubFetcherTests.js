@@ -84,7 +84,7 @@ describe('GitHub fetcher', () => {
       expect(request.shouldRequeue()).to.be.false;
       expect(request.shouldSkip()).to.be.false;
       expect(fetcher.tokenFactory.exhaust.callCount).to.be.equal(1);
-      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(resetTime * 1000, 20);
+      expect(fetcher.tokenFactory.exhaust.getCall(0).args[1]).to.be.approximately(resetTime * 1000 + 5000, 20);
     });
   });
 

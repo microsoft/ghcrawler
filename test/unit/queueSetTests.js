@@ -16,35 +16,28 @@ describe('QueueSet construction', () => {
 
 describe('QueueSet weighting', () => {
   it('should create a simple startMap', () => {
-    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, createOptions([3, 2]));
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], createOptions({ 1: 3, 2: 2 }));
     expect(set.startMap.length).to.be.equal(5);
     expect(set.startMap[0]).to.be.equal(0);
+    expect(set.startMap[1]).to.be.equal(0);
     expect(set.startMap[2]).to.be.equal(0);
     expect(set.startMap[3]).to.be.equal(1);
     expect(set.startMap[4]).to.be.equal(1);
   });
 
   it('should create a default startMap if no weights given', () => {
-    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, { _config: { on: () => { } } });
-    expect(set.startMap.length).to.be.equal(1);
-    expect(set.startMap[0]).to.be.equal(0);
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], { _config: { on: () => { } } });
+    expect(set.startMap.length).to.be.equal(2);
+    expect(set.startMap[0]).to.be.equal(1);
+    expect(set.startMap[1]).to.be.equal(1);
   });
 
   it('should throw if too many weights are given', () => {
-    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, createOptions([3, 2, 1]))).to.throw(Error);
+    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], createOptions({ 1: 3, 2: 2, 3: 1 }))).to.throw(Error);
   });
 
   it('should throw if no weights are given', () => {
-    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, [])).to.throw(Error);
-  });
-
-  it('should create a simple startMap', () => {
-    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], null, createOptions([3, 2]));
-    expect(set.startMap.length).to.be.equal(5);
-    expect(set.startMap[0]).to.be.equal(0);
-    expect(set.startMap[2]).to.be.equal(0);
-    expect(set.startMap[3]).to.be.equal(1);
-    expect(set.startMap[4]).to.be.equal(1);
+    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], {})).to.throw(Error);
   });
 
   it('should pop from first with default weights', () => {
