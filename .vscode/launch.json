@@ -127,7 +127,7 @@
         "CRAWLER_MODE": "Standard",
         "CRAWLER_EVENT_PROVIDER": "none",
         "CRAWLER_OPTIONS_PROVIDER": "redis",
-        "DEBUG.off": "amqp10:client,amqp10:link:receiver"
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "console": "internalConsole",
       "sourceMaps": false,
