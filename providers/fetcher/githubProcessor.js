@@ -458,7 +458,7 @@ class GitHubProcessor {
     const self = this;
     return Q.all(events.map(qlimit(10)(event => {
       const url = event.repo ? `${event.repo.url}/events/${event.id}` : `${event.org.url}/events/${event.id}`;
-      return self.store.etag('event', url).then(etag => {
+      return self.store.etag(event.type, url).then(etag => {
         return etag ? null : event;
       });
     }))).then(events => {
