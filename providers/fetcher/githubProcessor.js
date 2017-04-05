@@ -1,11 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+const extend = require('extend');
 const moment = require('moment');
 const parse = require('parse-link-header');
-const Request = require('../../lib/request');
 const Q = require('q');
 const qlimit = require('qlimit');
+const Request = require('../../lib/request');
 const TraversalPolicy = require('../../lib/traversalPolicy');
 const URL = require('url');
 const uuid = require('node-uuid');
@@ -64,8 +65,8 @@ class GitHubProcessor {
       for (let i = 2; i <= links.last.page; i++) {
         const separator = request.url.includes('?') ? '&' : '?';
         const url = request.url + `${separator}page=${i}&per_page=100`;
-        const newRequest = new Request(request.type, url, request.context);
-        newRequest.addHistory(request);
+        const newContext = extend(true, {}, request.context);
+        const newRequest = new Request(request.type, url, newContext);
         // Carry this request's transitivity forward to the other pages.
         newRequest.policy = request.policy;
         requests.push(newRequest);
@@ -110,7 +111,7 @@ class GitHubProcessor {
         // TODO if there is no elementType on a collection then assume it is events. Need to fix this up and
         // formalize the model of collections where the request carries the payload.
         const baseUrl = request.url.split("?")[0];
-        const newContext = { history: request.context.history };
+        const newContext = extend(true, {}, { history: request.context.history });
         const newRequest = new Request(item.type, `${baseUrl}/${item.id}`, newContext);
         newRequest.payload = { etag: 1, body: item };
         newRequest.policy = request.policy;
@@ -497,7 +498,8 @@ class GitHubProcessor {
         // is in the payload), it will need to be unique for the queue tagging/optimization
         // Events are immutable (and we can't fetch them later) so set the etag to a constant
         const baseUrl = request.url.split("?")[0];
-        const newRequest = new Request(event.type, `${baseUrl}/${event.id}`);
+        const newContext = extend(true, {}, { history: request.context.history });
+        const newRequest = new Request(event.type, `${baseUrl}/${event.id}`, newContext);
         newRequest.policy = TraversalPolicy.event(event.type);
         newRequest.payload = { etag: 1, body: event };
         return newRequest;
@@ -512,7 +514,7 @@ class GitHubProcessor {
     const self = this;
     return Q.all(events.map(qlimit(10)(event => {
       const url = event.repo ? `${event.repo.url}/events/${event.id}` : `${event.org.url}/events/${event.id}`;
-      return self.store.etag('event', url).then(etag => {
+      return self.store.etag(event.type, url).then(etag => {
         return etag ? null : event;
       });
     }))).then(events => {
@@ -847,8 +849,8 @@ class GitHubProcessor {
     context.qualifier = qualifier;
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
-    const newRequest = new Request(type, payload[name].url, context);
-    newRequest.addHistory(request);
+    const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
+    const newRequest = new Request(type, payload[name].url, newContext);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
@@ -861,8 +863,8 @@ class GitHubProcessor {
     context.qualifier = qualifier;
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${id}`);
-    const newRequest = new Request(type, url, context);
-    newRequest.addHistory(request);
+    const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
+    const newRequest = new Request(type, payload[name].url, newContext);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);

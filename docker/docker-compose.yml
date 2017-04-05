@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
 mongo:
   image: mongo:latest
   ports:
@@ -19,7 +21,7 @@ metabase:
   links:
     - mongo
 dashboard:
-  build: ../../crawler-dashboard
+  build: ../../ghcrawler-dashboard
   ports:
     - "4000:4000"
   environment:
