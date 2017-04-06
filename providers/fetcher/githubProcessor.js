@@ -835,7 +835,7 @@ class GitHubProcessor {
     context.qualifier = qualifier;
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
-    const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
+    const newContext = extend(true, context, { history: request.context.history, qualifier: qualifier });
     const newRequest = new Request(type, payload[name].url, newContext);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
@@ -849,7 +849,7 @@ class GitHubProcessor {
     context.qualifier = qualifier;
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${id}`);
-    const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
+    const newContext = extend(true, context, { history: request.context.history, qualifier: qualifier });
     const newRequest = new Request(type, url, newContext);
     newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
