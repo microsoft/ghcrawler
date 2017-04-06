@@ -245,7 +245,7 @@ describe('Repo processing', () => {
       { type: 'user', url: 'http://user/45', path: '/owner' },
       { type: 'org', url: 'http://org/24', path: '/organization' },
       { type: 'teams', url: 'http://teams', qualifier: 'urn:repo:12', path: '/teams', relation: { origin: 'repo', qualifier: 'urn:repo:12:teams', type: 'team' } },
-      { type: 'collaborators', url: 'http://collaborators?affiliation=outside', qualifier: 'urn:repo:12', path: '/collaborators', relation: { origin: 'repo', qualifier: 'urn:repo:12:collaborators', type: 'user' } },
+      { type: 'collaborators', url: 'http://collaborators?affiliation=direct', qualifier: 'urn:repo:12', path: '/collaborators', relation: { origin: 'repo', qualifier: 'urn:repo:12:collaborators', type: 'user' } },
       { type: 'contributors', url: 'http://contributors', qualifier: 'urn:repo:12', path: '/contributors', relation: { origin: 'repo', qualifier: 'urn:repo:12:contributors', type: 'user' } },
       { type: 'stargazers', url: 'http://stargazers', qualifier: 'urn:repo:12', path: '/stargazers', relation: { origin: 'repo', qualifier: 'urn:repo:12:stargazers', type: 'user' } },
       { type: 'subscribers', url: 'http://subscribers', qualifier: 'urn:repo:12', path: '/subscribers', relation: { origin: 'repo', qualifier: 'urn:repo:12:subscribers', type: 'user' } },

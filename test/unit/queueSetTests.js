@@ -16,7 +16,7 @@ describe('QueueSet construction', () => {
 
 describe('QueueSet weighting', () => {
   it('should create a simple startMap', () => {
-    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], createOptions({ 1: 3, 2: 2 }));
+    const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], createOptions({ '1': 3, '2': 2 }));
     expect(set.startMap.length).to.be.equal(5);
     expect(set.startMap[0]).to.be.equal(0);
     expect(set.startMap[1]).to.be.equal(0);
@@ -28,58 +28,15 @@ describe('QueueSet weighting', () => {
   it('should create a default startMap if no weights given', () => {
     const set = new QueueSet([createBaseQueue('1'), createBaseQueue('2')], { _config: { on: () => { } } });
     expect(set.startMap.length).to.be.equal(2);
-    expect(set.startMap[0]).to.be.equal(1);
+    expect(set.startMap[0]).to.be.equal(0);
     expect(set.startMap[1]).to.be.equal(1);
-  });
-
-  it('should throw if too many weights are given', () => {
-    expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], createOptions({ 1: 3, 2: 2, 3: 1 }))).to.throw(Error);
   });
 
   it('should throw if no weights are given', () => {
     expect(() => new QueueSet([createBaseQueue('1'), createBaseQueue('2')], {})).to.throw(Error);
   });
 
-  it('should pop from first with default weights', () => {
-    const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('priority', 'http://test')); } });
-    const normal = createBaseQueue('normal');
-    const queues = createBaseQueues([priority, normal]);
-
-    return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
-      expect(first.type).to.be.equal('priority');
-      expect(first._originQueue === priority).to.be.true;
-      expect(second.type).to.be.equal('priority');
-      expect(second._originQueue === priority).to.be.true;
-    });
-  });
-
-  it('should pop in order when requests always available', () => {
-    const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('priority', 'http://test')); } });
-    const normal = createBaseQueue('normal', { pop: () => { return Q(new Request('normal', 'http://test')); } });
-    const queues = createBaseQueues([priority, normal], null, [1, 1]);
-
-    return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
-      expect(first.type).to.be.equal('priority');
-      expect(first._originQueue === priority).to.be.true;
-      expect(second.type).to.be.equal('normal');
-      expect(second._originQueue === normal).to.be.true;
-    });
-  });
-
-  it('should pop from subsequent if previous queue is empty', () => {
-    const priority = createBaseQueue('priority', { pop: () => { return Q(null); } });
-    const normal = createBaseQueue('normal', { pop: () => { return Q(new Request('normal', 'http://test')); } });
-    const queues = createBaseQueues([priority, normal], null, [1, 1]);
-
-    return Q.all([queues.pop(), queues.pop()]).spread((first, second) => {
-      expect(first.type).to.be.equal('normal');
-      expect(first._originQueue === normal).to.be.true;
-      expect(second.type).to.be.equal('normal');
-      expect(second._originQueue === normal).to.be.true;
-    });
-  });
-
-  it('should pop earlier queue if starting later and nothing available', () => {
+  it('should pop other queue if nothing available', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('priority', 'http://test')); } });
     const normal = createBaseQueue('normal', { pop: () => { return Q(null); } });
     const queues = createBaseQueues([priority, normal], null, [1, 1]);
@@ -119,8 +76,7 @@ describe('QueueSet pushing', () => {
 
   it('should repush into the same queue', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('test', 'http://test')); }, push: request => { return Q(); } });
-    const normal = createBaseQueue('normal');
-    const queues = createBaseQueues([priority, normal]);
+    const queues = createBaseQueues([priority]);
     sinon.spy(priority, 'push');
 
     return queues.pop().then(request => {
@@ -136,8 +92,7 @@ describe('QueueSet pushing', () => {
 describe('QueueSet originQueue management', () => {
   it('should call done and mark acked on done', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('test', 'http://test')); }, done: request => { return Q(); } });
-    const normal = createBaseQueue('normal');
-    const queues = createBaseQueues([priority, normal]);
+    const queues = createBaseQueues([priority]);
     sinon.spy(priority, 'done');
 
     return queues.pop().then(request => {
@@ -151,8 +106,7 @@ describe('QueueSet originQueue management', () => {
 
   it('should call done and mark acked on abandon', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('test', 'http://test')); }, abandon: request => { return Q(); } });
-    const normal = createBaseQueue('normal');
-    const queues = createBaseQueues([priority, normal]);
+    const queues = createBaseQueues([priority]);
     sinon.spy(priority, 'abandon');
 
     return queues.pop().then(request => {
@@ -166,8 +120,7 @@ describe('QueueSet originQueue management', () => {
 
   it('should not abandon twice', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('test', 'http://test')); }, abandon: request => { return Q(); } });
-    const normal = createBaseQueue('normal');
-    const queues = createBaseQueues([priority, normal]);
+    const queues = createBaseQueues([priority]);
     sinon.spy(priority, 'abandon');
 
     return queues.pop().then(request => {
@@ -183,8 +136,7 @@ describe('QueueSet originQueue management', () => {
 
   it('should not done after abandon ', () => {
     const priority = createBaseQueue('priority', { pop: () => { return Q(new Request('test', 'http://test')); }, abandon: request => { return Q(); }, done: request => { return Q(); } });
-    const normal = createBaseQueue('normal');
-    const queues = createBaseQueues([priority, normal]);
+    const queues = createBaseQueues([priority]);
     sinon.spy(priority, 'abandon');
     sinon.spy(priority, 'done');
 
@@ -202,35 +154,29 @@ describe('QueueSet originQueue management', () => {
 });
 
 describe('QueueSet subscription management', () => {
-  it('should subscribe all, including deadletter', () => {
+  it('should subscribe all', () => {
     const priority = createBaseQueue('priority', { subscribe: () => { } });
     const normal = createBaseQueue('normal', { subscribe: () => { } });
-    const deadletter = createBaseQueue('deadletter', { subscribe: () => { } });
-    const queues = createBaseQueues([priority, normal], deadletter);
+    const queues = createBaseQueues([priority, normal]);
     sinon.spy(priority, 'subscribe');
     sinon.spy(normal, 'subscribe');
-    sinon.spy(deadletter, 'subscribe');
 
     return queues.subscribe().then(() => {
       expect(priority.subscribe.callCount).to.be.equal(1);
       expect(normal.subscribe.callCount).to.be.equal(1);
-      expect(deadletter.subscribe.callCount).to.be.equal(1);
     });
   });
 
-  it('should unsubscribe all, including deadletter', () => {
+  it('should unsubscribe all', () => {
     const priority = createBaseQueue('priority', { unsubscribe: () => { } });
     const normal = createBaseQueue('normal', { unsubscribe: () => { } });
-    const deadletter = createBaseQueue('deadletter', { unsubscribe: () => { } });
-    const queues = createBaseQueues([priority, normal], deadletter);
+    const queues = createBaseQueues([priority, normal]);
     sinon.spy(priority, 'unsubscribe');
     sinon.spy(normal, 'unsubscribe');
-    sinon.spy(deadletter, 'unsubscribe');
 
     return queues.unsubscribe().then(() => {
       expect(priority.unsubscribe.callCount).to.be.equal(1);
       expect(normal.unsubscribe.callCount).to.be.equal(1);
-      expect(deadletter.unsubscribe.callCount).to.be.equal(1);
     });
   });
 });
@@ -242,8 +188,8 @@ function createOptions(weights) {
   };
 }
 
-function createBaseQueues(queues, deadletter, weights = [1]) {
-  return new QueueSet(queues, deadletter || createBaseQueue('deadletter'), createOptions(weights));
+function createBaseQueues(queues, weights = null) {
+  return new QueueSet(queues, createOptions(weights));
 }
 
 function createBaseQueue(name, { pop = null, push = null, done = null, abandon = null, subscribe = null, unsubscribe = null } = {}) {
