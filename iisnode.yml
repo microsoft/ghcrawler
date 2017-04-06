@@ -1,3 +1,0 @@
-# nodeProcessCountPerApplication - number of node.exe processes that IIS will start per application;
-# setting this value to 0 results in creating one node.exe process per each processor on the machine
-nodeProcessCountPerApplication: 0
