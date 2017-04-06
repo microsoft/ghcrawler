@@ -185,10 +185,6 @@ class GitHubProcessor {
       this._addRoot(request, 'owner', 'user');
     }
 
-    if (request.context.deletedAt) {
-      document._metadata.deletedAt = request.context.deletedAt;
-      return document;
-    }
     this._addRelation(request, 'teams', 'team');
     // this._addRelation(request, 'collaborators', 'user', document.collaborators_url.replace('{/collaborator}', ''));
     this._addRelation(request, 'collaborators', 'user', document.collaborators_url.replace('{/collaborator}', '?affiliation=direct'));
@@ -319,9 +315,6 @@ class GitHubProcessor {
     request.linkSiblings(`${context.qualifier}:review_comments`);
 
     this._addRoot(request, 'user', 'user');
-    if (request.context.deletedAt) {
-      document._metadata.deletedAt = request.context.deletedAt;
-    }
     return document;
   }
 
@@ -368,9 +361,6 @@ class GitHubProcessor {
     request.linkSiblings(`${context.qualifier}:issue_comments`);
 
     this._addRoot(request, 'user', 'user');
-    if (request.context.deletedAt) {
-      document._metadata.deletedAt = request.context.deletedAt;
-    }
     return document;
   }
 
@@ -380,10 +370,6 @@ class GitHubProcessor {
     request.linkSiblings(`urn:org:${document.organization.id}:teams`);
 
     this._addRoot(request, 'organization', 'org');
-    if (request.context.deletedAt) {
-      document._metadata.deletedAt = request.context.deletedAt;
-      return document;
-    }
     this._addRelation(request, 'members', 'user', document.members_url.replace('{/member}', ''), `${this._getQualifier(request)}:team_members`);
     this._addRelation(request, 'repos', 'repo', document.repositories_url);
     return document;
