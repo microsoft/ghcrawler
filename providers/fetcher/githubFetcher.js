@@ -189,16 +189,12 @@ class GitHubFetcher {
 
   // tack on any content we want to carry over from the current document for future processing
   _prepareCachedRequest(request, document, origin) {
-    const metadata = {
-      fetchedAt: document._metadata.fetchedAt,
-      version: document._metadata.version
-    };
     // Augment the existing repsonse headers with the ones we got last time
     if (document._metadata.headers && Object.getOwnPropertyNames(document._metadata.headers).length > 0) {
       request.response.headers.etag = document._metadata.headers.etag;
       request.response.headers.link = document._metadata.headers.link;
     }
-    request.response._metadataTemplate = metadata;
+    request.response._metadataTemplate = document._metadata;
     // be sure to return a "clean" document just like we got from origin the first time (i.e., without metadata)
     // but be careful not to destructively modify the content of the cached document
     request.document = document.elements ? document.elements : Object.assign({}, document);
