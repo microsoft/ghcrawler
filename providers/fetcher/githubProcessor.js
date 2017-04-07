@@ -431,7 +431,7 @@ class GitHubProcessor {
     } else {
       const type = this._getTranslatedEventType(request.payload.type);
       const newContext = extend(true, {}, { history: request.context.history });
-      const newRequest = new Request(type, request.url, newContext);
+      const newRequest = new Request(type, request.url + '/' + request.payload.guid, newContext);
       newRequest.payload = request.payload;
       request.queueRequests(newRequest, 'immediate');
     }
@@ -606,9 +606,12 @@ class GitHubProcessor {
   }
 
   MembershipEvent(request) {
-    this._addEventBasics(request);
+    let [document, , payload] = this._addEventBasics(request);
     const userPolicy = TraversalPolicy.reload('user');
     this._addEventResource(request, null, 'member', 'user', null, {}, userPolicy);
+    if (payload.team && payload.team.deleted) {
+      return document;
+    }
     const teamPolicy = TraversalPolicy.reload('team');
     return this._addEventResource(request, null, 'team', 'team', null, {}, teamPolicy);
   }
