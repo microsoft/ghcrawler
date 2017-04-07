@@ -10,6 +10,7 @@ const Request = require('../../lib/request');
 const TraversalPolicy = require('../../lib/traversalPolicy');
 const URL = require('url');
 const uuid = require('node-uuid');
+const VisitorMap = require('../../lib/visitorMap');
 
 class GitHubProcessor {
   constructor(store) {
@@ -149,7 +150,7 @@ class GitHubProcessor {
     request.addRootSelfLink();
     request.linkSiblings('urn:users');
 
-    this._addCollection(request, 'repos', "repo");
+    this._addCollection(request, 'repos', 'repo');
     return document;
   }
 
@@ -424,9 +425,51 @@ class GitHubProcessor {
   // This dramatically reduces the work as events in one repo tend to come in bursts.
   event_trigger(request) {
     request.markNoSave();
-    const newRequest = new Request('update_events', request.url, request.context);
-    request.queueRequests(newRequest, 'immediate');
+    if (this._isEventVisibleInTimeline(request.payload.type, request.payload.body.action)) {
+      const newRequest = new Request('update_events', request.url, request.context);
+      request.queueRequests(newRequest, 'immediate');
+    } else {
+      const type = this._getTranslatedEventType(request.payload.type);
+      const newContext = extend(true, {}, { history: request.context.history });
+      const newRequest = new Request(type, request.url, newContext);
+      newRequest.payload = request.payload;
+      request.queueRequests(newRequest, 'immediate');
+    }
     return null;
+  }
+
+  _isEventVisibleInTimeline(type, action) {
+    if (['deployment', 'deployment_status', 'label', 'membership', 'milestone', 'organization',
+      'page_build', 'repository', 'status', 'team', 'team_add'].includes(type)) {
+      return false;
+    }
+    if (['issue_comment', 'pull_request_review_comment'].includes(type) && action === 'deleted') {
+      return false;
+    }
+    if (type === 'member' && action === 'removed') {
+      return false;
+    }
+    return true;
+  }
+
+  _getTranslatedEventType(type) {
+    const eventTypes = {
+      deployment: 'DeploymentEvent',
+      deployment_status: 'DeploymentStatusEvent',
+      issue_comment: 'IssueCommentEvent',
+      label: 'LabelEvent',
+      member: 'MemberEvent',
+      membership: 'MembershipEvent',
+      milestone: 'MilestoneEvent',
+      organization: 'OrganizationEvent',
+      page_build: 'PageBuildEvent',
+      pull_request_review_comment: 'PullRequestReviewCommentEvent',
+      repository: 'RepositoryEvent',
+      status: 'StatusEvent',
+      team: 'TeamEvent',
+      team_add: 'TeamAddEvent',
+    };
+    return eventTypes[type];
   }
 
   // The events in a repo or org have changed.  Go get the latest events, discover any new
@@ -500,14 +543,14 @@ class GitHubProcessor {
 
   DeploymentEvent(request) {
     let [, repo] = this._addEventBasics(request);
-    return this._addEventResourceContains(request, repo, 'deployment');
+    return this._addEventResource(request, repo, 'deployment');
   }
 
   DeploymentStatusEvent(request) {
     let [, repo] = this._addEventBasics(request);
     // TODO figure out how to do this more deeply nested structure
     // request.linkResource('deployment_status', `urn:repo:${repo}:deployment:${payload.deployment.id}:status:${payload.deployment_status.id}`);
-    return this._addEventResourceContains(request, repo, 'deployment');
+    return this._addEventResource(request, repo, 'deployment');
   }
 
   ForkEvent(request) {
@@ -524,18 +567,23 @@ class GitHubProcessor {
   IssueCommentEvent(request) {
     let [, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:issue:${payload.issue.id}`;
-    this._addEventResourceContains(request, repo, 'comment', 'issue_comment', qualifier);
-    return this._addEventResourceContains(request, repo, 'issue');
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: request.payload.fetchedAt };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, repo, 'comment', 'issue_comment', qualifier, context, policy);
+    }
+    this._addEventResource(request, repo, 'comment', 'issue_comment', qualifier);
+    return this._addEventResource(request, repo, 'issue');
   }
 
   IssuesEvent(request) {
     let [document, repo, payload] = this._addEventBasics(request);
-    this._addEventResourceContains(request, repo, 'issue');
+    this._addEventResource(request, repo, 'issue');
     if (payload.assignee) {
-      this._addEventResourceReference(request, null, 'assignee', 'user');
+      this._addEventResource(request, null, 'assignee', 'user');
     }
     if (payload.label) {
-      this._addEventResourceContains(request, repo, 'label');
+      this._addEventResource(request, repo, 'label');
     }
     return document;
   }
@@ -546,20 +594,42 @@ class GitHubProcessor {
   }
 
   MemberEvent(request) {
-    this._addEventBasics(request);
-    return this._addEventResourceReference(request, null, 'member', 'user');
+    let [document, repo, payload] = this._addEventBasics(request);
+    if (payload.action === 'added' || payload.action === 'removed') { // removed and not deleted as stated in documentation
+      const relationPolicy = this._getNextRelationPolicy('repo', request);
+      this._addEventResourceExplicit(request, 'repository', repo, (document.repo || document.repository).url, 'repo', null, {}, relationPolicy);
+      if (payload.action === 'removed') {
+        return document;
+      }
+    }
+    return this._addEventResource(request, null, 'member', 'user');
   }
 
   MembershipEvent(request) {
     this._addEventBasics(request);
-    this._addEventResourceReference(request, null, 'member', 'user');
-    return this._addEventResourceReference(request, null, 'team');
+    const userPolicy = TraversalPolicy.reload('user');
+    this._addEventResource(request, null, 'member', 'user', null, {}, userPolicy);
+    const teamPolicy = TraversalPolicy.reload('team');
+    return this._addEventResource(request, null, 'team', 'team', null, {}, teamPolicy);
   }
 
   MilestoneEvent(request) {
     // TODO complete implementation and add Milestone handler
     // let [, repo] = this._addEventBasics(request);
-    // return this._addEventResource(request, repo, 'milestone');
+    // const context = (payload.action === 'deleted') ? { deletedAt: request.payload.fetchedAt } : {};
+    // return this._addEventResource(request, repo, 'milestone', null, null, context);
+    let [document] = this._addEventBasics(request);
+    return document;
+  }
+
+  OrganizationEvent(request) {
+    // TODO complete implementation and add organization handler
+    let [document] = this._addEventBasics(request);
+    return document;
+  }
+
+  OrgBlockEvent(request) {
+    // TODO complete implementation and add organization handler
     let [document] = this._addEventBasics(request);
     return document;
   }
@@ -582,16 +652,16 @@ class GitHubProcessor {
 
   PullRequestEvent(request) {
     let [, repo] = this._addEventBasics(request);
-    return this._addEventResourceContains(request, repo, 'pull_request');
+    return this._addEventResource(request, repo, 'pull_request');
   }
 
   PullRequestReviewEvent(request) {
     let [, repo] = this._addEventBasics(request);
-    return this._addEventResourceContains(request, repo, 'pull_request');
+    return this._addEventResource(request, repo, 'pull_request');
   }
 
   PullRequestReviewCommentEvent(request) {
-    if (!request.document.payload.pull_request) {
+    if (request.document.payload && !request.document.payload.pull_request) {
       // this is a legacy event so tack on the event and queue up a fetch of the pull request to be processed
       // together so the stored event can have the right pull request link (id is missing in the old events).
       const context = { originalDocument: request.document };
@@ -600,8 +670,13 @@ class GitHubProcessor {
     }
     let [, repo, payload] = this._addEventBasics(request);
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
-    this._addEventResourceContains(request, repo, 'comment', 'review_comment', qualifier);
-    return this._addEventResourceContains(request, repo, 'pull_request');
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: request.payload.fetchedAt };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, repo, 'comment', 'review_comment', qualifier, context, policy);
+    }
+    this._addEventResource(request, repo, 'comment', 'review_comment', qualifier);
+    return this._addEventResource(request, repo, 'pull_request');
   }
 
   LegacyPullRequestReviewCommentEvent(request) {
@@ -634,8 +709,17 @@ class GitHubProcessor {
   }
 
   RepositoryEvent(request) {
-    this._addEventBasics(request);
-    return this._addEventResourceReference(request, null, 'repository', 'repo');
+    let [, , payload] = this._addEventBasics(request, null, ['actor', 'org']);
+    if (payload.action === 'created') {
+      const policy = TraversalPolicy.reload('repo');
+      return this._addEventResource(request, null, 'repository', 'repo', null, {}, policy);
+    }
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: request.payload.fetchedAt };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, null, 'repository', 'repo', null, context, policy);
+    }
+    return this._addEventResource(request, null, 'repository', 'repo');
   }
 
   StatusEvent(request) {
@@ -646,17 +730,30 @@ class GitHubProcessor {
   }
 
   TeamEvent(request) {
-    let [, , payload] = this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
-    if (payload.repository) {
-      this._addEventResourceReference(request, null, 'repository', 'repo');
+    let [, , payload] = this._addEventBasics(request, `urn:team:${(request.document.payload || request.document).team.id}`);
+    if (payload.action === 'added_to_repository' || payload.action === 'removed_from_repository') {
+      const relationPolicy = this._getNextRelationPolicy('repo', request);
+      return this._addEventResource(request, null, 'repository', 'repo', null, {}, relationPolicy);
     }
-    return this._addEventResourceReference(request, null, 'team');
+    if (payload.repository) {
+      this._addEventResource(request, null, 'repository', 'repo');
+    }
+    if (payload.action === 'created') {
+      const policy = TraversalPolicy.reload('team');
+      return this._addEventResource(request, null, 'team', 'team', null, {}, policy);
+    }
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: request.payload.fetchedAt };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, null, 'team', 'team', null, context, policy);
+    }
+    return this._addEventResource(request, null, 'team');
   }
 
   TeamAddEvent(request) {
-    this._addEventBasics(request, `urn:team:${request.document.payload.team.id}`);
-    this._addEventResourceReference(request, null, 'repository', 'repo');
-    return this._addEventResourceReference(request, null, 'team');
+    this._addEventBasics(request, `urn:team:${(request.document.payload || request.document).team.id}`);
+    this._addEventResource(request, null, 'repository', 'repo');
+    return this._addEventResource(request, null, 'team');
   }
 
   WatchEvent(request) {
@@ -703,49 +800,77 @@ class GitHubProcessor {
     return null;
   }
 
-  _addEventBasics(request, qualifier = null) {
+  _addEventBasics(request, qualifier = null, queueList = ['actor', 'repo', 'org']) {
     // TODO handle org event cases (no repo etc)
     const document = request.document;
-    const repo = document.repo ? document.repo.id : null;
-    qualifier = qualifier || (repo ? `urn:repo:${repo}` : `urn:org:${document.org.id}`);
-    request.linkResource('self', `${qualifier}:${request.type}:${document.id}`);
+    let repo = document.repo ? document.repo.id : null;
+    if (!repo) {
+      repo = document.repository ? document.repository.id : null;
+    }
+    let orgId = document.org ? document.org.id : null;
+    if (!orgId) {
+      orgId = document.organization ? document.organization.id : null;
+    }
+    qualifier = qualifier || (repo ? `urn:repo:${repo}` : `urn:org:${orgId}`);
+    const id = document.id || request.payload.guid;
+    request.linkResource('self', `${qualifier}:${request.type}:${id}`);
     request.linkSiblings(`${qualifier}:${request.type}s`);
 
     // TODO understand if the actor is typically the same as the creator or pusher in the payload
-    this._addRoot(request, 'actor', 'user');
+    this._addRoot(request, 'actor', 'user', null, null, queueList.includes('actor'));
     if (repo) {
-      this._addRoot(request, 'repo', 'repo');
+      this._addRoot(request, 'repo', 'repo', null, null, queueList.includes('repo'));
     }
-    this._addRoot(request, 'org', 'org');
-
-    return [document, repo, document.payload];
+    this._addRoot(request, 'org', 'org', null, null, queueList.includes('org'));
+    return [document, repo, document.payload || document];
   }
 
-  _addEventResourceReference(request, repo, name, type = name, qualifier = null) {
-    return this._addEventResource(request, repo, name, type, qualifier);
-  }
-
-  _addEventResourceContains(request, repo, name, type = name, qualifier = null) {
-    return this._addEventResource(request, repo, name, type, qualifier);
-  }
-
-  _addEventResource(request, repo, name, type = name, qualifier = null) {
-    const payload = request.document.payload;
+  _addEventResource(request, repo, name, type = name, qualifier = null, context = {}, policy = null) {
+    const payload = request.document.payload || request.document;
     const target = payload[name];
     if (!target) {
       throw new Error(`payload[${name}] missing in ${request.toString()}`);
     }
     // if the repo is given then use it. Otherwise, assume the type is a root and construct a urn
     qualifier = qualifier || (repo ? `urn:repo:${repo}` : 'urn:');
+    context.qualifier = qualifier;
     const separator = qualifier.endsWith(':') ? '' : ':';
     request.linkResource(name, `${qualifier}${separator}${type}:${payload[name].id}`);
-    const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
+    const newContext = extend(true, {}, context, { history: request.context.history, qualifier: qualifier });
     const newRequest = new Request(type, payload[name].url, newContext);
-    newRequest.policy = request.getNextPolicy(name);
+    newRequest.policy = policy || request.getNextPolicy(name);
     if (newRequest.policy) {
       request.queueRequests(newRequest);
     }
     return request.document;
+  }
+
+  _addEventResourceExplicit(request, name, id, url, type = name, qualifier = null, context = {}, policy = null) {
+    qualifier = qualifier || 'urn:';
+    context.qualifier = qualifier;
+    const separator = qualifier.endsWith(':') ? '' : ':';
+    request.linkResource(name, `${qualifier}${separator}${type}:${id}`);
+    const newContext = extend(true, {}, context, { history: request.context.history, qualifier: qualifier });
+    const newRequest = new Request(type, url, newContext);
+    newRequest.policy = policy || request.getNextPolicy(name);
+    if (newRequest.policy) {
+      request.queueRequests(newRequest);
+    }
+    return request.document;
+  }
+
+  _getNextRelationPolicy(name, request) {
+    const map = VisitorMap.getMap(`relationOnly/${request.type}`);
+    if (!map) {
+      return null;
+    }
+    const policy = request.policy.getNextPolicy(name, map);
+    policy.fetch = 'originStorage';
+    return policy;
+  }
+
+  _getNextDeletedPolicy() {
+    return new TraversalPolicy('storageOnly', 'always', VisitorMap.getMap('self'));
   }
 
   _addResource(request, name, type, id, url = null, urn = null, qualifier = null) {
@@ -769,8 +894,19 @@ class GitHubProcessor {
     request.queue(name, url, newPolicy, newContext);
   }
 
-  _addRoot(request, name, type, url = null, urn = null) {
-    const element = request.document[name];
+  _addRoot(request, name, type, url = null, urn = null, queue = true) {
+    let element = request.document[name];
+    if (!element) {
+      if (name === 'actor') {
+        element = request.document.sender;
+      }
+      if (name === 'repo') {
+        element = request.document.repository;
+      }
+      if (name === 'org') {
+        element = request.document.organization;
+      }
+    }
     // If there is no element then we must have both the url and urn as otherwise we don't know how to compute them
     if ((!element || Object.getOwnPropertyNames(element).length === 0) && !(urn && url)) {
       return;
@@ -780,7 +916,9 @@ class GitHubProcessor {
     url = url || element.url;
     request.linkResource(name, urn);
     const newPolicy = request.getNextPolicy(name);
-    request.queue(type, url, newPolicy);
+    if (queue) {
+      request.queue(type, url, newPolicy);
+    }
   }
 
   /**
