@@ -91,6 +91,7 @@ class QueueSet {
   _createStartMap(weights) {
     // Create a simple table of which queue to pop based on the weights supplied.  For each queue,
     // look up its weight and add that many entries in the map.  If no weight is included, assume 1.
+    weights = weights || {};
     const result = [];
     for (let i = 0; i < this.queues.length; i++) {
       const count = weights[this.queues[i].getName()] || 1;

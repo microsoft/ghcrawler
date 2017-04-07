@@ -265,13 +265,12 @@ class GitHubFetcher {
   _getTypeDetails(type) {
     const result = {
       orgs: { tokenTraits: ['admin'] },
-      org: { tokenTraits: [['admin'], ['public']], headers: { Accept: 'application/vnd.github.korra-preview+json'} },
-      repos: { tokenTraits: [['admin'], ['public']] },
-      repo: { tokenTraits: [['admin'], ['public']] },
+      org: { tokenTraits: [['admin'], ['public']] },
+      repos: { tokenTraits: [['admin'], ['public']], headers: { Accept: 'application/vnd.github.mercy-preview+json' } },
+      repo: { tokenTraits: [['admin'], ['public']], headers: { Accept: 'application/vnd.github.mercy-preview+json' } },
       teams: { tokenTraits: ['admin'] },
       team: { tokenTraits: ['admin'] },
       members: { tokenTraits: ['admin'] },
-      // update_events: { tokenTraits: ['admin'] },
       events: { tokenTraits: ['admin'] },
       collaborators: { tokenTraits: ['admin'], headers: { Accept: 'application/vnd.github.korra-preview' } },
       reviews: { headers: { Accept: 'application/vnd.github.black-cat-preview+json' } },
