@@ -1414,10 +1414,6 @@ function expectQueued(actual, expected) {
     const ar = a.context.relation;
     expect(expected.some(e => {
       const er = e.context ? e.context.relation : null;
-      if (e.type === a.type
-        && e.url === a.url) {
-        console.log(e, a);
-      }
       return e.type === a.type
         && e.url === a.url
         && (!e.urn || e.urn === a.context.qualifier)
