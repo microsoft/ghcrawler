@@ -32,7 +32,7 @@ router.post('/', wrap(function* (request, response, next) {
   const event = JSON.parse(request.body);
   const eventsUrl = event.repository ? event.repository.events_url : event.organization.events_url;
   const result = new Request('event_trigger', `${eventsUrl}/${deliveryId}`);
-  result.payload = { body: event, etag: 1, fetchedAt: moment.utc().toISOString(), type: eventType, guid: deliveryId };
+  result.payload = { body: event, etag: 1, fetchedAt: moment.utc().toISOString(), type: eventType, deliveryId: deliveryId };
   // requests off directly off the event feed do not need exclusivity
   result.requiresLock = false;
   // if the event is for a private repo, mark the request as needing private access.

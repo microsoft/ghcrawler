@@ -818,7 +818,7 @@ class GitHubProcessor {
       orgId = document.organization ? document.organization.id : null;
     }
     qualifier = qualifier || (repo ? `urn:repo:${repo}` : `urn:org:${orgId}`);
-    const id = document.id || request.payload.guid;
+    const id = document.id || request.payload.deliveryId;
     request.linkResource('self', `${qualifier}:${request.type}:${id}`);
     request.linkSiblings(`${qualifier}:${request.type}s`);
 
