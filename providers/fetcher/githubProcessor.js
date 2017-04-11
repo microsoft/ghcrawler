@@ -426,12 +426,15 @@ class GitHubProcessor {
   event_trigger(request) {
     request.markNoSave();
     if (this._isEventVisibleInTimeline(request.payload.type, request.payload.body.action)) {
-      const newRequest = new Request('update_events', request.url, request.context);
+      // If the request is visible in the timeline, toss the payload and queue an update_events request to query the timeline
+      const url = request.url.substr(0, request.url.lastIndexOf('/'));
+      const newRequest = new Request('update_events', url, request.context);
       request.queueRequests(newRequest, 'immediate');
     } else {
+      // Otherwise, this is as good as its going to get so queue the webhook event directly.
       const type = this._getTranslatedEventType(request.payload.type);
       const newContext = extend(true, {}, { history: request.context.history });
-      const newRequest = new Request(type, request.url + '/' + request.payload.guid, newContext);
+      const newRequest = new Request(type, request.url, newContext);
       newRequest.payload = request.payload;
       request.queueRequests(newRequest, 'immediate');
     }
