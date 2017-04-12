@@ -1382,6 +1382,40 @@ describe('Event Finder', () => {
   });
 });
 
+describe('Event Trigger', () => {
+  it('should queue update_events when on timeline', () => {
+    const request = createRequest('event_trigger', 'http://foo/events/4321');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    request.payload = { type:'issue_comment', body: { action: 'created' } };
+
+    const processor = new GitHubProcessor();
+    processor.event_trigger(request);
+
+    const expected = [
+      { type: 'update_events', url: 'http://foo/events', path: '/' }
+    ];
+    expectQueued(queue, expected);
+    expect(queue[0].payload).to.undefined;
+  });
+
+  it('should queue explict event when not on timeline', () => {
+    const request = createRequest('event_trigger', 'http://foo/events/4321');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    request.payload = { type:'repository', body: { action: 'created' } };
+
+    const processor = new GitHubProcessor();
+    processor.event_trigger(request);
+
+    const expected = [
+      { type: 'RepositoryEvent', url: request.url, path: '/' }
+    ];
+    expectQueued(queue, expected);
+    expect(queue[0].payload).to.be.deep.equal(request.payload);
+  });
+});
+
 // =========================== HELPERS =========================
 
 

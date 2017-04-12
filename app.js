@@ -5,7 +5,6 @@ const appInsights = require('applicationinsights');
 const auth = require('./middleware/auth');
 const bodyParser = require('body-parser');
 const config = require('painless-config');
-const CrawlerService = require('./lib/crawlerService');
 const express = require('express');
 const logger = require('morgan');
 const mockInsights = require('./providers/logger/mockInsights');
