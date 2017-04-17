@@ -103,11 +103,11 @@ describe('Crawler get request', () => {
     const queues = createBaseQueues({ priority: priority, normal: normal });
     const crawler = createBaseCrawler({ queues: queues });
     const requestBox = [];
-    const timeBeforeGetRequest = Date.now();
+    sinon.stub(Q, 'delay', (request) => { return Q(request); });
     return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
       expect(request.type).to.be.equal('normal');
       expect(request.attemptCount).to.be.equal(1);
-      expect(Date.now() - timeBeforeGetRequest).to.be.approximately(500, 20);
+      expect(Q.delay.callCount).to.be.equal(1);
     });
   });
 });
