@@ -94,6 +94,22 @@ describe('Crawler get request', () => {
       },
       request => assert.fail());
   });
+
+  it('should delay the request if attempt count is present', () => {
+    const priority = createBaseQueue('priority', { pop: () => { return Q(null); } });
+    const newRequest = new Request('normal', 'http://test');
+    newRequest.attemptCount = 1;
+    const normal = createBaseQueue('normal', { pop: () => { return Q(newRequest); } });
+    const queues = createBaseQueues({ priority: priority, normal: normal });
+    const crawler = createBaseCrawler({ queues: queues });
+    const requestBox = [];
+    const timeBeforeGetRequest = Date.now();
+    return crawler._getRequest(requestBox, { name: 'test' }).then(request => {
+      expect(request.type).to.be.equal('normal');
+      expect(request.attemptCount).to.be.equal(1);
+      expect(Date.now() - timeBeforeGetRequest).to.be.approximately(500, 20);
+    });
+  });
 });
 
 describe('Crawler fetching', () => {
