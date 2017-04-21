@@ -17,6 +17,7 @@ const mode = config.get('CRAWLER_MODE') || '';
 const service = CrawlerFactory.createService(mode);
 const app = express();
 
+app.disable('x-powered-by');
 app.use(logger('dev'));
 app.use(sendHelper());
 
