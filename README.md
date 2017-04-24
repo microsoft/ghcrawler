@@ -35,10 +35,10 @@ If you want to persist the data gathered and create some insights dashboards in 
 
 ***NOTE*** This is an evolving solution and the steps for running will be simplified published, ready-to-use images on Docker Hub. For now, follow these steps
 
-1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/crawler-dashboard](https://github.com/Microsoft/crawler-dashboard.git) repos.
+1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/ghcrawler-dashboard](https://github.com/Microsoft/ghcrawler-dashboard.git) repos.
 1. In a command prompt go to ```ghcrawler/docker``` and run ```docker-compose up```.
 
-Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or the browser-based dashboard, both of which are described below. 
+Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or the browser-based dashboard, both of which are described below.
 
 Check out the [related GHCrawler wiki page](https://github.com/Microsoft/ghcrawler/wiki/Crawler-in-a-box) for more information on running in Docker.
 
@@ -48,7 +48,7 @@ For ultimate flexibility, the crawler and associated bits can be run directly on
 ***Setting up this operating mode is a bit more involved and is not yet documented.***
 
 # Event tracking
-The crawler can hook and track GitHub events by listening webhooks.  To set this up, 
+The crawler can hook and track GitHub events by listening webhooks.  To set this up,
 
 1. Create a webhook on your GitHub orgs or repos and point it at the running crawler.  When events are on the webhook should point to
 ```
@@ -82,9 +82,9 @@ http://localhost:3000> exit
 
 ## Browser dashboard
 
-The crawler dashboard gives you live feedback on what the crawler is doing as well as better control over the crawler's queues and configuration. Some configurations (e.g., Docker) include and start the dashboard for free. If you need to deploy the dashboard explicitly, clone the [Microsoft/crawler-dashboard](https://github.com/Microsoft/crawler-dashboard.git) repo and follow the instructions in [the README found there](https://github.com/Microsoft/crawler-dashboard/blob/develop/README.md).
+The crawler dashboard gives you live feedback on what the crawler is doing as well as better control over the crawler's queues and configuration. Some configurations (e.g., Docker) include and start the dashboard for free. If you need to deploy the dashboard explicitly, clone the [Microsoft/ghcrawler-dashboard](https://github.com/Microsoft/ghcrawler-dashboard.git) repo and follow the instructions in [the README found there](https://github.com/Microsoft/ghcrawler-dashboard/blob/develop/README.md).
 
-Once the dashboard service is up and running, point your browser at the dashboard endpoint (http://localhost:4000 by default). Detail information is included in [the dashboard README](https://github.com/Microsoft/crawler-dashboard/blob/develop/README.md).
+Once the dashboard service is up and running, point your browser at the dashboard endpoint (http://localhost:4000 by default). Detail information is included in [the dashboard README](https://github.com/Microsoft/ghcrawler-dashboard/blob/develop/README.md).
 
 Note that the dashboard does not report queue message rates (top right graph) when used with the memory-based crawler service as that mechanism requires Redis to record activity.
 

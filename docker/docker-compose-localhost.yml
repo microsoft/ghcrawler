@@ -21,7 +21,7 @@ metabase:
   links:
     - mongo
 dashboard:
-  build: ../../crawler-dashboard
+  build: ../../ghcrawler-dashboard
   ports:
     - "4000:4000"
   environment:
