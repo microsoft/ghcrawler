@@ -7,7 +7,7 @@ class TokenFactory {
     const parts = spec.split('#');
     const value = parts[0];
     const traits = parts[1].split(',');
-    return { value: value, traits: traits };
+    return { value: value, traits: traits || ['public'] };
   }
 
   constructor(tokens, options) {

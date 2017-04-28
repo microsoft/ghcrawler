@@ -14,8 +14,8 @@ GHCrawler focuses on successively retrieving and walking GitHub API resources su
 The crawler can be configured to use a variety of different queuing technologies (e.g., AMQP 1.0 and AMQP 0.9 compatible queues like Azure ServiceBus and Rabbit MQ, respectively), and storage systems (e.g., Azure Blob and MongoDB). You can create your own infrastructure plugins to use different technologies.
 
 
-# Documentation
-This page is essentially the Quick Start Guide for using the crawler. Detailed and complete documentation is maintained in
+# Quick start
+This page is the Quick Start Guide for using the crawler. Detailed and complete documentation is maintained on the following sites:
 
 * This [project's wiki](https://github.com/Microsoft/ghcrawler/wiki) for documentation on the crawler itself
 * The [Dashboard repo](https://github.com/Microsoft/ghcrawler-dashboard), for information on the browser-based crawler management dashboard
@@ -25,10 +25,11 @@ This page is essentially the Quick Start Guide for using the crawler. Detailed a
 The easiest way try our the GHCrawler is to run it in memory. You can get up and running in a couple minutes.  This approach does not scale and is not persistent but it's dead simple.
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) repo.
-1. Run ```npm install``` in the clone repo directory to install the prerequisites.
-1. Run the crawler using ```node bin/www.js```.
+1. Run `npm install` in the clone repo directory to install the prerequisites.
+1. Set the token environment variable `CRAWLER_GITHUB_TOKENS=`
+1. Run the crawler using `node bin/www.js`.
 
-Once the service is up and running, you should see some crawler related messages in the console output every few seconds. You can control the crawler either using the ```cc``` command line tool or a browser-based dashboard, both of which are described below. Note that since you are running in memory, if you kill the crawler process, all work will be lost. This mode is great for playing around with the crawler or testing.
+Once the service is up and running, you should see some crawler related messages in the console output every few seconds. You can control the crawler either using the `cc` command line tool or a browser-based dashboard, both of which are described below. Note that since you are running in memory, if you kill the crawler process, all work will be lost. This mode is great for playing around with the crawler or testing.
 
 # Running Crawler-In-A-Box (CIABatta)
 If you want to persist the data gathered and create some insights dashboards in small to medium production system, you can run GHCrawler in Docker with Mongo, Rabbit, and Redis infrastructure using the Crawler-in-a-box (CIABatta) approach. This setup also includes Metabase for building browser-based insights and gives you a browser-based control-panel for observing and controlling the crawler service.
@@ -36,14 +37,14 @@ If you want to persist the data gathered and create some insights dashboards in 
 ***NOTE*** This is an evolving solution and the steps for running will be simplified published, ready-to-use images on Docker Hub. For now, follow these steps
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/ghcrawler-dashboard](https://github.com/Microsoft/ghcrawler-dashboard.git) repos.
-1. In a command prompt go to ```ghcrawler/docker``` and run ```docker-compose up```.
+1. In a command prompt go to `ghcrawler/docker` and run `docker-compose up`.
 
 Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or the browser-based dashboard, both of which are described below.
 
 Check out the [related GHCrawler wiki page](https://github.com/Microsoft/ghcrawler/wiki/Crawler-in-a-box) for more information on running in Docker.
 
 # Deploying native
-For ultimate flexibility, the crawler and associated bits can be run directly on VMs or as an app service. This structure typically uses cloud-based infrastructure for queuing, storage and redis. For example, this project comes with adapters for Azure Service Bus queuing and Azure Blob storage. The APIs on these adpaters is very slim so it is easy to for you to implement (and contribute) more.
+For ultimate flexibility and performance, the crawler and associated bits can be run directly on VMs or as an app service. This structure typically uses cloud-based infrastructure for queuing, storage and redis. For example, this project comes with adapters for Azure Service Bus queuing and Azure Blob storage. The APIs on these adpaters is very slim so it is easy to for you to implement (and contribute) more.
 
 ***Setting up this operating mode is a bit more involved and is not yet documented.***
 
