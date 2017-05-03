@@ -421,7 +421,6 @@ describe('Commit processing', () => {
       links.commit_comments.href = 'urn:repo:12:pull_request_commit:6dcb09b5b5:commit_comments';
       delete links.siblings;
     }
-    console.log('QUA', qualifier, document._metadata.links);
     expectLinks(document._metadata.links, links);
 
     const expected = [
