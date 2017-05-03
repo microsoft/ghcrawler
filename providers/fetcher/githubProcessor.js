@@ -211,6 +211,11 @@ class GitHubProcessor {
       repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
       context.qualifier = `${repoUrn}:pull_request_commit`;
       request.linkResource('self', `${context.qualifier}:${document.sha}`);
+    } else if (context.qualifier.includes('PushEvent')) {
+      repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
+      context.qualifier = `${repoUrn}:commit`;
+      request.linkResource('self', `${context.qualifier}:${document.sha}`);
+      request.linkSiblings(`${repoUrn}:commits`);
     } else {
       request.addSelfLink('sha');
       repoUrn = context.qualifier;
@@ -701,8 +706,17 @@ class GitHubProcessor {
   }
 
   PushEvent(request) {
-    let [document] = this._addEventBasics(request);
-    // TODO figure out what to do with the commits
+    let [document, repo, payload] = this._addEventBasics(request);
+    const qualifier = `urn:repo:${repo}:PushEvent:${document.id}`;
+    request.linkCollection('commits', qualifier);
+    const commits = payload.commits || [];
+    const newRequests = commits.map(commit => {
+      const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
+      const newRequest = new Request('commit', commit.url, newContext);
+      newRequest.policy = request.getNextPolicy('commits');
+      return newRequest;
+    });
+    request.queueRequests(newRequests);
     return document;
   }
 

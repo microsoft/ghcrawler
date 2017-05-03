@@ -378,8 +378,20 @@ describe('Repo processing', () => {
 
 describe('Commit processing', () => {
   it('should link and queue correctly', () => {
+    testCommit('urn:repo:12');
+  });
+
+  it('should link and queue correctly if qualifier contains pull_request_commit', () => {
+    testCommit('urn:repo:12:pull_request_commit:6dcb09b5b5');
+  });
+
+  it('should link and queue correctly if qualifier contains PushEvent', () => {
+    testCommit('urn:repo:12:PushEvent:123');
+  });
+
+  function testCommit(qualifier) {
     const request = createRequest('commit', 'http://foo/commit');
-    request.context = { qualifier: 'urn:repo:12' };
+    request.context = { qualifier: qualifier };
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     request.document = {
@@ -404,6 +416,12 @@ describe('Commit processing', () => {
       committer: { href: 'urn:user:15', type: 'resource' },
       repo: { href: 'urn:repo:12', type: 'resource' },
     }
+    if (qualifier.includes('pull_request_commit')) {
+      links.self.href = 'urn:repo:12:pull_request_commit:6dcb09b5b5';
+      links.commit_comments.href = 'urn:repo:12:pull_request_commit:6dcb09b5b5:commit_comments';
+      delete links.siblings;
+    }
+    console.log('QUA', qualifier, document._metadata.links);
     expectLinks(document._metadata.links, links);
 
     const expected = [
@@ -411,6 +429,38 @@ describe('Commit processing', () => {
       { type: 'user', url: 'http://user/15', path: '/committer' },
       { type: 'repo', url: 'http://repo/12', path: '/repo' },
       { type: 'commit_comments', url: 'http://comments', qualifier: 'urn:repo:12:commit:6dcb09b5b5', path: '/commit_comments' }
+    ];
+    expectQueued(queue, expected);
+  }
+
+  it('should link and queue PushEvent with commits', () => {
+    const request = createRequest('PushEvent', 'http://foo/events/123');
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    const payload = {
+      commits: [{ sha: 'a1a', url: 'http://commits/a1a' }, { sha: 'b2b', url: 'http://commits/b2b' }]
+    };
+    request.document = createEvent('PushEvent', payload);
+
+    const processor = new GitHubProcessor();
+    const document = processor.PushEvent(request);
+
+    const links = {
+      self: { href: 'urn:repo:4:PushEvent:12345', type: 'resource' },
+      siblings: { href: 'urn:repo:4:PushEvents', type: 'collection' },
+      actor: { href: 'urn:user:3', type: 'resource' },
+      repo: { href: 'urn:repo:4', type: 'resource' },
+      org: { href: 'urn:org:5', type: 'resource' },
+      commits: { href: 'urn:repo:4:PushEvent:12345', type: 'collection' }
+    }
+    expectLinks(document._metadata.links, links);
+
+    const expected = [
+      { type: 'user', url: 'http://user/3', path: '/actor' },
+      { type: 'repo', url: 'http://repo/4', path: '/repo' },
+      { type: 'org', url: 'http://org/5', path: '/org' },
+      { type: 'commit', url: 'http://commits/a1a', qualifier: 'urn:repo:4:PushEvent:12345', path: '/commits' },
+      { type: 'commit', url: 'http://commits/b2b', qualifier: 'urn:repo:4:PushEvent:12345', path: '/commits' }
     ];
     expectQueued(queue, expected);
   });
