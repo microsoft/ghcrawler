@@ -450,7 +450,7 @@ describe('Commit processing', () => {
       actor: { href: 'urn:user:3', type: 'resource' },
       repo: { href: 'urn:repo:4', type: 'resource' },
       org: { href: 'urn:org:5', type: 'resource' },
-      commits: { href: 'urn:repo:4:PushEvent:12345', type: 'collection' }
+      commits: { href: 'urn:repo:4:PushEvent:12345:commits', type: 'collection' }
     }
     expectLinks(document._metadata.links, links);
 

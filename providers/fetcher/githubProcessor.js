@@ -708,7 +708,7 @@ class GitHubProcessor {
   PushEvent(request) {
     let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = document._metadata.links.self.href;
-    request.linkCollection('commits', qualifier);
+    request.linkCollection('commits', `${qualifier}:commits`);
     const commits = payload.commits || [];
     const newRequests = commits.map(commit => {
       const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
