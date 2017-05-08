@@ -714,9 +714,9 @@ class GitHubProcessor {
       const newContext = extend(true, {}, { history: request.context.history, qualifier: qualifier });
       const newRequest = new Request('commit', commit.url, newContext);
       newRequest.policy = request.getNextPolicy('commits');
-      return newRequest;
+      return newRequest.policy ? newRequest : null;
     });
-    request.queueRequests(newRequests);
+    request.queueRequests(newRequests.filter(request => request));
     return document;
   }
 
