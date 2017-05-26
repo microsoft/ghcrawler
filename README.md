@@ -9,7 +9,7 @@ GHCrawler is a robust GitHub API crawler that walks a queue of GitHub entities t
 * Efficiently storing and the retrieved entities
 * Keeping the stored data up to date when used in conjunction with a GitHub webhook to track events
 
-GHCrawler focuses on successively retrieving and walking GitHub API resources supplied on a (set of) queues. Each resource is fetched, processed, plumbed for more resources to fetch and ultimately store. Discovered resources are themselves queued for further processing. The crawler is careful to not repeatedly fetch the same resource. It makes heavy use of etags, Redis, client-side rate limiting, and GitHub token pooling and rotation to optimize use of your API tokens and not beat up the GitHub API.
+GHCrawler focuses on successively retrieving and walking GitHub API resources supplied on a (set of) queues. Each resource is fetched, processed, plumbed for more resources to fetch and ultimately stored. Discovered resources are themselves queued for further processing. The crawler is careful to not repeatedly fetch the same resource. It makes heavy use of etags, Redis, client-side rate limiting, and GitHub token pooling and rotation to optimize use of your API tokens and not beat up the GitHub API.
 
 The crawler can be configured to use a variety of different queuing technologies (e.g., AMQP 1.0 and AMQP 0.9 compatible queues like Azure ServiceBus and Rabbit MQ, respectively), and storage systems (e.g., Azure Blob and MongoDB). You can create your own infrastructure plugins to use different technologies.
 
@@ -25,10 +25,11 @@ This page is essentially the Quick Start Guide for using the crawler. Detailed a
 The easiest way try our the GHCrawler is to run it in memory. You can get up and running in a couple minutes.  This approach does not scale and is not persistent but it's dead simple.
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) repo.
-1. Run ```npm install``` in the clone repo directory to install the prerequisites.
-1. Run the crawler using ```node bin/www.js```.
+1. Run `npm install` in the clone repo directory to install the prerequisites.
+1. Set the `CRAWLER_GITHUB_TOKENS` environment var to a semi-colon delimited list of [GitHub API tokens](https://developer.github.com/v3/#authentication) for rate-limiting and permissions.  For example, `set CRAWLER_GITHUB_TOKENS=432b345acd23`.
+1. Run the crawler using `node bin/www.js`.
 
-Once the service is up and running, you should see some crawler related messages in the console output every few seconds. You can control the crawler either using the ```cc``` command line tool or a browser-based dashboard, both of which are described below. Note that since you are running in memory, if you kill the crawler process, all work will be lost. This mode is great for playing around with the crawler or testing.
+Once the service is up and running, you should see some crawler related messages in the console output every few seconds. You can control the crawler either using the `cc` command line tool or a browser-based dashboard, both of which are described below. Note that since you are running in memory, if you kill the crawler process, all work will be lost. This mode is great for playing around with the crawler or testing.
 
 # Running Crawler-In-A-Box (CIABatta)
 If you want to persist the data gathered and create some insights dashboards in small to medium production system, you can run GHCrawler in Docker with Mongo, Rabbit, and Redis infrastructure using the Crawler-in-a-box (CIABatta) approach. This setup also includes Metabase for building browser-based insights and gives you a browser-based control-panel for observing and controlling the crawler service.
@@ -36,7 +37,8 @@ If you want to persist the data gathered and create some insights dashboards in 
 ***NOTE*** This is an evolving solution and the steps for running will be simplified published, ready-to-use images on Docker Hub. For now, follow these steps
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/ghcrawler-dashboard](https://github.com/Microsoft/ghcrawler-dashboard.git) repos.
-1. In a command prompt go to ```ghcrawler/docker``` and run ```docker-compose up```.
+1. Set the `CRAWLER_GITHUB_TOKENS` environment var to a semi-colon delimited list of [GitHub API tokens](https://developer.github.com/v3/#authentication) for rate-limiting and permissions.  For example, `set CRAWLER_GITHUB_TOKENS=432b345acd23`.
+1. In a command prompt go to `ghcrawler/docker` and run `docker-compose up`.
 
 Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or the browser-based dashboard, both of which are described below.
 
@@ -45,7 +47,7 @@ Check out the [related GHCrawler wiki page](https://github.com/Microsoft/ghcrawl
 # Deploying native
 For ultimate flexibility, the crawler and associated bits can be run directly on VMs or as an app service. This structure typically uses cloud-based infrastructure for queuing, storage and redis. For example, this project comes with adapters for Azure Service Bus queuing and Azure Blob storage. The APIs on these adpaters is very slim so it is easy to for you to implement (and contribute) more.
 
-***Setting up this operating mode is a bit more involved and is not yet documented.***
+***Setting up this operating mode is a bit more involved and is not fully documented.  The [wiki pages on Configuration](https://github.com/Microsoft/ghcrawler/wiki/Configuration) contain much of the raw info needed.***
 
 # Event tracking
 The crawler can hook and track GitHub events by listening webhooks.  To set this up,
@@ -114,8 +116,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 It is clearly early days for the crawler so there are a number of things left to do. Most of the concrete work items are captured in repo issues. Broadly speaking there are several types of work:
 
-* Documentation -- The crawler code itself is relatively straightforward but some of the architecture, control and extensibility points are not called out.
-* Ease of use -- There are a number of places where running and managing the crawler is just clumsy and error prone
+* Documentation -- The crawler code itself is relatively straightforward but not all of the architecture, control and extensibility points are not called out.
 * Completeness -- There are a few functional gaps in certain scenarios that need to be addressed.
 * Docker configuration -- Several items in making the Docker configuration real
 * Analysis and insights -- Metabase is supplied in the Docker configuration but relatively little has been done with analyzing the harvested data.
