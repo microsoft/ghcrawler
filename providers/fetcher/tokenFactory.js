@@ -6,7 +6,7 @@ class TokenFactory {
   static createToken(spec) {
     const parts = spec.split('#');
     const value = parts[0];
-    const traits = parts[1].split(',');
+    const traits = parts[1] ? parts[1].split(',') : ['public'];
     return { value: value, traits: traits };
   }
 
@@ -31,7 +31,7 @@ class TokenFactory {
   /**
    * Given a collection of trait sets, find the first set that has any number of matching tokens in the
    * factory.  From that set return a random one that is not on the bench. If all candidates are benched,
-   * return either the soonest time one will come off the bench. If no matching tokens are found for a given
+   * return the soonest time one will come off the bench. If no matching tokens are found for a given
    * set, move on to the next set. If no tokens match any of the sets, return null.
    */
   getToken(desiredTraitSets) {
@@ -60,8 +60,11 @@ class TokenFactory {
     });
 
     if (candidates.length === 0) {
+      // if there are no candidates at all for this trait set, return null otherwise return the soonest that
+      // a suitable token will be available.
       return minBench === Number.MAX_SAFE_INTEGER ? null : minBench;
     }
+    // having found some suitable and available tokens, pick one randomly
     const index = Math.floor(Math.random() * candidates.length);
     return candidates[index].value;
   }

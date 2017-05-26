@@ -28,6 +28,10 @@ class GitHubFetcher {
     const etagPromise = checkEtag ? this.store.etag(request.type, request.url) : Q(null);
     return etagPromise.then(etag => {
       return self._getToken(request).then(token => {
+        if (!token) {
+          // there were no tokens at all for this request so mark as dead and skip
+          return request.markDead('No token', 'No token with matching traits');
+        }
         // if we get back a number, all tokens that could address this request have been benched so we have to requeue and wait.
         if (typeof token === 'number') {
           return self._handleDeferred(request, token);
@@ -222,10 +226,7 @@ class GitHubFetcher {
     }
     additionalTraits = additionalTraits.length === 0 ? [] : [additionalTraits];
     return this.tokenFactory.getToken(additionalTraits.concat(traits)).then(token => {
-      if (token === null) {
-        throw new Error(`No API tokens available for ${request.toString()}`);
-      }
-      if (typeof token === 'number') {
+      if (!token || typeof token === 'number') {
         return token;
       }
       const exhaust = (until => {
