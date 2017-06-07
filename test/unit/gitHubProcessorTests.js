@@ -423,56 +423,6 @@ describe('Commit processing', () => {
     expectQueued(queue, expected);
   }
 
-  it('should link and queue pull request commit correctly without comments', () => {
-    testPullRequestCommit(false);
-  });
-
-  it('should link and queue pull request commit correctly with comments', () => {
-    testPullRequestCommit(true);
-  });
-
-  function testPullRequestCommit(hasComments = false) {
-    request = createRequest('pull_request_commit', 'http://foo/commit');
-    request.context = { qualifier: 'urn:repo:12:pull_request_commit:77cb09b5b5' };
-    const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
-    request.document = {
-      _metadata: { links: {} },
-      sha: '77cb09b5b5',
-      url: 'http://repo/12/commits/77cb09b5b5',
-      commit: { comment_count: 0 },
-      author: { id: 7, url: 'http://user/7' },
-      committer: { id: 15, url: 'http://user/15' }
-    };
-    if (hasComments) {
-      request.document.commit.comment_count = 1;
-      request.document.comments_url = 'http://comments';
-    }
-    request.processMode = 'process';
-
-    const processor = new GitHubProcessor();
-    const document = processor.pull_request_commit(request);
-    const links = {
-      self: { href: 'urn:repo:12:pull_request_commit:77cb09b5b5', type: 'resource' },
-      siblings: { href: 'urn:repo:12:pull_request_commits', type: 'collection' },
-      author: { href: 'urn:user:7', type: 'resource' },
-      committer: { href: 'urn:user:15', type: 'resource' },
-      repo: { href: 'urn:repo:12', type: 'resource' },
-      pull_request_commit_comments: { href: 'urn:repo:12:pull_request_commit:77cb09b5b5:pull_request_commit_comments', type: 'collection' }
-    };
-    expectLinks(document._metadata.links, links);
-
-    const expected = [
-      { type: 'user', url: 'http://user/7', path: '/author' },
-      { type: 'user', url: 'http://user/15', path: '/committer' },
-      { type: 'repo', url: 'http://repo/12', path: '/repo' }
-    ];
-    if (hasComments) {
-      expected.push({ type: 'pull_request_commit_comments', url: 'http://comments', qualifier: 'urn:repo:12:pull_request_commit:77cb09b5b5', path: '/pull_request_commit_comments' });
-    }
-    expectQueued(queue, expected);
-  }
-
   it('should link and queue PushEvent with commits', () => {
     const request = createRequest('PushEvent', 'http://foo/events/123');
     const queue = [];
@@ -506,6 +456,57 @@ describe('Commit processing', () => {
   });
 });
 
+describe('Pull request commit processing', () => {
+  it('should link and queue pull request commit correctly without comments', () => {
+    testPullRequestCommit(false);
+  });
+
+  it('should link and queue pull request commit correctly with comments', () => {
+    testPullRequestCommit(true);
+  });
+
+  function testPullRequestCommit(hasComments = false) {
+    request = createRequest('pull_request_commit', 'http://foo/commit');
+    request.context = { qualifier: 'urn:repo:12:pull_request:9' };
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    request.document = {
+      _metadata: { links: {} },
+      sha: '77cb09b5b5',
+      url: 'http://repo/12/commits/77cb09b5b5',
+      commit: { comment_count: 0 },
+      author: { id: 7, url: 'http://user/7' },
+      committer: { id: 15, url: 'http://user/15' }
+    };
+    if (hasComments) {
+      request.document.commit.comment_count = 1;
+      request.document.comments_url = 'http://comments';
+    }
+    request.processMode = 'process';
+
+    const processor = new GitHubProcessor();
+    const document = processor.pull_request_commit(request);
+    const links = {
+      self: { href: 'urn:repo:12:pull_request:9:pull_request_commit:77cb09b5b5', type: 'resource' },
+      siblings: { href: 'urn:repo:12:pull_request:9:pull_request_commits', type: 'collection' },
+      author: { href: 'urn:user:7', type: 'resource' },
+      committer: { href: 'urn:user:15', type: 'resource' },
+      pull_request : { href: 'urn:repo:12:pull_request:9', type: 'resource' },
+      pull_request_commit_comments: { href: 'urn:repo:12:pull_request:9:pull_request_commit:77cb09b5b5:pull_request_commit_comments', type: 'collection' }
+    };
+    expectLinks(document._metadata.links, links);
+
+    const expected = [
+      { type: 'user', url: 'http://user/7', path: '/author' },
+      { type: 'user', url: 'http://user/15', path: '/committer' }
+    ];
+    if (hasComments) {
+      expected.push({ type: 'pull_request_commit_comments', url: 'http://comments', qualifier: 'urn:repo:12:pull_request:9:pull_request_commit:77cb09b5b5', path: '/pull_request_commit_comments' });
+    }
+    expectQueued(queue, expected);
+  }
+});
+
 describe('Commit comment processing', () => {
   it('should link and queue correctly', () => {
     const request = createRequest('commit_comment', 'http://repo/commit/comment');
@@ -524,33 +525,6 @@ describe('Commit comment processing', () => {
       self: { href: 'urn:repo:12:commit:a1b1:commit_comment:37', type: 'resource' },
       siblings: { href: 'urn:repo:12:commit:a1b1:commit_comments', type: 'collection' },
       commit: { href: 'urn:repo:12:commit:a1b1', type: 'resource' },
-      user: { href: 'urn:user:7', type: 'resource' },
-    }
-    expectLinks(document._metadata.links, links);
-
-    const expected = [
-      { type: 'user', url: 'http://user/7', path: '/user' },
-    ];
-    expectQueued(queue, expected);
-  });
-
-  it('should link and queue pull request commit comment correctly', () => {
-    const request = createRequest('pull_request_commit_comment', 'http://repo/commit/comment');
-    request.context = { qualifier: 'urn:repo:12:pull_request_commit:a1b1' };
-    const queue = [];
-    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
-    request.document = {
-      _metadata: { links: {} },
-      id: 37,
-      user: { id: 7, url: 'http://user/7' }
-    };
-    const processor = new GitHubProcessor();
-    const document = processor.pull_request_commit_comment(request);
-
-    const links = {
-      self: { href: 'urn:repo:12:pull_request_commit:a1b1:pull_request_commit_comment:37', type: 'resource' },
-      siblings: { href: 'urn:repo:12:pull_request_commit:a1b1:pull_request_commit_comments', type: 'collection' },
-      pull_request_commit: { href: 'urn:repo:12:pull_request_commit:a1b1', type: 'resource' },
       user: { href: 'urn:user:7', type: 'resource' },
     }
     expectLinks(document._metadata.links, links);
@@ -590,6 +564,35 @@ describe('Commit comment processing', () => {
       { type: 'org', url: 'http://org/5', path: '/org' },
       { type: 'commit', url: 'http://repo/4/commits/a1b1', qualifier: 'urn:repo:4', path: '/commit' },
       { type: 'commit_comment', url: 'http://commit_comment/7', qualifier: 'urn:repo:4:commit:a1b1', path: '/commit_comment' }
+    ];
+    expectQueued(queue, expected);
+  });
+});
+
+describe('Pull request commit comment processing', () => {
+  it('should link and queue pull request commit comment correctly', () => {
+    const request = createRequest('pull_request_commit_comment', 'http://repo/commit/comment');
+    request.context = { qualifier: 'urn:repo:12:pull_request:7:pull_request_commit:a1b1' };
+    const queue = [];
+    request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
+    request.document = {
+      _metadata: { links: {} },
+      id: 37,
+      user: { id: 7, url: 'http://user/7' }
+    };
+    const processor = new GitHubProcessor();
+    const document = processor.pull_request_commit_comment(request);
+
+    const links = {
+      self: { href: 'urn:repo:12:pull_request:7:pull_request_commit:a1b1:pull_request_commit_comment:37', type: 'resource' },
+      siblings: { href: 'urn:repo:12:pull_request:7:pull_request_commit:a1b1:pull_request_commit_comments', type: 'collection' },
+      pull_request_commit: { href: 'urn:repo:12:pull_request:7:pull_request_commit:a1b1', type: 'resource' },
+      user: { href: 'urn:user:7', type: 'resource' },
+    }
+    expectLinks(document._metadata.links, links);
+
+    const expected = [
+      { type: 'user', url: 'http://user/7', path: '/user' },
     ];
     expectQueued(queue, expected);
   });
@@ -664,7 +667,7 @@ describe('Pull Request processing', () => {
       repo: { href: 'urn:repo:17', type: 'resource' },
       reviews: { href: 'urn:repo:12:pull_request:13:reviews', type: 'collection' },
       review_comments: { href: 'urn:repo:12:pull_request:13:review_comments', type: 'collection' },
-      commits: { href: 'urn:repo:12:pull_request:13:commits:pages:*', type: 'relation' },
+      pull_request_commits: { href: 'urn:repo:12:pull_request:13:pull_request_commits', type: 'collection' },
       statuses: { href: 'urn:repo:12:commit:funkySHA:statuses', type: 'collection' },
       issue: { href: 'urn:repo:12:issue:13', type: 'resource' },
       issue_comments: { href: 'urn:repo:12:issue:13:issue_comments', type: 'collection' }
@@ -680,7 +683,7 @@ describe('Pull Request processing', () => {
       { type: 'reviews', url: 'http://pull_request/13/reviews', qualifier: 'urn:repo:12:pull_request:13', path: '/reviews' },
       { type: 'review_comments', url: 'http://review_comments', qualifier: 'urn:repo:12:pull_request:13', path: '/review_comments' },
       { type: 'statuses', url: 'http://statuses/funkySHA', qualifier: 'urn:repo:12:pull_request:13', path: '/statuses' },
-      { type: 'commits', url: 'http://commits', qualifier: 'urn:repo:12:pull_request:13', path: '/commits' }
+      { type: 'pull_request_commits', url: 'http://commits', qualifier: 'urn:repo:12:pull_request:13', path: '/pull_request_commits' }
     ];
     expectQueued(queue, expected);
   });

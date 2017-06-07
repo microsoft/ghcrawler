@@ -209,24 +209,22 @@ class GitHubProcessor {
   commit(request, isPullRequestCommit = false) {
     const document = request.document;
     const context = request.context;
-    let repoUrn = null;
     if (isPullRequestCommit) {
-      // if this is a PR commit, put it in a central spot for the repo and setup the qualifier so comments go there too
-      repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
-      context.qualifier = `${repoUrn}:pull_request_commit`;
-      request.linkResource('self', `${context.qualifier}:${document.sha}`);
-      request.linkSiblings(`${repoUrn}:pull_request_commits`);
+      request.addSelfLink('sha');
+      request.linkSiblings(`${context.qualifier}:pull_request_commits`);
+      request.linkResource('pull_request', context.qualifier);
     } else if (context.qualifier.includes('PushEvent')) {
-      repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
+      const repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
       context.qualifier = `${repoUrn}:commit`;
       request.linkResource('self', `${context.qualifier}:${document.sha}`);
       request.linkSiblings(`${repoUrn}:commits`);
+      this._addRoot(request, 'repo', 'repo', document.url.replace(/\/commits\/.*/, ''), repoUrn);
     } else {
       request.addSelfLink('sha');
-      repoUrn = context.qualifier;
+      const repoUrn = context.qualifier;
       request.linkSiblings(`${context.qualifier}:commits`);
+      this._addRoot(request, 'repo', 'repo', document.url.replace(/\/commits\/.*/, ''), repoUrn);
     }
-    this._addRoot(request, 'repo', 'repo', document.url.replace(/\/commits\/.*/, ''), repoUrn);
 
     // Most often there actually are no comments. Get the comments if we think there will be some and this resource is being processed (vs. traversed).
     // Note that if we are doing event processing, new comments will be added to the list dynamically so the only reason we need to refetch the
@@ -254,6 +252,7 @@ class GitHubProcessor {
     return document;
   }
 
+  // It looks like there are only pull request review comments now. Pull request commit comments may not exist anymore.
   pull_request_commit_comment(request) {
     return this.commit_comment(request, true);
   }
@@ -264,13 +263,9 @@ class GitHubProcessor {
     const document = request.document;
     const context = request.context;
     request.addSelfLink();
-    if (isPullRequest) {
-      request.linkResource('pull_request_commit', context.qualifier);
-      request.linkSiblings(`${context.qualifier}:pull_request_commit_comments`);
-    } else {
-      request.linkResource('commit', context.qualifier);
-      request.linkSiblings(`${context.qualifier}:commit_comments`);
-    }
+    const commitName = isPullRequest ? 'pull_request_commit' : 'commit';
+    request.linkResource(commitName, context.qualifier);
+    request.linkSiblings(`${context.qualifier}:${commitName}_comments`);
 
     this._addRoot(request, 'user', 'user');
     return document;
@@ -302,7 +297,7 @@ class GitHubProcessor {
     }
 
     if (document._links.commits && document.commits) {
-      this._addRelation(request, 'commits', 'pull_request_commit', document._links.commits.href);
+      this._addCollection(request, 'pull_request_commits', 'pull_request_commit', document._links.commits.href);
     }
 
     // link and queue the related issue.  Getting the issue will bring in the comments for this PR
