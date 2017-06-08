@@ -209,22 +209,23 @@ class GitHubProcessor {
   commit(request, isPullRequestCommit = false) {
     const document = request.document;
     const context = request.context;
+    let repoUrn = null;
     if (isPullRequestCommit) {
+      repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
       request.addSelfLink('sha');
       request.linkSiblings(`${context.qualifier}:pull_request_commits`);
       request.linkResource('pull_request', context.qualifier);
     } else if (context.qualifier.includes('PushEvent')) {
-      const repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
+      repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
       context.qualifier = `${repoUrn}:commit`;
       request.linkResource('self', `${context.qualifier}:${document.sha}`);
       request.linkSiblings(`${repoUrn}:commits`);
-      this._addRoot(request, 'repo', 'repo', document.url.replace(/\/commits\/.*/, ''), repoUrn);
     } else {
       request.addSelfLink('sha');
-      const repoUrn = context.qualifier;
+      repoUrn = context.qualifier;
       request.linkSiblings(`${context.qualifier}:commits`);
-      this._addRoot(request, 'repo', 'repo', document.url.replace(/\/commits\/.*/, ''), repoUrn);
     }
+    this._addRoot(request, 'repo', 'repo', document.url.replace(/\/commits\/.*/, ''), repoUrn);
 
     // Most often there actually are no comments. Get the comments if we think there will be some and this resource is being processed (vs. traversed).
     // Note that if we are doing event processing, new comments will be added to the list dynamically so the only reason we need to refetch the
@@ -1000,9 +1001,7 @@ class GitHubProcessor {
     request.linkResource(relation.origin, `${qualifier}`);
     request.linkSiblings(`${relation.qualifier}:pages`);
     request.linkCollection('unique', `${relation.qualifier}:pages:${relation.guid}`);
-    const urnPrefix = relation.type === 'pull_request_commit' ? `repo:${qualifier.split(':')[2]}:pull_request_commit` : relation.type;
-    const id = ['commit', 'pull_request_commit'].includes(relation.type) ? 'sha' : 'id';
-    const urns = document.elements.map(element => `urn:${urnPrefix}:${element[id]}`);
+    const urns = document.elements.map(element => `urn:${relation.type}:${element['id']}`);
     request.linkResource('resources', urns);
     return document;
   }

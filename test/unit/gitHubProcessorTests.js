@@ -491,6 +491,7 @@ describe('Pull request commit processing', () => {
       siblings: { href: 'urn:repo:12:pull_request:9:pull_request_commits', type: 'collection' },
       author: { href: 'urn:user:7', type: 'resource' },
       committer: { href: 'urn:user:15', type: 'resource' },
+      repo: { href: 'urn:repo:12', type: 'resource' },
       pull_request : { href: 'urn:repo:12:pull_request:9', type: 'resource' },
       pull_request_commit_comments: { href: 'urn:repo:12:pull_request:9:pull_request_commit:77cb09b5b5:pull_request_commit_comments', type: 'collection' }
     };
@@ -498,7 +499,8 @@ describe('Pull request commit processing', () => {
 
     const expected = [
       { type: 'user', url: 'http://user/7', path: '/author' },
-      { type: 'user', url: 'http://user/15', path: '/committer' }
+      { type: 'user', url: 'http://user/15', path: '/committer' },
+      { type: 'repo', url: 'http://repo/12', path: '/repo' }
     ];
     if (hasComments) {
       expected.push({ type: 'pull_request_commit_comments', url: 'http://comments', qualifier: 'urn:repo:12:pull_request:9:pull_request_commit:77cb09b5b5', path: '/pull_request_commit_comments' });
