@@ -30,7 +30,7 @@ class GitHubProcessor {
       request.processMode = 'process';
     } else {
       // We are not going to process but may still need to traverse the doc to get to referenced docs that
-      // do need proecessing. If so, mark the request for no saving (already have good content) and carry on.
+      // do need processing. If so, mark the request for no saving (already have good content) and carry on.
       // Otherwise, skip the doc altogether.
       if (request.policy.shouldTraverse(request)) {
         request.processMode = 'traverse';
@@ -202,15 +202,19 @@ class GitHubProcessor {
     return document;
   }
 
-  commit(request) {
+  pull_request_commit(request) {
+    return this.commit(request, true);
+  }
+
+  commit(request, isPullRequestCommit = false) {
     const document = request.document;
     const context = request.context;
     let repoUrn = null;
-    if (context.qualifier.includes('pull_request')) {
-      // if this is a PR commit, put it in a central spot for the repo and setup the qualifier so comments go there too
+    if (isPullRequestCommit) {
       repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
-      context.qualifier = `${repoUrn}:pull_request_commit`;
-      request.linkResource('self', `${context.qualifier}:${document.sha}`);
+      request.addSelfLink('sha');
+      request.linkSiblings(`${context.qualifier}:pull_request_commits`);
+      request.linkResource('pull_request', context.qualifier);
     } else if (context.qualifier.includes('PushEvent')) {
       repoUrn = `urn:repo:${context.qualifier.split(':')[2]}`;
       context.qualifier = `${repoUrn}:commit`;
@@ -226,12 +230,13 @@ class GitHubProcessor {
     // Most often there actually are no comments. Get the comments if we think there will be some and this resource is being processed (vs. traversed).
     // Note that if we are doing event processing, new comments will be added to the list dynamically so the only reason we need to refetch the
     // comment list in general is if we think we missed some events.
-    const commentsUrn = `${document._metadata.links.self.href}:commit_comments`;
+    const commitCommentType = isPullRequestCommit ? 'pull_request_commit_comment' : 'commit_comment';
+    const commentsUrn = `${document._metadata.links.self.href}:${commitCommentType}s`;
     if (document.comments_url && (document.commit.comment_count > 0 && request.processMode === 'process')) {
-      this._addCollection(request, 'commit_comments', 'commit_comment', document.comments_url, commentsUrn);
+      this._addCollection(request, `${commitCommentType}s`, commitCommentType, document.comments_url, commentsUrn);
     } else {
       // even if there are no comments to process, add a link to the comment collection for future use
-      request.linkCollection('commit_comments', commentsUrn);
+      request.linkCollection(`${commitCommentType}s`, commentsUrn);
     }
 
     // TODO some commits have author and committer properties, others have email info in a "commit" property
@@ -248,14 +253,20 @@ class GitHubProcessor {
     return document;
   }
 
-  commit_comment(request) {
+  // It looks like there are only pull request review comments now. Pull request commit comments may not exist anymore.
+  pull_request_commit_comment(request) {
+    return this.commit_comment(request, true);
+  }
+
+  commit_comment(request, isPullRequest = false) {
     // TODO links to consider
     // * reactions -- get this by using the following Accept header: application/vnd.github.squirrel-girl-preview
     const document = request.document;
     const context = request.context;
     request.addSelfLink();
-    request.linkResource('commit', context.qualifier);
-    request.linkSiblings(`${context.qualifier}:commit_comments`);
+    const commitName = isPullRequest ? 'pull_request_commit' : 'commit';
+    request.linkResource(commitName, context.qualifier);
+    request.linkSiblings(`${context.qualifier}:${commitName}_comments`);
 
     this._addRoot(request, 'user', 'user');
     return document;
@@ -287,7 +298,7 @@ class GitHubProcessor {
     }
 
     if (document._links.commits && document.commits) {
-      this._addRelation(request, 'commits', 'commit', document._links.commits.href);
+      this._addCollection(request, 'pull_request_commits', 'pull_request_commit', document._links.commits.href);
     }
 
     // link and queue the related issue.  Getting the issue will bring in the comments for this PR
@@ -436,7 +447,7 @@ class GitHubProcessor {
       const newRequest = new Request('update_events', url, request.context);
       request.queueRequests(newRequest, 'immediate');
     } else {
-      // Otherwise, this is as good as its going to get so queue the webhook event directly.
+      // Otherwise, this is as good as it is going to get so queue the webhook event directly.
       const type = this._getTranslatedEventType(request.payload.type);
       const newContext = extend(true, {}, { history: request.context.history });
       const newRequest = new Request(type, request.url, newContext);
@@ -457,6 +468,9 @@ class GitHubProcessor {
     if (type === 'member' && action === 'removed') {
       return false;
     }
+    if (type === 'pull_request' && action === 'synchronize') {
+      return false;
+    }
     return true;
   }
 
@@ -471,6 +485,7 @@ class GitHubProcessor {
       milestone: 'MilestoneEvent',
       organization: 'OrganizationEvent',
       page_build: 'PageBuildEvent',
+      pull_request: 'PullRequestEvent',
       pull_request_review_comment: 'PullRequestReviewCommentEvent',
       repository: 'RepositoryEvent',
       status: 'StatusEvent',
@@ -705,6 +720,11 @@ class GitHubProcessor {
     return result;
   }
 
+  // PushEvent is issued when commit/s are pushed to either default or other branches.
+  // It causes a superset of commits from the default branch to be stored.
+  // In some cases PushEvent is not visible in the timeline when new commits are pushed,
+  // for example when a new branch containing commits is published, so some commits from
+  // other branches are expected to be missing.
   PushEvent(request) {
     let [document, repo, payload] = this._addEventBasics(request);
     const qualifier = document._metadata.links.self.href;
@@ -721,7 +741,7 @@ class GitHubProcessor {
   }
 
   ReleaseEvent(request) {
-    // TODO complet implementation and add a Release handler
+    // TODO complete implementation and add a Release handler
     // let [, repo] = this._addEventBasics(request);
     // return this._addEventResource(request, repo, 'release');
     let [document] = this._addEventBasics(request);
@@ -786,7 +806,7 @@ class GitHubProcessor {
 
   isCollectionType(request) {
     const collections = new Set([
-      'collaborators', 'commit_comments', 'commits', 'contributors', 'events', 'issues', 'issue_comments', 'members', 'orgs', 'repos', 'reviews', 'review_comments', 'subscribers', 'stargazers', 'statuses', 'teams'
+      'collaborators', 'commit_comments', 'commits', 'contributors', 'events', 'issues', 'issue_comments', 'members', 'orgs', 'pull_request_commit_comments', 'pull_request_commits', 'repos', 'reviews', 'review_comments', 'subscribers', 'stargazers', 'statuses', 'teams'
     ]);
     return collections.has(request.type);
   }
@@ -981,9 +1001,7 @@ class GitHubProcessor {
     request.linkResource(relation.origin, `${qualifier}`);
     request.linkSiblings(`${relation.qualifier}:pages`);
     request.linkCollection('unique', `${relation.qualifier}:pages:${relation.guid}`);
-    const urnPrefix = relation.type === 'commit' && qualifier.includes('pull_request') ? `repo:${qualifier.split(':')[2]}:pull_request_commit` : relation.type;
-    const id = relation.type === 'commit' ? 'sha' : 'id';
-    const urns = document.elements.map(element => `urn:${urnPrefix}:${element[id]}`);
+    const urns = document.elements.map(element => `urn:${relation.type}:${element['id']}`);
     request.linkResource('resources', urns);
     return document;
   }
