@@ -1,20 +1,22 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-# Copy of mongo.xml for convenience
+#
+# Work in progress.  Not yet supported
+#
 
 version: "2.0"
 services:
-  mongo:
+  elasticsearch:
     extends:
       file: common-services.yml
-      service: mongo
-  metabase:
+      service: elasticsearch
+  kibana:
     extends:
       file: common-services.yml
-      service: metabase
+      service: kibana
     links:
-      - mongo
+      - elasticsearch
   redis:
     extends:
       file: common-services.yml
@@ -35,6 +37,6 @@ services:
       file: common-services.yml
       service: crawler
     links:
-      - mongo
+      - elasticsearch
       - redis
       - rabbitmq

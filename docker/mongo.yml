@@ -1,8 +1,5 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-
-# Copy of mongo.xml for convenience
-
 version: "2.0"
 services:
   mongo:
