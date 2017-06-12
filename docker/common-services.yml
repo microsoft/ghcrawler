@@ -1,0 +1,65 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+version: "2.0"
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  dashboard:
+    build: ../../ghcrawler-dashboard
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=localhost
+      - DEBUG_ALLOW_HTTP=1
+      - CRAWLER_REDIS_URL=redis
+      - CRAWLER_NAME=crawlerdocker
+      - CRAWLER_SERVICE_URL=http://crawler:3000
+    # links:
+    #   - redis
+    #   - crawler
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+      - "28017:28017"
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+    ports:
+      - "9200:9200"
+  kibana:
+    image: docker.elastic.co/kibana/kibana:5.4.0
+    ports:
+      - "5601:5601"
+    # links:
+    #   - elasticsearch
+  metabase:
+    image: metabase/metabase:latest
+    ports:
+      - "5000:3000"
+    # links:
+    #   - mongo
+  crawler:
+    build: ..
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=localhost
+      - CRAWLER_NAME=crawlerdocker
+      - CRAWLER_MODE=Standard
+      - CRAWLER_REDIS_URL=redis
+      - CRAWLER_STORE_PROVIDER=mongo
+      - CRAWLER_MONGO_URL=mongodb://mongo:27017/ghcrawler
+      - CRAWLER_QUEUE_PREFIX=crawlerdocker
+      - CRAWLER_QUEUE_PROVIDER=amqp
+      - CRAWLER_AMQP_URL=amqp://rabbitmq:5672
+      - CRAWLER_RABBIT_MANAGER_ENDPOINT=http://guest:guest@rabbitmq:15672
+      - CRAWLER_GITHUB_TOKENS=${CRAWLER_GITHUB_TOKENS}
+      - CRAWLER_OPTIONS_PROVIDER=redis
+      - CRAWLER_EVENT_PROVIDER=none
