@@ -112,6 +112,13 @@ To start working, run `npm install` in the repository folder to install the requ
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
+# Elastic Search
+
+To configure the crawler docker CIABatta set up to use elastic search, follow the CIABatta instructions with the following additions/changes:
+1. Set the CRAWLER_STORE_PROVIDER to "elastic"
+1. Set the CRAWLER_ELASTICSEARCH_URL to http://username:password@elasticsearch:9200 
+1. In a command prompt go to `ghcrawler/docker` and run `docker-compose up -f elastic.yml` instead of using the default docker-compose.yml. 
+
 # Known issues
 
 It is clearly early days for the crawler so there are a number of things left to do. Most of the concrete work items are captured in repo issues. Broadly speaking there are several types of work:
