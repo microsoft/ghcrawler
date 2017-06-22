@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 const expect = require('chai').expect;
-const CrawlerFactory = require('../../lib/crawlerFactory');
+const CrawlerFactory = require('../../lib/factory');
 const Q = require('q');
 const Request = require('../../lib/request');
 const sinon = require('sinon');
