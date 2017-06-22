@@ -19,4 +19,4 @@ WORKDIR /opt/ghcrawler
 ENV PATH="/opt/ghcrawler/bin:$PATH"
 ADD . /opt/ghcrawler
 
-CMD ["npm", "start"]
+CMD ["ghcrawler"]
