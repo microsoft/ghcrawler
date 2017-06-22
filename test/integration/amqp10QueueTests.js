@@ -4,7 +4,7 @@
 const Amqp10Queue = require('../../providers/queuing/amqp10Queue');
 const config = require('painless-config');
 const expect = require('chai').expect;
-const CrawlerFactory = require('../../lib/crawlerFactory');
+const CrawlerFactory = require('../../lib/factory');
 const Q = require('q');
 const Request = require('../../lib/request');
 
