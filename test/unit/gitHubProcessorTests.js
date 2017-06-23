@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 const expect = require('chai').expect;
-const GitHubProcessor = require('../../providers/fetcher/githubProcessor.js');
+const GitHubProcessor = require('../../src/providers/fetcher/GitHubProcessor');
 const Q = require('q');
-const Request = require('../../lib/request.js');
+const Request = require('../../src/Request');
 const sinon = require('sinon');
-const TraversalPolicy = require('../../lib/traversalPolicy');
+const TraversalPolicy = require('../../src/TraversalPolicy');
 
 describe('GitHubProcessor reprocessing', () => {
   it('will skip if at same version', () => {
@@ -466,7 +466,7 @@ describe('Pull request commit processing', () => {
   });
 
   function testPullRequestCommit(hasComments = false) {
-    request = createRequest('pull_request_commit', 'http://foo/commit');
+    const request = createRequest('pull_request_commit', 'http://foo/commit');
     request.context = { qualifier: 'urn:repo:12:pull_request:9' };
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
@@ -843,7 +843,7 @@ describe('Pull request/review comment processing', () => {
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const processor = new GitHubProcessor();
-    const document = processor.PullRequestReviewCommentEvent(request);
+    processor.PullRequestReviewCommentEvent(request);
 
     // test that the new request got queued and that the doc has the right stuff
 

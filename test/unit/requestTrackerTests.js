@@ -7,8 +7,8 @@ const expect = require('chai').expect;
 const extend = require('extend');
 const Q = require('q');
 const redlock = require('redlock');
-const Request = require('../../lib/request');
-const RequestTracker = require('../../providers/queuing/redisRequestTracker.js');
+const Request = require('../../src/Request');
+const RedisRequestTracker = require('../../src/providers/queuing/RedisRequestTracker');
 const sinon = require('sinon');
 
 describe('NON Locking Request Tracker track', () => {
@@ -451,7 +451,7 @@ function createNolock() {
 }
 
 function createTracker(prefix, redisClient = createRedisClient(), locker = createNolock(), options = createOptions()) {
-  return new RequestTracker(prefix, redisClient, locker, options);
+  return new RedisRequestTracker(prefix, redisClient, locker, options);
 }
 
 function createOptions() {

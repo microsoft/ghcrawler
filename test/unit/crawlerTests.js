@@ -3,16 +3,16 @@
 
 const assert = require('chai').assert;
 const chai = require('chai');
-const Crawler = require('../../lib/crawler');
+const Crawler = require('../../src/Crawler');
 const expect = require('chai').expect;
 const extend = require('extend');
-const GitHubFetcher = require('../../providers/fetcher/githubFetcher');
-const GitHubProcessor = require('../../providers/fetcher/githubProcessor');
+const GitHubFetcher = require('../../src/providers/fetcher/GitHubFetcher');
+const GitHubProcessor = require('../../src/providers/fetcher/GitHubProcessor');
 const Q = require('q');
-const QueueSet = require('../../providers/queuing/queueSet');
-const Request = require('../../lib/request');
+const QueueSet = require('../../src/providers/queuing/QueueSet');
+const Request = require('../../src/Request');
 const sinon = require('sinon');
-const TraversalPolicy = require('../../lib/traversalPolicy');
+const TraversalPolicy = require('../../src/TraversalPolicy');
 
 describe('Crawler get request', () => {
   it('should return a dummy skip/delay request if none are queued', () => {
@@ -1007,7 +1007,7 @@ function createFullCrawler() {
     return Q(request);
   });
 
-  const GitHubProcessor = require('../../providers/fetcher/githubProcessor');
+  const GitHubProcessor = require('../../src/providers/fetcher/GitHubProcessor');
   const processor = new GitHubProcessor();
   sinon.spy(processor, 'process');
 

@@ -3,9 +3,9 @@
 
 const assert = require('chai').assert;
 const expect = require('chai').expect;
-const Request = require('../../lib/request.js');
+const Request = require('../../src/Request');
 const Q = require('q');
-const QueueSet = require('../../providers/queuing/queueSet.js');
+const QueueSet = require('../../src/providers/queuing/QueueSet');
 const sinon = require('sinon');
 
 describe('QueueSet construction', () => {
