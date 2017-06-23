@@ -5,7 +5,7 @@ const moment = require('moment');
 const uuid = require('node-uuid');
 const Q = require('q');
 
-class DeltaStore {
+class AzureDeltaStore {
   constructor(baseStore, blobService, name, options) {
     this.baseStore = baseStore;
     this.service = blobService;
@@ -114,4 +114,4 @@ class DeltaStore {
   }
 }
 
-module.exports = DeltaStore;
+module.exports = AzureDeltaStore;
