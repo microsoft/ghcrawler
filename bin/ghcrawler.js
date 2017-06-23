@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-const start = require('../lib').start;
+const start = require('../src').start;
 const path = require('path');
 
 var args = require('argly').createParser({

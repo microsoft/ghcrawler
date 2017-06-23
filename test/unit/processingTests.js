@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 const expect = require('chai').expect;
-const CrawlerFactory = require('../../lib/factory');
+const factory = require('../../src/factory');
 const Q = require('q');
-const Request = require('../../lib/request');
+const Request = require('../../src/Request');
 const sinon = require('sinon');
 
 let crawler = null;
@@ -67,7 +67,7 @@ function gatherQueued(spy) {
 }
 
 function createCrawler() {
-  const service = CrawlerFactory.createService('InMemory');
+  const service = factory.createService('InMemory');
   return service.ensureInitialized().then(() => {
     const crawler = service.crawler;
     crawler.options.orgList = null;

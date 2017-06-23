@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const Amqp10Queue = require('../../providers/queuing/amqp10Queue');
+const Amqp10Queue = require('../../src/providers/queuing/Amqp10Queue');
 const config = require('painless-config');
 const expect = require('chai').expect;
-const CrawlerFactory = require('../../lib/factory');
+const CrawlerFactory = require('../../src/CrawlerFactory');
 const Q = require('q');
-const Request = require('../../lib/request');
+const Request = require('../../src/Request');
 
 const url = config.get('CRAWLER_AMQP10_URL'); // URL should be: amqps://<keyName>:<key>@<host>
 const name = 'test';

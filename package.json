@@ -2,13 +2,14 @@
   "name": "ghcrawler",
   "version": "0.2.23",
   "description": "A robust GitHub API crawler that walks a queue of GitHub entities retrieving and storing their contents.",
-  "main": "./index.js",
+  "main": "./src/index.js",
   "bin": {
     "ghcrawler": "bin/ghcrawler"
   },
   "scripts": {
-    "lint": "eslint lib",
-    "test": "npm run lint && mocha test/unit/**/*.js",
+    "lint": "eslint src/",
+    "mocha": "mocha test/unit/**/*.js",
+    "test": "npm run mocha && npm run lint",
     "integration": "./node_modules/mocha/bin/mocha test/integration/**/*.js --timeout 20000"
   },
   "keywords": [
@@ -67,6 +68,7 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "eslint": "^4.0.0",
     "grunt": "^1.0.1",
     "grunt-mocha-test": "^0.13.2",
     "istanbul": "^0.4.5",

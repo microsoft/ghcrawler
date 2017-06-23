@@ -3,9 +3,7 @@
 
 const assert = require('chai').assert;
 const expect = require('chai').expect;
-const Request = require('../../lib/request.js');
-const sinon = require('sinon');
-const TraversalPolicy = require('../../lib/traversalPolicy');
+const Request = require('../../src/Request');
 
 describe('Request context/qualifier', () => {
   it('will not queueRoot if none transitivity', () => {
