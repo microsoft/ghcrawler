@@ -41,6 +41,7 @@ function loadOptions(options) {
       orgList: options.orgs || loadOrgs()
     },
     fetcher: {
+      githubTokens: options.githubTokens || config.get('CRAWLER_GITHUB_TOKENS'),
       tokenLowerBound: 50,
       metricsStore: 'redis',
       callCapStore: 'memory',

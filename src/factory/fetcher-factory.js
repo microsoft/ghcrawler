@@ -1,4 +1,3 @@
-const config = require('painless-config');
 const GitHubFetcher = require('../providers/fetcher/GitHubFetcher');
 const factoryLogger = require('./util/logger');
 const redisUtil = require('./util/redis');
@@ -72,7 +71,7 @@ function createTokenLimiter(options) {
 
 function createTokenFactory(options) {
   factoryLogger.info('create token factory');
-  const factory = new TokenFactory(config.get('CRAWLER_GITHUB_TOKENS'), options);
+  const factory = new TokenFactory(options.githubTokens, options);
   const limiter = createTokenLimiter(options);
   return new LimitedTokenFactory(factory, limiter, options);
 }
