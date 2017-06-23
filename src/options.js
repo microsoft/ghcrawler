@@ -42,6 +42,7 @@ function loadOptions(options) {
       deadletterPolicy: 'always' // Another option: excludeNotFound
     },
     fetcher: {
+      githubTokens: options.githubTokens || config.get('CRAWLER_GITHUB_TOKENS'),
       tokenLowerBound: 50,
       metricsStore: 'redis',
       callCapStore: 'memory',
