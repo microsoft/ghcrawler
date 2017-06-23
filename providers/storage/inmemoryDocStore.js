@@ -74,7 +74,7 @@ class InmemoryDocStore {
   }
 
   close() {
-    content = {};
+
   }
 }
 
