@@ -4,10 +4,10 @@
 const start = require('../src').start;
 const path = require('path');
 
-var args = require('argly').createParser({
-        '--config -c *': 'string'
-    })
-    .parse();
+const args = require('argly').createParser({
+    '--config -c *': 'string'
+  })
+  .parse();
 
 Promise.resolve()
   .then(function loadOptions() {
