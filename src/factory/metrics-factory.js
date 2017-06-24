@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.const redlock = require('redlock');
+
 const RedisMetrics = require('redis-metrics');
 const factoryLogger = require('./util/logger');
 const redisUtil = require('./util/redis');

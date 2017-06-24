@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 const queuingFactory = require('./queuing-factory');
 const metricsFactory = require('./metrics-factory');
 const storageFactory = require('./storage-factory');

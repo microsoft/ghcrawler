@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 const GitHubFetcher = require('../providers/fetcher/GitHubFetcher');
 const factoryLogger = require('./util/logger');
 const redisUtil = require('./util/redis');
