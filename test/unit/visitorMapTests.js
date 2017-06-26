@@ -1,10 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const assert = require('chai').assert;
 const expect = require('chai').expect;
-const sinon = require('sinon');
-const VisitorMap = require('../../lib/visitorMap');
+const VisitorMap = require('../../src/VisitorMap');
 
 describe('Visitor Map', () => {
 

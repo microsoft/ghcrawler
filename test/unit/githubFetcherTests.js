@@ -3,15 +3,15 @@
 
 const assert = require('chai').assert;
 const chai = require('chai');
-const Crawler = require('../../lib/crawler');
+const Crawler = require('../../src/Crawler');
 const expect = require('chai').expect;
 const extend = require('extend');
-const GitHubFetcher = require('../../providers/fetcher/githubFetcher');
+const GitHubFetcher = require('../../src/providers/fetcher/GitHubFetcher');
 const Q = require('q');
-const QueueSet = require('../../providers/queuing/queueSet');
-const Request = require('../../lib/request');
+const QueueSet = require('../../src/providers/queuing/QueueSet');
+const Request = require('../../src/Request');
 const sinon = require('sinon');
-const TraversalPolicy = require('../../lib/traversalPolicy');
+const TraversalPolicy = require('../../src/TraversalPolicy');
 const URL = require('url');
 
 describe('GitHub fetcher', () => {
