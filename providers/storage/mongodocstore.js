@@ -84,7 +84,7 @@ class MongoDocStore {
 
   _getDocumentAndStoreInCache(type, key) {
     const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
-    return this.db.collection(type).findOne({ filter: key }).then(value => {
+    return this.db.collection(type).findOne({ [filter]: key }).then(value => {
       if (value) {
         const url = value._metadata.url;
         memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
