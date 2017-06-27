@@ -13,33 +13,33 @@ class InmemoryDocStore {
   }
 
   upsert(document) {
-    const selfHref = document._metadata.links.self.href;
     const type = document._metadata.type;
+    const url = document._metadata.url;
+    const urn = document._metadata.links.self.href;
     let collection = this.collections[type];
     if (!collection) {
       collection = {};
       this.collections[type] = collection;
     }
-    collection[selfHref] = document;
+    collection[url] = document;
+    collection[urn] = document;
     return Q(document);
   }
 
-  get(type, url) {
-    // TODO interesting question as to what a mongo store would do if the doc does not exist.
+  get(type, key) {
     const collection = this.collections[type];
     if (!collection) {
       return Q.reject();
     }
-    return collection[url] ? Q(collection[url]) : Q.reject();
+    return collection[key] ? Q(collection[key]) : Q.reject();
   }
 
-  etag(type, url) {
-    // TODO interesting question as to what a mongo store would do if the doc does not exist.
+  etag(type, key) {
     const collection = this.collections[type];
     if (!collection) {
       return Q(null);
     }
-    let result = collection[url];
+    let result = collection[key];
     result = result ? result._metadata.etag : null;
     return Q(result);
   }
@@ -60,12 +60,12 @@ class InmemoryDocStore {
     }));
   }
 
-  delete(type, url) {
+  delete(type, key) {
     const collection = this.collections[type];
     if (!collection) {
       return Q(null);
     }
-    delete collection[url];
+    delete collection[key];
     return Q(true);
   }
 

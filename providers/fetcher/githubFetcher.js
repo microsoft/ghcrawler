@@ -25,7 +25,7 @@ class GitHubFetcher {
 
   _fetchFromGitHub(request, checkEtag) {
     const self = this;
-    const etagPromise = checkEtag ? this.store.etag(request.type, request.url) : Q(null);
+    const etagPromise = checkEtag ? this.store.etag(request.type, request.context.cacheKey || request.url) : Q(null);
     return etagPromise.then(etag => {
       return self._getToken(request).then(token => {
         if (!token) {
@@ -78,7 +78,7 @@ class GitHubFetcher {
           if (status === 304) {
             // We already have the content for this element.  Get the content from the store and process.
             // TODO we may strictly speaking not need to get the content here but it is complicated to tell ahead of time.  Future optimization
-            return this.store.get(request.type, request.url).then(document => {
+            return this.store.get(request.type, request.context.cacheKey || request.url).then(document => {
               return this._prepareCachedRequest(request, document, 'cacheOfOrigin');
             });
           }
@@ -147,7 +147,7 @@ class GitHubFetcher {
 
   _fetchFromStorage(request) {
     const start = Date.now();
-    return this.store.get(request.type, request.url).then(
+    return this.store.get(request.type, request.context.cacheKey || request.url).then(
       document => {
         if (!document) {
           return this._fetchMissing(request);

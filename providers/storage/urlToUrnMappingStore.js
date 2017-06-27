@@ -25,18 +25,18 @@ class UrltoUrnMappingStore {
     });
   }
 
-  get(type, url) {
-    return this._getBlobNameForUrl(url).then(urn => {
-      if (!urn) {
-        throw new Error(`Document not found at ${url}`);
+  get(type, key) {
+    return this._getBlobNameForKey(key).then(blobName => {
+      if (!blobName) {
+        throw new Error(`Document not found at ${key}`);
       }
-      return this.baseStore.get(type, urn);
+      return this.baseStore.get(type, blobName);
     });
   }
 
-  etag(type, url) {
-    return this._getBlobNameForUrl(url).then(urn => {
-      return urn ? this.baseStore.etag(type, urn) : null;
+  etag(type, key) {
+    return this._getBlobNameForKey(key).then(blobName => {
+      return blobName ? this.baseStore.etag(type, blobName) : null;
     });
   }
 
@@ -44,8 +44,8 @@ class UrltoUrnMappingStore {
     return this.baseStore.list(type);
   }
 
-  delete(type, url) {
-    return this.baseStore.delete(type, url);
+  delete(type, key) {
+    return this.baseStore.delete(type, key);
   }
 
   count(type) {
@@ -56,9 +56,9 @@ class UrltoUrnMappingStore {
     return this.baseStore.close();
   }
 
-  _getBlobNameForUrl(url) {
+  _getBlobNameForKey(key) {
     const deferred = Q.defer();
-    this.redisClient.hget(this.name, url, this._callbackToPromise(deferred));
+    this.redisClient.hget(this.name, key, this._callbackToPromise(deferred));
     return deferred.promise;
   }
 
