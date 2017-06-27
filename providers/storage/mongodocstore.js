@@ -14,7 +14,7 @@ class MongoDocStore {
   }
 
   connect() {
-    return promiseRetry((retry, number) => {
+    return promiseRetry((retry) => {
       return this.client.connect(this.url).then(db => {
         this.db = db;
       })
@@ -36,14 +36,7 @@ class MongoDocStore {
     if (cached) {
       return Q(cached.document);
     }
-    return this.db.collection(type).findOne({ '$or': [{ '_metadata.url': key }, { '_metadata.links.self.href': key }] }).then(value => {
-      if (value) {
-        const url = value._metadata.url;
-        memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
-        return value;
-      }
-      return null;
-    });
+    return this._getDocumentAndStoreInCache(type, key);
   }
 
   etag(type, key) {
@@ -51,14 +44,8 @@ class MongoDocStore {
     if (cached) {
       return Q(cached.etag);
     }
-    const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
-    return this.db.collection(type).findOne({ filter: key }).then(value => {
-      if (value) {
-        const url = value._metadata.url;
-        memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
-        return value._metadata.etag;
-      }
-      return null;
+    return this._getDocumentAndStoreInCache(type, key).then(value => {
+      return value ? value._metadata.etag : null;
     });
   }
 
@@ -82,7 +69,7 @@ class MongoDocStore {
 
   delete(type, key) {
     const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
-    return this.db.collection(type).deleteOne({ filter: key }).then(result => {
+    return this.db.collection(type).deleteOne({ [filter]: key }).then(result => {
       return result;
     });
   }
@@ -93,6 +80,18 @@ class MongoDocStore {
 
   close() {
     this.db.close();
+  }
+
+  _getDocumentAndStoreInCache(type, key) {
+    const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
+    return this.db.collection(type).findOne({ filter: key }).then(value => {
+      if (value) {
+        const url = value._metadata.url;
+        memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
+        return value;
+      }
+      return null;
+    });
   }
 }
 

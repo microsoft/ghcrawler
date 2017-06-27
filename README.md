@@ -37,7 +37,7 @@ If you want to persist the data gathered and create some insights dashboards in 
 ***NOTE*** This is an evolving solution and the steps for running will be simplified published, ready-to-use images on Docker Hub. For now, follow these steps
 
 1. Clone the [Microsoft/ghcrawler](https://github.com/Microsoft/ghcrawler.git) and [Microsoft/ghcrawler-dashboard](https://github.com/Microsoft/ghcrawler-dashboard.git) repos.
-1. Set the `CRAWLER_GITHUB_TOKENS` environment var to a semi-colon delimited list of [GitHub API tokens](https://developer.github.com/v3/#authentication) for rate-limiting and permissions.  For example, `set CRAWLER_GITHUB_TOKENS=432b345acd23`.
+1. Set the `CRAWLER_GITHUB_TOKENS` environment var to a semi-colon delimited list of [GitHub API tokens](https://developer.github.com/v3/#authentication) for rate-limiting and permissions.  For example, `export CRAWLER_GITHUB_TOKENS=432b345acd23`.
 1. In a command prompt go to `ghcrawler/docker` and run `docker-compose up`.
 
 Once the containers are up and running, you should see some crawler related messages in the container's console output every few seconds. You can control the crawler either using the `cc` command line tool or the browser-based dashboard, both of which are described below.
@@ -106,9 +106,9 @@ Note that the dashboard does not report queue message rates (top right graph) wh
 
 # Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.microsoft.com.  
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.microsoft.com.
 
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions provided by the bot. You will only need to do this once across all repos using our CLA.  
+When you submit a pull request, a CLA-bot will automatically determine whether you need to provide a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions provided by the bot. You will only need to do this once across all repos using our CLA.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
