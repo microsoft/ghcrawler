@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const factoryLogger = require('./logger');
 const AzureStorage = require('azure-storage');
+const factoryLogger = require('./logger');
 
 function createBlobService(account, key) {
   factoryLogger.info(`creating blob service`);

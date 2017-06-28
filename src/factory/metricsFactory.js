@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const RedisMetrics = require('redis-metrics');
 const factoryLogger = require('./util/logger');
+const RedisMetrics = require('redis-metrics');
 const redisUtil = require('./util/redis');
 
 function createQueuingMetrics(crawlerName, options) {

@@ -1,12 +1,12 @@
 const config = require('painless-config');
-const fs = require('fs');
 const createLogger = require('./logging').createLogger;
+const deepAssign = require('deep-assign');
+const fs = require('fs');
 const logger = createLogger(true);
-const RefreshingConfig = require('refreshing-config');
-const RefreshingConfigRedis = require('refreshing-config-redis');
 const Q = require('q');
 const redisUtil = require('./factory/util/redis');
-const deepAssign = require('deep-assign');
+const RefreshingConfig = require('refreshing-config');
+const RefreshingConfigRedis = require('refreshing-config-redis');
 
 function loadLines(path) {
   if (!path || !fs.existsSync(path)) {
@@ -146,11 +146,8 @@ function createRefreshingOptions(crawlerName, subsystemNames, provider = 'redis'
       }
       return config.getAll().then(values => {
         logger.info(`creating refreshingOption config get completed`);
-
-
         return initializeSubsystemOptions(values, options[subsystemName]).then(resolved => {
           logger.info(`subsystem options initialized`);
-
           options[subsystemName] = values;
         });
       });

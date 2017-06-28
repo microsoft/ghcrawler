@@ -1,16 +1,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+const AzureStorageDocStore = require('../providers/storage/AzureStorageDocStore');
+const AzureDeltaStore = require('../providers/storage/AzureDeltaStore');
+const AzureTableMappingStore = require('../providers/storage/AzureTableMappingStore');
+const azureUtil = require('./util/azure');
+const config = require('painless-config');
 const factoryLogger = require('./util/logger');
 const InMemoryDocStore = require('../providers/storage/InMemoryDocStore');
 const MongoDocStore = require('../providers/storage/MongoDocStore');
-const AzureTableMappingStore = require('../providers/storage/AzureTableMappingStore');
-const UrlToUrnMappingStore = require('../providers/storage/UrlToUrnMappingStore');
-const AzureStorageDocStore = require('../providers/storage/AzureStorageDocStore');
-const AzureDeltaStore = require('../providers/storage/AzureDeltaStore');
-const azureUtil = require('./util/azure');
 const redisUtil = require('./util/redis');
-const config = require('painless-config');
+const UrlToUrnMappingStore = require('../providers/storage/UrlToUrnMappingStore');
 
 function createAzureStorageStore(options, name = null) {
   factoryLogger.info(`creating azure storage store`);

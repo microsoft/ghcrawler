@@ -1,17 +1,18 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-const GitHubFetcher = require('../providers/fetcher/GitHubFetcher');
-const factoryLogger = require('./util/logger');
-const redisUtil = require('./util/redis');
-const RedisRateLimiter = require('redis-rate-limiter');
-const InMemoryRateLimiter = require('../providers/limiting/InMemoryRateLimiter');
-const LimitedTokenFactory = require('../providers/fetcher/LimitedTokenFactory');
-const requestor = require('ghrequestor');
-const ip = require('ip');
-const TokenFactory = require('../providers/fetcher/TokenFactory');
+
 const ComputeLimiter = require('../providers/limiting/ComputeLimiter');
+const factoryLogger = require('./util/logger');
+const GitHubFetcher = require('../providers/fetcher/GitHubFetcher');
+const InMemoryRateLimiter = require('../providers/limiting/InMemoryRateLimiter');
+const ip = require('ip');
+const LimitedTokenFactory = require('../providers/fetcher/LimitedTokenFactory');
 const Q = require('q');
+const RedisRateLimiter = require('redis-rate-limiter');
+const redisUtil = require('./util/redis');
 const request = require('request');
+const requestor = require('ghrequestor');
+const TokenFactory = require('../providers/fetcher/TokenFactory');
 
 function createRequestor() {
   factoryLogger.info('create requestor');
