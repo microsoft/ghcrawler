@@ -4,7 +4,7 @@ const createLogger = require('./logging').createLogger;
 const logger = createLogger(true);
 const RefreshingConfig = require('refreshing-config');
 const RefreshingConfigRedis = require('refreshing-config-redis');
-
+const Q = require('q');
 const redisUtil = require('./factory/util/redis');
 const deepAssign = require('deep-assign');
 
@@ -94,7 +94,6 @@ function loadOptions(options) {
   };
 
   var finalOptions = deepAssign(defaultOptions, options);
-  console.log('finalOptions:', finalOptions);
   return finalOptions;
 }
 
@@ -120,9 +119,9 @@ function createInMemoryRefreshingConfig(values = {}) {
 function initializeSubsystemOptions(config, defaults) {
 
   if (Object.getOwnPropertyNames(config).length > 1) {
-    return Promise.resolve(config);
+    return Q(config);
   }
-  return Promise.all(Object.getOwnPropertyNames(defaults).map(optionName => {
+  return Q.all(Object.getOwnPropertyNames(defaults).map(optionName => {
       return config._config.set(optionName, defaults[optionName]);
     }))
     .then(() => { return config._config.getAll(); });
@@ -134,7 +133,7 @@ function createRefreshingOptions(crawlerName, subsystemNames, provider = 'redis'
   provider = provider.toLowerCase();
   options = loadOptions(options);
 
-  return Promise.all(subsystemNames.map(subsystemName => {
+  return Q.all(subsystemNames.map(subsystemName => {
       logger.info(`creating refreshing options promise with crawlerName:${crawlerName} subsystemName ${subsystemName} provider ${provider}`);
       let config = null;
       if (provider === 'redis') {
