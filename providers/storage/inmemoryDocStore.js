@@ -45,8 +45,14 @@ class InmemoryDocStore {
   }
 
   list(type) {
-    return Q(this.collections[type].map(doc => {
-      const metadata = doc._metadata;
+    let collection = this.collections[type];
+    if (!collection) {
+      collection = {};
+    }
+    return Q(Object.keys(collection).filter(key => {
+      return key.startsWith('urn:') ? true : false;
+    }).map(key => {
+      const metadata = collection[key]._metadata;
       return {
         version: metadata.version,
         etag: metadata.etag,
