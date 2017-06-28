@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.const redlock = require('redlock');
+// Licensed under the MIT License.
 
 const factoryLogger = require('./util/logger');
 const InMemoryDocStore = require('../providers/storage/InMemoryDocStore');
