@@ -25,7 +25,7 @@ class GitHubFetcher {
 
   _fetchFromGitHub(request, checkEtag) {
     const self = this;
-    const etagPromise = checkEtag ? this.store.etag(request.type, request.context.cacheKey || request.url) : Q(null);
+    const etagPromise = checkEtag ? this.store.etag(request.type, request.url) : Q(null);
     return etagPromise.then(etag => {
       return self._getToken(request).then(token => {
         if (!token) {

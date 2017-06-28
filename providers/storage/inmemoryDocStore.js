@@ -65,6 +65,11 @@ class InmemoryDocStore {
     if (!collection) {
       return Q(null);
     }
+    const document = collection[key];
+    if (document) {
+      const anotherKey = key === document._metadata.url ? document._metadata.links.self.href : document._metadata.url;
+      delete collection[anotherKey];
+    }
     delete collection[key];
     return Q(true);
   }
@@ -74,6 +79,7 @@ class InmemoryDocStore {
   }
 
   close() {
+    this.collections = {};
   }
 }
 

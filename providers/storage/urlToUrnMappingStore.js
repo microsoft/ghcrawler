@@ -45,7 +45,12 @@ class UrltoUrnMappingStore {
   }
 
   delete(type, key) {
-    return this.baseStore.delete(type, key);
+    return this.baseStore.delete(type, key).catch(() => {
+      return this.get(type, key).then(document => {
+        const anotherKey = key === document._metadata.url ? document._metadata.links.self.href : document._metadata.url;
+        return this.baseStore.delete(type, anotherKey);
+      });
+    });
   }
 
   count(type) {

@@ -14,7 +14,7 @@ class MongoDocStore {
   }
 
   connect() {
-    return promiseRetry((retry) => {
+    return promiseRetry(retry => {
       return this.client.connect(this.url).then(db => {
         this.db = db;
       })
@@ -36,7 +36,7 @@ class MongoDocStore {
     if (cached) {
       return Q(cached.document);
     }
-    return this._getDocumentAndStoreInCache(type, key);
+    return this._getDocument(type, key);
   }
 
   etag(type, key) {
@@ -44,7 +44,7 @@ class MongoDocStore {
     if (cached) {
       return Q(cached.etag);
     }
-    return this._getDocumentAndStoreInCache(type, key).then(value => {
+    return this._getDocument(type, key).then(value => {
       return value ? value._metadata.etag : null;
     });
   }
@@ -69,8 +69,12 @@ class MongoDocStore {
 
   delete(type, key) {
     const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
-    return this.db.collection(type).deleteOne({ [filter]: key }).then(result => {
-      return result;
+    return this.get(type, key).then(document => {
+      const url = document._metadata.url;
+      memoryCache.del(url);
+      return this.db.collection(type).deleteOne({ [filter]: key }).then(result => {
+        return result;
+      });
     });
   }
 
@@ -82,15 +86,15 @@ class MongoDocStore {
     this.db.close();
   }
 
-  _getDocumentAndStoreInCache(type, key) {
+  _getDocument(type, key) {
     const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
     return this.db.collection(type).findOne({ [filter]: key }).then(value => {
-      if (value) {
-        const url = value._metadata.url;
-        memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
-        return value;
+      if (!value) {
+        return null;
       }
-      return null;
+      const url = value._metadata.url;
+      memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
+      return value;
     });
   }
 }
