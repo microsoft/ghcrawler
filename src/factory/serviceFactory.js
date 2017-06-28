@@ -2,11 +2,10 @@
 // Licensed under the MIT License.
 
 const config = require('painless-config');
-const factoryLogger = require('./util/logger');
 const CrawlerService = require('../CrawlerService');
 const createRefreshingOptions = require('../options').createRefreshingOptions;
-
 const crawlerFactory = require('./crawlerFactory');
+const factoryLogger = require('./util/logger');
 
 const subsystemNames = ['crawler', 'fetcher', 'queuing', 'storage', 'locker'];
 

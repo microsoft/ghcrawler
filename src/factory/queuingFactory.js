@@ -1,22 +1,22 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const config = require('painless-config');
-const Amqp10Queue = require('../providers/queuing/Amqp10Queue');
-const AttenuatedQueue = require('../providers/queuing/AttenuatedQueue');
-const InMemoryCrawlQueue = require('../providers/queuing/InMemoryCrawlQueue');
-const RabbitQueueManager = require('../providers/queuing/RabbitQueueManager');
-const RedisRequestTracker = require('../providers/queuing/RedisRequestTracker');
-const ServiceBusQueueManager = require('../providers/queuing/ServiceBusQueueManager');
-const redisUtil = require('./util/redis');
-const request = require('request');
-const Request = require('../Request');
-const moment = require('moment');
-const QueueSet = require('../providers/queuing/QueueSet');
-const lockingFactory = require('./lockingFactory');
 const amqp10 = require('amqp10');
 const AmqpClient = amqp10.Client;
 const AmqpPolicy = amqp10.Policy;
+const Amqp10Queue = require('../providers/queuing/Amqp10Queue');
+const AttenuatedQueue = require('../providers/queuing/AttenuatedQueue');
+const config = require('painless-config');
+const InMemoryCrawlQueue = require('../providers/queuing/InMemoryCrawlQueue');
+const lockingFactory = require('./lockingFactory');
+const moment = require('moment');
+const RabbitQueueManager = require('../providers/queuing/RabbitQueueManager');
+const RedisRequestTracker = require('../providers/queuing/RedisRequestTracker');
+const redisUtil = require('./util/redis');
+const request = require('request');
+const Request = require('../Request');
+const ServiceBusQueueManager = require('../providers/queuing/ServiceBusQueueManager');
+const QueueSet = require('../providers/queuing/QueueSet');
 
 class EventFormatter {
   constructor(options) {

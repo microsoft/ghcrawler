@@ -44,6 +44,4 @@ function getRedisClient(logger) {
   return redisClient;
 }
 
-
-
 exports.getRedisClient = getRedisClient;

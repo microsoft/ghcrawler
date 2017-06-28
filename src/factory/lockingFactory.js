@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
+
+const factoryLogger = require('./util/logger');
 const redlock = require('redlock');
 const redisUtil = require('./util/redis');
-const factoryLogger = require('./util/logger');
 
 function createNolock() {
   return { lock: () => null, unlock: () => { } };
