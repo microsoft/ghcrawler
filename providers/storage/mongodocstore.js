@@ -14,7 +14,7 @@ class MongoDocStore {
   }
 
   connect() {
-    return promiseRetry((retry, number) => {
+    return promiseRetry(retry => {
       return this.client.connect(this.url).then(db => {
         this.db = db;
       })
@@ -31,32 +31,21 @@ class MongoDocStore {
     });
   }
 
-  // TODO: Consistency on whether key is a URL or URN
-  get(type, url) {
-    const cached = memoryCache.get(url);
+  get(type, key) {
+    const cached = memoryCache.get(key);
     if (cached) {
       return Q(cached.document);
     }
-    return this.db.collection(type).findOne({ '$or': [{ '_metadata.url': url }, { '_metadata.links.self.href': url }] }).then(value => {
-      if (value) {
-        memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
-        return value;
-      }
-      return null;
-    });
+    return this._getDocument(type, key);
   }
 
-  etag(type, url) {
-    const cached = memoryCache.get(url);
+  etag(type, key) {
+    const cached = memoryCache.get(key);
     if (cached) {
       return Q(cached.etag);
     }
-    return this.db.collection(type).findOne({ '_metadata.url': url }).then(value => {
-      if (value) {
-        memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
-        return value._metadata.etag;
-      }
-      return null;
+    return this._getDocument(type, key).then(value => {
+      return value ? value._metadata.etag : null;
     });
   }
 
@@ -78,9 +67,14 @@ class MongoDocStore {
     });
   }
 
-  delete(type, urn) {
-    return this.db.collection(type).deleteOne({ '_metadata.links.self.href': urn }).then(result => {
-      return result;
+  delete(type, key) {
+    const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
+    return this.get(type, key).then(document => {
+      const url = document._metadata.url;
+      memoryCache.del(url);
+      return this.db.collection(type).deleteOne({ [filter]: key }).then(result => {
+        return result;
+      });
     });
   }
 
@@ -90,6 +84,18 @@ class MongoDocStore {
 
   close() {
     this.db.close();
+  }
+
+  _getDocument(type, key) {
+    const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
+    return this.db.collection(type).findOne({ [filter]: key }).then(value => {
+      if (!value) {
+        return null;
+      }
+      const url = value._metadata.url;
+      memoryCache.put(url, { etag: value._metadata.etag, document: value }, this.options.ttl);
+      return value;
+    });
   }
 }
 

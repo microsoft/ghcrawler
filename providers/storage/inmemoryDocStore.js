@@ -13,40 +13,46 @@ class InmemoryDocStore {
   }
 
   upsert(document) {
-    const selfHref = document._metadata.links.self.href;
     const type = document._metadata.type;
+    const url = document._metadata.url;
+    const urn = document._metadata.links.self.href;
     let collection = this.collections[type];
     if (!collection) {
       collection = {};
       this.collections[type] = collection;
     }
-    collection[selfHref] = document;
+    collection[url] = document;
+    collection[urn] = document;
     return Q(document);
   }
 
-  get(type, url) {
-    // TODO interesting question as to what a mongo store would do if the doc does not exist.
+  get(type, key) {
     const collection = this.collections[type];
     if (!collection) {
       return Q.reject();
     }
-    return collection[url] ? Q(collection[url]) : Q.reject();
+    return collection[key] ? Q(collection[key]) : Q.reject();
   }
 
-  etag(type, url) {
-    // TODO interesting question as to what a mongo store would do if the doc does not exist.
+  etag(type, key) {
     const collection = this.collections[type];
     if (!collection) {
       return Q(null);
     }
-    let result = collection[url];
+    let result = collection[key];
     result = result ? result._metadata.etag : null;
     return Q(result);
   }
 
   list(type) {
-    return Q(this.collections[type].map(doc => {
-      const metadata = doc._metadata;
+    let collection = this.collections[type];
+    if (!collection) {
+      collection = {};
+    }
+    return Q(Object.keys(collection).filter(key => {
+      return key.startsWith('urn:') ? true : false;
+    }).map(key => {
+      const metadata = collection[key]._metadata;
       return {
         version: metadata.version,
         etag: metadata.etag,
@@ -60,12 +66,17 @@ class InmemoryDocStore {
     }));
   }
 
-  delete(type, url) {
+  delete(type, key) {
     const collection = this.collections[type];
     if (!collection) {
       return Q(null);
     }
-    delete collection[url];
+    const document = collection[key];
+    if (document) {
+      const anotherKey = key === document._metadata.url ? document._metadata.links.self.href : document._metadata.url;
+      delete collection[anotherKey];
+    }
+    delete collection[key];
     return Q(true);
   }
 
@@ -74,7 +85,7 @@ class InmemoryDocStore {
   }
 
   close() {
-    content = {};
+    this.collections = {};
   }
 }
 

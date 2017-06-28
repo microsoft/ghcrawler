@@ -36,17 +36,17 @@ class AzureTableMappingStore {
     });
   }
 
-  get(type, url) {
-    return this._getBlobNameForUrl(type, url).then(blobName => {
+  get(type, key) {
+    return this._getBlobNameForKey(type, key).then(blobName => {
       if (!blobName) {
-        throw new Error(`Document not found at ${url}`);
+        throw new Error(`Document not found at ${key}`);
       }
       return this.baseStore.get(type, blobName);
     });
   }
 
-  etag(type, url) {
-    return this._getBlobNameForUrl(type, url).then(blobName => {
+  etag(type, key) {
+    return this._getBlobNameForKey(type, key).then(blobName => {
       return blobName ? this.baseStore.etag(type, blobName) : null;
     });
   }
@@ -55,8 +55,13 @@ class AzureTableMappingStore {
     return this.baseStore.list(type);
   }
 
-  delete(type, url) {
-    return this.baseStore.delete(type, url);
+  delete(type, key) {
+    return this.baseStore.delete(type, key).catch(() => {
+      return this.get(type, key).then(document => {
+        const anotherKey = key === document._metadata.url ? document._metadata.links.self.href : document._metadata.url;
+        return this.baseStore.delete(type, anotherKey);
+      });
+    });
   }
 
   count(type) {
@@ -72,9 +77,10 @@ class AzureTableMappingStore {
     return createTableIfNotExists(name);
   }
 
-  _getBlobNameForUrl(type, url) {
+  _getBlobNameForKey(type, key) {
     const deferred = Q.defer();
-    this.service.retrieveEntity(this.name, `url:${type}`, encodeURIComponent(url), (error, result) => {
+    const prefix = key && key.startsWith('urn:') ? 'urn' : 'url';
+    this.service.retrieveEntity(this.name, `${prefix}:${type}`, encodeURIComponent(key), (error, result) => {
       if (!error) {
         return deferred.resolve(result.blobName._);
       }
