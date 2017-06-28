@@ -6,7 +6,7 @@ const factoryLogger = require('./util/logger');
 const CrawlerService = require('../CrawlerService');
 const createRefreshingOptions = require('../options').createRefreshingOptions;
 
-const crawlerFactory = require('./crawler-factory');
+const crawlerFactory = require('./crawlerFactory');
 
 const subsystemNames = ['crawler', 'fetcher', 'queuing', 'storage', 'locker'];
 

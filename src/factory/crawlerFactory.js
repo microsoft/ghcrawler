@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-const queuingFactory = require('./queuing-factory');
-const metricsFactory = require('./metrics-factory');
-const storageFactory = require('./storage-factory');
-const lockingFactory = require('./locking-factory');
-const fetcherFactory = require('./fetcher-factory');
+const queuingFactory = require('./queuingFactory');
+const metricsFactory = require('./metricsFactory');
+const storageFactory = require('./storageFactory');
+const lockingFactory = require('./lockingFactory');
+const fetcherFactory = require('./fetcherFactory');
 const createLogger = require('../logging').createLogger;
 const factoryLogger = require('./util/logger');
 const GitHubProcessor = require('../providers/fetcher/GitHubProcessor');
