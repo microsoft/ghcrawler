@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 const expect = require('chai').expect;
-const TokenFactory = require('../../providers/fetcher/tokenFactory');
+const TokenFactory = require('../../src/providers/fetcher/tokenFactory');
 
 describe('Token Factory', () => {
   it('should find a token with multiple desired traits', () => {

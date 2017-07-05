@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 const expect = require('chai').expect;
-const DeltaStore = require('../../providers/storage/deltaStore');
+const AzureDeltaStore = require('../../src/providers/storage/AzureDeltaStore');
 const Q = require('q');
 const sinon = require('sinon');
 
@@ -31,7 +31,7 @@ describe('Logging Store', () => {
     let blobService = {
       createContainerIfNotExists: sinon.spy((name, cb) => { cb(null); })
     };
-    let deltaStore = new DeltaStore(baseStore, blobService, 'test');
+    let deltaStore = new AzureDeltaStore(baseStore, blobService, 'test');
     return Q.all([
       deltaStore.connect(),
       deltaStore.get('test', 'test'),
@@ -52,7 +52,7 @@ describe('Logging Store', () => {
       createAppendBlobFromText: sinon.spy((name, blobName, text, cb) => { cb(); }),
       appendBlockFromText: sinon.spy((name, blobName, text, cb) => { cb(); })
     };
-    deltaStore = new DeltaStore(baseStore, blobService, 'test');
+    let deltaStore = new AzureDeltaStore(baseStore, blobService, 'test');
     const promises = [];
     for (let i = 0; i < 10; i++) {
       promises.push(deltaStore.upsert({ test: true }));
@@ -72,7 +72,7 @@ describe('Logging Store', () => {
       createAppendBlobFromText: sinon.spy((name, blobName, text, cb) => { cb(); }),
       appendBlockFromText: sinon.spy((name, blobName, text, cb) => { cb(appendResponses.shift()); })
     };
-    deltaStore = new DeltaStore(baseStore, blobService, 'test');
+    let deltaStore = new AzureDeltaStore(baseStore, blobService, 'test');
     return deltaStore.upsert({ test: true }).then(() => {
       expect(blobService.createAppendBlobFromText.callCount).to.be.equal(1);
       expect(blobService.appendBlockFromText.callCount).to.be.above(1);
@@ -87,7 +87,7 @@ describe('Logging Store', () => {
       createAppendBlobFromText: sinon.spy((name, blobName, text, cb) => { cb(); }),
       appendBlockFromText: sinon.spy((name, blobName, text, cb) => { cb(appendResponses.shift()); })
     };
-    deltaStore = new DeltaStore(baseStore, blobService, 'test');
+    let deltaStore = new AzureDeltaStore(baseStore, blobService, 'test');
     return deltaStore.upsert({ test: true }).then(() => {
       expect(blobService.createAppendBlobFromText.callCount).to.be.equal(1);
       expect(blobService.appendBlockFromText.callCount).to.be.above(1);
