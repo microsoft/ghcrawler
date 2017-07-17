@@ -114,7 +114,12 @@ function transformEntities({ blobName, entities }) {
       console.log(`Skipping ${entity} in ${blobName} due to missing data.`);
       continue;
     }
-    const outputDocument = doc.data;
+    let outputDocument = doc.data;
+    if (['paths', 'referrers'].includes(doc.category)) {
+      outputDocument = {
+        elements: doc.data
+      };
+    }
     outputDocument.id = date;
     outputDocument._metadata = {
       type: doc.category,
