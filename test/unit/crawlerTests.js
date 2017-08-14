@@ -142,6 +142,11 @@ describe('Crawler filtering', () => {
     expect(crawler._filter(new Request('org', 'http://api.github.com/org/test/test')).shouldSkip()).to.be.true;
 
     expect(crawler._filter(new Request('foo', 'http://api.github.com/org/test/test')).shouldSkip()).to.be.false;
+
+    expect(crawler._filter(new Request('clones', 'https://api.github.com/repos/testOrg/testRepo/traffic/clones')).shouldSkip()).to.be.true;
+    expect(crawler._filter(new Request('paths', 'https://api.github.com/repos/testOrg/testRepo/traffic/paths')).shouldSkip()).to.be.true;
+    expect(crawler._filter(new Request('referrers', 'https://api.github.com/repos/testOrg/testRepo/traffic/referrers')).shouldSkip()).to.be.true;
+    expect(crawler._filter(new Request('views', 'https://api.github.com/repos/testOrg/testRepo/traffic/views')).shouldSkip()).to.be.true;
   });
 
   it('should not filter if no config', () => {
