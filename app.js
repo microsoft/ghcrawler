@@ -25,7 +25,7 @@ app.use(sendHelper());
 // Note also that the GitHub doc says events are capped at 5mb
 app.use('/webhook', bodyParser.raw({ limit: '5mb', type: '*/*' }), require('./routes/webhook')(service, config.get('CRAWLER_WEBHOOK_SECRET')));
 // It's safe to set limitation to 2mb.
-app.use(bodyParser.json({ limit: '2mb' }));
+app.use(bodyParser.json({ limit: '2mb' , strict: false}));
 app.use('/status', require('./routes/status')(service));
 app.use('/config', require('./routes/config')(service));
 app.use('/requests', require('./routes/requests')(service));
