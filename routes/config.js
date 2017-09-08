@@ -34,7 +34,9 @@ router.put('/tokens', auth.validate, (request, response, next) => {
 });
 
 router.get('/tokens', auth.validate, (request, response, next) => {
-  response.json(crawlerService.crawler.fetcher.tokenFactory.getAllTokens()).status(200).end();
+  let tokens = crawlerService.crawler.fetcher.tokenFactory.getAllTokens();
+  let shortTokens = tokens.map(t => {return {value: t.value.substr(0,8) + "...", traits: t.traits}});
+  response.json(shortTokens).status(200).end();
 });
 
 function setup(service) {
