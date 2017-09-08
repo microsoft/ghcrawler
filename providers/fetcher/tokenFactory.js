@@ -28,6 +28,10 @@ class TokenFactory {
     this.tokens = tokenSpecs.map(spec => TokenFactory.createToken(spec));
   }
 
+  getAllTokens() {
+    return this.tokens;
+  }
+
   /**
    * Given a collection of trait sets, find the first set that has any number of matching tokens in the
    * factory.  From that set return a random one that is not on the bench. If all candidates are benched,

@@ -53,6 +53,10 @@ class LimitedTokenFactory {
   setTokens(tokens) {
     this.factory.setTokens(tokens);
   }
+
+  getAllTokens() {
+    return this.factory.getAllTokens();
+  }
 }
 
 module.exports = LimitedTokenFactory;

@@ -27,10 +27,16 @@ router.get('/', auth.validate, function (request, response, next) {
   response.json(result).status(200).end();
 });
 
-router.post('/tokens', auth.validate, (request, response, next) => {
+router.put('/tokens', auth.validate, (request, response, next) => {
   const body = request.body;
-  crawlerService.fetcher.tokenFactory.setTokens(body);
+  crawlerService.crawler.fetcher.tokenFactory.setTokens(body);
   response.sendStatus(200);
+});
+
+router.get('/tokens', auth.validate, (request, response, next) => {
+  let tokens = crawlerService.crawler.fetcher.tokenFactory.getAllTokens();
+  let shortTokens = tokens.map(t => {return {value: t.value.substr(0,8) + "...", traits: t.traits}});
+  response.json(shortTokens).status(200).end();
 });
 
 function setup(service) {
