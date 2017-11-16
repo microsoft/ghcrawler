@@ -468,7 +468,10 @@ class GitHubProcessor {
     if (type === 'member' && action === 'removed') {
       return false;
     }
-    if (type === 'pull_request' && action === 'synchronize') {
+    if (type === 'issues' && !['opened', 'closed', 'reopened'].includes(action)) {
+      return false;
+    }
+    if (type === 'pull_request' && !['opened', 'closed', 'reopened'].includes(action)) {
       return false;
     }
     return true;
@@ -478,6 +481,7 @@ class GitHubProcessor {
     const eventTypes = {
       deployment: 'DeploymentEvent',
       deployment_status: 'DeploymentStatusEvent',
+      issues: 'IssuesEvent',
       issue_comment: 'IssueCommentEvent',
       label: 'LabelEvent',
       member: 'MemberEvent',
