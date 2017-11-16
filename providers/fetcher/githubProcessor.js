@@ -468,10 +468,10 @@ class GitHubProcessor {
     if (type === 'member' && action === 'removed') {
       return false;
     }
-    if (type === 'pull_request' && action === 'synchronize') {
+    if (type === 'issues' && !['opened', 'closed', 'reopened'].includes(action)) {
       return false;
     }
-    if (type === 'issues' && !['opened', 'closed', 'reopened'].includes(action)) {
+    if (type === 'pull_request' && !['opened', 'closed', 'reopened'].includes(action)) {
       return false;
     }
     return true;
