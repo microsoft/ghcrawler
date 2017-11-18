@@ -681,7 +681,9 @@ class GitHubProcessor {
   }
 
   PullRequestEvent(request) {
-    let [, repo] = this._addEventBasics(request);
+    let [, repo, payload] = this._addEventBasics(request);
+    const newPolicy = request.getNextPolicy('issue');
+    request.queue('issue', payload.pull_request.issue_url, newPolicy, { qualifier: `urn:repo:${repo}`, history: request.context.history });
     return this._addEventResource(request, repo, 'pull_request');
   }
 
