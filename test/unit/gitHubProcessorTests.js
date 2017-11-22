@@ -695,7 +695,7 @@ describe('Pull Request processing', () => {
     const queue = [];
     request.crawler = { queue: sinon.spy(request => { queue.push.apply(queue, request) }) };
     const payload = {
-      pull_request: { id: 1, url: 'http://pull_request/1' }
+      pull_request: { id: 1, url: 'http://pull_request/1', issue_url: 'http://issue/9' }
     }
     request.document = createEvent('PullRequestEvent', payload);
 
@@ -716,7 +716,8 @@ describe('Pull Request processing', () => {
       { type: 'user', url: 'http://user/3', path: '/actor' },
       { type: 'repo', url: 'http://repo/4', path: '/repo' },
       { type: 'org', url: 'http://org/5', path: '/org' },
-      { type: 'pull_request', url: 'http://pull_request/1', qualifier: 'urn:repo:4', path: '/pull_request' }
+      { type: 'pull_request', url: 'http://pull_request/1', qualifier: 'urn:repo:4', path: '/pull_request' },
+      { type: 'issue', url: 'http://issue/9', qualifier: 'urn:repo:4', path: '/issue' }
     ];
     expectQueued(queue, expected);
   });
