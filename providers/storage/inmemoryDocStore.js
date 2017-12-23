@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+// SPDX-License-Identifier: MIT
 
 const Q = require('q');
 
@@ -89,4 +89,4 @@ class InmemoryDocStore {
   }
 }
 
-module.exports = InmemoryDocStore;
+module.exports = options => new InmemoryDocStore(options);

@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+// SPDX-License-Identifier: MIT
 
 const appInsights = require('applicationinsights');
 const auth = require('./middleware/auth');
@@ -8,13 +8,15 @@ const config = require('painless-config');
 const express = require('express');
 const logger = require('morgan');
 const mockInsights = require('./providers/logger/mockInsights');
-const CrawlerFactory = require('./lib/crawlerFactory');
 const sendHelper = require('./middleware/sendHelper');
 
 auth.initialize(config.get('CRAWLER_SERVICE_AUTH_TOKEN') || 'secret', config.get('CRAWLER_SERVICE_FORCE_AUTH'));
 mockInsights.setup(config.get('CRAWLER_INSIGHTS_KEY') || 'mock', true);
-const mode = config.get('CRAWLER_MODE') || '';
-const service = CrawlerFactory.createService(mode);
+
+const CrawlerFactory = require('./crawlerFactory');
+const options = config.get('CRAWLER_OPTIONS') || './memoryConfig';
+const service = CrawlerFactory.createService(require(options));
+
 const app = express();
 
 app.disable('x-powered-by');

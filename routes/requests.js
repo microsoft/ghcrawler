@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+// SPDX-License-Identifier: MIT
 
 const auth = require('../middleware/auth');
 const express = require('express');
@@ -59,6 +59,7 @@ function rationalizeRequest(request) {
   if (typeof request === 'string') {
     request = buildRequestFromSpec(request);
   }
+  request.policy = request.policy || "default"
   return Request.adopt(request);
 }
 

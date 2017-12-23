@@ -1,16 +1,18 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+// SPDX-License-Identifier: MIT
+
+const Crawler = require('../../../');
+const Request = Crawler.request;
+const TraversalPolicy = Crawler.traversalPolicy;
+const VisitorMap = Crawler.visitorMap;
 
 const extend = require('extend');
 const moment = require('moment');
 const parse = require('parse-link-header');
 const Q = require('q');
 const qlimit = require('qlimit');
-const Request = require('../../lib/request');
-const TraversalPolicy = require('../../lib/traversalPolicy');
 const URL = require('url');
 const uuid = require('node-uuid');
-const VisitorMap = require('../../lib/visitorMap');
 
 class GitHubProcessor {
   constructor(store) {

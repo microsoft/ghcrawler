@@ -168,7 +168,8 @@
         "--nolazy"
       ],
       "env": {
-        "NODE_ENV": "localhost"
+        "NODE_ENV": "localhost",
+        "CRAWLER_OPTIONS": "./clearlyDefined/cdConfig"
       },
       "console": "internalConsole",
       "sourceMaps": false,

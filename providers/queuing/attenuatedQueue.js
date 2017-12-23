@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+// SPDX-License-Identifier: MIT
 
 const memoryCache = require('memory-cache');
 const NestedQueue = require('./nestedQueue');
@@ -46,7 +46,7 @@ class AttenuatedQueue extends NestedQueue{
       timestamp: Date.now(),
       promise: this.queue.push(request)
     };
-    const ttl = this.options.attenuation.ttl || 1000;
+    const ttl = (this.options.attenuation && this.options.attenuation.ttl) || 1000;
     memoryCache.put(key, entry, ttl);
     return entry.promise;
   }

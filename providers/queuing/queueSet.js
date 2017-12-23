@@ -1,22 +1,34 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+// SPDX-License-Identifier: MIT
 
 const Q = require('q');
 
 class QueueSet {
   constructor(queues, options) {
     this.queues = queues;
-    this.queueTable = queues.reduce((table, queue) => {
+    this._configureQueues();
+    this.options = options;
+    this.options._config.on('changed', this._reconfigure.bind(this));
+    this.startMap = this._createStartMap(this.options.weights);
+    this.popCount = 0;
+  }
+
+  _configureQueues() {
+    this.queueTable = this.queues.reduce((table, queue) => {
       table[queue.getName()] = queue;
       return table;
     }, {});
     if (this.queues.length > Object.getOwnPropertyNames(this.queueTable).length) {
       throw new Error('Duplicate queue names');
     }
-    this.options = options;
-    this.options._config.on('changed', this._reconfigure.bind(this));
-    this.startMap = this._createStartMap(this.options.weights);
-    this.popCount = 0;
+  }
+
+  addQueue(queue, location = 'beginning') {
+    if (location === 'beginning')
+      this.queues.unshift(queue);
+    else
+      this.queues.push(queue);
+    this._configureQueues();
   }
 
   _reconfigure(current, changes) {
