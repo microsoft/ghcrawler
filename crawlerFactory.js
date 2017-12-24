@@ -42,16 +42,16 @@ let finalOptions = null;
 
 class CrawlerFactory {
 
-  static createService(defaults) {
+  static createService(defaults, searchPath = []) {
     factoryLogger.info('appInitStart');
     // TODO remove clearly defined and github when they are separete modules
-    providerSearchPath = [require('./providers'), require('./clearlyDefined'), require('./github')];
+    providerSearchPath = [require('./providers'), require('./github')];
     // initialize the redis provider (if any) ASAP since it is used all over and we want to share the client
     CrawlerFactory._initializeRedis(defaults);
 
     const optionsProvider = defaults.provider || 'memory';
     const crawlerName = (defaults.crawler && defaults.crawler.name) || 'crawler';
-    defaults.searchPath && defaults.searchPath.forEach(entry => providerSearchPath.push(require(entry)));
+    searchPath.forEach(entry => providerSearchPath.push(entry));
     const subsystemNames = ['crawler', 'fetch', 'process', 'queue', 'store', 'deadletter', 'lock'];
     const crawlerPromise = CrawlerFactory.createRefreshingOptions(crawlerName, subsystemNames, defaults, optionsProvider).then(options => {
       factoryLogger.info(`created all refreshingOptions`);

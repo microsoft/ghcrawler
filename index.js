@@ -9,3 +9,11 @@ module.exports.queueSet = require('./providers/queuing/queueSet');
 module.exports.request = require('./lib/request');
 module.exports.traversalPolicy = require('./lib/traversalPolicy');
 module.exports.visitorMap = require('./lib/visitorMap');
+
+const www = require('./bin/www');
+const crawlerFactory = require('./crawlerFactory');
+
+module.exports.run = (defaults, searchPath) => {
+  const service = crawlerFactory.createService(defaults, searchPath);
+  www(service);
+}

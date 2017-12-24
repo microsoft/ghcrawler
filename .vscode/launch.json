@@ -1,17 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "ClearlyDefined",
-      "program": "${workspaceRoot}/bin/www.js",
-      "cwd": "${workspaceRoot}",
-      "env": {
-        "NODE_ENV": "localhost",
-        "CRAWLER_OPTIONS": "./clearlyDefined/cdConfig"
-      },
-    },
+
     {
       "name": "Mocha",
       "type": "node",
