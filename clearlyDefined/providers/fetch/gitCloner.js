@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-
 const URL = require('url');
 const Git = require('nodegit');
 const tmp = require('tmp');
@@ -17,8 +14,9 @@ class GitHubCloner {
   constructor() {
   }
 
-
   getHandler(request, type = request.type) {
+    if (URL.parse(request.url).path.split('/')[1].toLowerCase() !== 'git')
+      return null;
     return this._fetch.bind(this);
   }
 

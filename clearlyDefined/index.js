@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 module.exports = {
-  fetcher: {
-    github: require('./providers/fetcher/github')
+  fetch: {
+    git: require('./providers/fetch/gitCloner')
   },
-  processor: {
-    scancode: require('./providers/processor/scancode')
+  process: {
+    scancode: require('./providers/process/scancode')
   },
   store: {
     clearlyDefined: require('./providers/store/clearlyDefined')

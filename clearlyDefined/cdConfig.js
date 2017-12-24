@@ -14,7 +14,7 @@ module.exports =
       count: 1
     },
     fetch: {
-      github: {}
+      git: {}
     },
     process: {
       scancode: {}
@@ -34,4 +34,3 @@ module.exports =
       }
     }
   };
-

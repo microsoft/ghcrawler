@@ -10,6 +10,7 @@ module.exports = defaults => {
 
 function run(defaults) {
   options = defaults;
+  // yowza! double lazy initialization! The first call initializes the module
   delete this.run;
   return this.run = getClient;
 }

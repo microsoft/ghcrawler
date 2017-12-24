@@ -210,14 +210,14 @@ class CrawlerFactory {
 
   static createFetchers(options, store) {
     if (options.provider)
-      return CrawlerFactory._getProvider(options, options.provider, 'fetcher', store);
-    return CrawlerFactory._getAllProviders(options, 'fetcher', store);
+      return CrawlerFactory._getProvider(options, options.provider, 'fetch', store);
+    return CrawlerFactory._getAllProviders(options, 'fetch', store);
   }
 
   static createProcessors(options) {
     if (options.provider)
-      return CrawlerFactory._getProvider(options, options.provider, 'processor');
-    return CrawlerFactory._getAllProviders(options, 'processor');
+      return CrawlerFactory._getProvider(options, options.provider, 'process');
+    return CrawlerFactory._getAllProviders(options, 'process');
   }
 
   // static createStoreOld(options) {
