@@ -11,9 +11,12 @@ module.exports.traversalPolicy = require('./lib/traversalPolicy');
 module.exports.visitorMap = require('./lib/visitorMap');
 
 const www = require('./bin/www');
-const crawlerFactory = require('./crawlerFactory');
+const CrawlerFactory = require('./crawlerFactory');
+const VisitorMap = require('./lib/visitorMap');
 
-module.exports.run = (defaults, searchPath) => {
-  const service = crawlerFactory.createService(defaults, searchPath);
+module.exports.run = (defaults, searchPath, maps) => {
+  const service = CrawlerFactory.createService(defaults, searchPath);
+  Object.getOwnPropertyNames(maps).forEach(name =>
+    VisitorMap.register(name, maps[name]))
   www(service);
 }
