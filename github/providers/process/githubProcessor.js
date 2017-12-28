@@ -20,6 +20,7 @@ class GitHubProcessor {
     this.version = 13;
   }
 
+  // TODO make sure the processor sets the version of in _metadata.
   process(request) {
     const handler = this._getHandler(request);
     if (!handler) {
