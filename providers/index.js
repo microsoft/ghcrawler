@@ -12,7 +12,7 @@ module.exports = {
   store: {
     memory: require('./storage/inmemoryDocStore'),
     mongo: require('./storage/mongodocstore'),
-    azblob: require('./storage/storageDocStore')
+    azblob: require('./storage/azureBlobFactory')
   },
   lock: {
     memory: require('./locker/memory'),

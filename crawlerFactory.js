@@ -265,15 +265,6 @@ class CrawlerFactory {
     return new AzureTableMappingStore(baseStore, CrawlerFactory.createTableService(account, key), baseStore.name, options);
   }
 
-  static createAzureStorageStore(options, name = null) {
-    factoryLogger.info(`creating azure storage store`);
-    name = name || config.get('CRAWLER_STORAGE_NAME');
-    const account = config.get('CRAWLER_STORAGE_ACCOUNT');
-    const key = config.get('CRAWLER_STORAGE_KEY');
-    const blobService = CrawlerFactory.createBlobService(account, key);
-    return new AzureStorageDocStore(blobService, name, options);
-  }
-
   // static createDeadLetterStore_old(options) {
   //   const provider = options.provider || 'azure';
   //   factoryLogger.info(`Create deadletter store for provider ${options.provider}`);
@@ -323,14 +314,9 @@ class CrawlerFactory {
     const account = config.get('CRAWLER_DELTA_STORAGE_ACCOUNT') || config.get('CRAWLER_STORAGE_ACCOUNT');
     const key = config.get('CRAWLER_DELTA_STORAGE_KEY') || config.get('CRAWLER_STORAGE_KEY');
     factoryLogger.info('creating delta store', { name: name, account: account });
-    const blobService = CrawlerFactory.createBlobService(account, key);
-    return new DeltaStore(inner, blobService, name, options);
-  }
-
-  static createBlobService(account, key) {
-    factoryLogger.info(`creating blob service`);
     const retryOperations = new AzureStorage.ExponentialRetryPolicyFilter();
-    return AzureStorage.createBlobService(account, key).withFilter(retryOperations);
+    const blobService = AzureStorage.createBlobService(account, key).withFilter(retryOperations);
+    return new DeltaStore(inner, blobService, name, options);
   }
 
   static createTableService(account, key) {
