@@ -11,6 +11,7 @@ module.exports = {
   },
   store: {
     memory: require('./storage/inmemoryDocStore'),
+    file: require('./storage/file'),
     mongo: require('./storage/mongodocstore'),
     azblob: require('./storage/azureBlobFactory')
   },
