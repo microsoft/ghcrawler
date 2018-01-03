@@ -44,8 +44,7 @@ class CrawlerFactory {
 
   static createService(defaults, searchPath = []) {
     factoryLogger.info('appInitStart');
-    // TODO remove clearly defined and github when they are separete modules
-    providerSearchPath = [require('./providers'), require('./github')];
+    providerSearchPath = [require('./providers')];
     // initialize the redis provider (if any) ASAP since it is used all over and we want to share the client
     CrawlerFactory._initializeRedis(defaults);
 
@@ -343,7 +342,7 @@ class CrawlerFactory {
 
   static createRequestTracker(prefix, options) {
     let locker = null;
-    if (options.tracker.locking) {
+    if (options.tracker && options.tracker.locking) {
       locker = new redlock([CrawlerFactory.getProvider('redis')], options.tracker);
     } else {
       locker = CrawlerFactory.createNolock();
