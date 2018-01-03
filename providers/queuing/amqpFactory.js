@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 const RabbitQueueManager = require('./rabbitQueueManager');
-const CrawlerFactory = require('../../CrawlerFactory');
+const CrawlerFactory = require('../../crawlerFactory');
 
 // {
 //   managementEndpoint: config.get('CRAWLER_RABBIT_MANAGER_ENDPOINT'),

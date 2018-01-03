@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 const ServiceBusQueueManager = require('./serviceBusQueueManager');
-const CrawlerFactory = require('../../CrawlerFactory');
+const CrawlerFactory = require('../../crawlerFactory');
 
 // {
 //   managementEndpoint: config.get('CRAWLER_SERVICEBUS_MANAGER_ENDPOINT'),

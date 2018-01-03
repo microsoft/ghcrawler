@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 const RabbitQueueManager = require('./rabbitQueueManager');
-const CrawlerFactory = require('../../CrawlerFactory');
+const CrawlerFactory = require('../../crawlerFactory');
 const Amqp10Queue = require('./amqp10Queue');
 const amqp10 = require('amqp10');
 const AmqpClient = amqp10.Client;
