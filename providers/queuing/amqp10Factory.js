@@ -13,6 +13,9 @@ module.exports = options => {
   const { managementEndpoint, url } = options;
   const manager = new ServiceBusQueueManager(url, managementEndpoint);
   const env = process.env.NODE_ENV;
-  const tracker = CrawlerFactory.createRequestTracker(`${env}:AMQP10:${options.queueName}`, options);
+  let tracker;
+  if (options.tracker) {
+    tracker = CrawlerFactory.createRequestTracker(`${env}:AMQP10:${options.queueName}`, options);
+  }
   return CrawlerFactory.createQueueSet(manager, tracker, options);
 }
