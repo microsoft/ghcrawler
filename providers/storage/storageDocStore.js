@@ -207,7 +207,7 @@ class AzureStorageDocStore {
   }
 
   _getBlobNameFromUrl(type, url) {
-    if (!(url.startsWith('http:') || url.startsWith('https:'))) {
+    if (url.startsWith('urn:')) {
       return url;
     }
     const parsed = URL.parse(url, true);
