@@ -51,7 +51,7 @@ class CrawlerFactory {
     const optionsProvider = defaults.provider || 'memory';
     const crawlerName = (defaults.crawler && defaults.crawler.name) || 'crawler';
     searchPath.forEach(entry => providerSearchPath.push(entry));
-    const subsystemNames = ['crawler', 'fetch', 'process', 'queue', 'store', 'deadletter', 'lock'];
+    const subsystemNames = ['crawler', 'filter', 'fetch', 'process', 'queue', 'store', 'deadletter', 'lock'];
     const crawlerPromise = CrawlerFactory.createRefreshingOptions(crawlerName, subsystemNames, defaults, optionsProvider).then(options => {
       factoryLogger.info(`created all refreshingOptions`);
       finalOptions = options;
@@ -79,7 +79,7 @@ class CrawlerFactory {
     }
   }
 
-  static createCrawler(options, { queues = null, store = null, deadletters = null, locker = null, fetchers = null, processors = null } = {}) {
+  static createCrawler(options, { queues = null, store = null, deadletters = null, locker = null, filter = null, fetchers = null, processors = null } = {}) {
     factoryLogger.info('creating crawler');
     queues = queues || CrawlerFactory.createQueues(options.queue);
     if (options.event)
@@ -87,8 +87,9 @@ class CrawlerFactory {
     store = store || CrawlerFactory.createStore(options.store);
     deadletters = deadletters || CrawlerFactory.createDeadLetterStore(options.deadletter);
     locker = locker || CrawlerFactory.createLocker(options.lock);
-    fetchers = fetchers || CrawlerFactory.createFetchers(options.fetch, store);
     processors = processors || CrawlerFactory.createProcessors(options.process);
+    filter = filter || CrawlerFactory.createFilter(options.filter, processors);
+    fetchers = fetchers || CrawlerFactory.createFetchers(options.fetch, store, processors, filter);
     // The crawler is not "provided" so ensure the options are decorated as necessary (e.g., logger)
     CrawlerFactory._decorateOptions('crawler', options.crawler);
     const result = new Crawler(queues, store, deadletters, locker, fetchers, processors, options.crawler);
@@ -112,7 +113,7 @@ class CrawlerFactory {
       factoryLogger.info(`creating refreshing options ${subsystemName} with provider ${refreshingProvider}`);
       let config = null;
       const subDefaults = defaults[subsystemName] || {};
-      const subProvider = subDefaults ? subDefaults.provider : null;
+      const subProvider = subDefaults && subDefaults.provider;
       const uniqueName = `${subsystemName}${subProvider ? '-' + subProvider : ''}`;
       if (refreshingProvider === 'redis') {
         config = CrawlerFactory.createRedisRefreshingConfig(crawlerName, uniqueName);
@@ -194,9 +195,13 @@ class CrawlerFactory {
 
   static _getAllProviders(options, namespace, ...params) {
     return Object.getOwnPropertyNames(options)
-      .filter(key => !['_config', 'logger'].includes(key))
+      .filter(key => !['_config', 'logger', 'dispatcher', options.dispatcher].includes(key))
       .map(name =>
         CrawlerFactory._getProvider(options, name, namespace, ...params));
+  }
+
+  static createFilter(options, processors) {
+    return CrawlerFactory._getProvider(options, options.provider, 'filter', processors);
   }
 
   static createStore(options, provider = options.provider) {
@@ -207,16 +212,18 @@ class CrawlerFactory {
     return CrawlerFactory._getProvider(options, provider, 'store');
   }
 
-  static createFetchers(options, store) {
-    if (options.provider)
-      return CrawlerFactory._getProvider(options, options.provider, 'fetch', store);
-    return CrawlerFactory._getAllProviders(options, 'fetch', store);
+  static createFetchers(options, store, processors, filter) {
+    const fetchers = CrawlerFactory._getAllProviders(options, 'fetch', store, processors, filter);
+    return options.dispatcher
+      ? [CrawlerFactory._getProvider(options, options.dispatcher, 'fetch', store, fetchers, processors, filter)]
+      : fetchers;
   }
 
   static createProcessors(options) {
-    if (options.provider)
-      return CrawlerFactory._getProvider(options, options.provider, 'process');
-    return CrawlerFactory._getAllProviders(options, 'process');
+    const processors = CrawlerFactory._getAllProviders(options, 'process');
+    return options.dispatcher
+      ? [CrawlerFactory._getProvider(options, options.dispatcher, 'process', processors)]
+      : processors;
   }
 
   // static createStoreOld(options) {
