@@ -21,7 +21,7 @@ class FileStore {
     // This method is just using URN. Need to look at the usecases and clarify.
     const type = document._metadata.type;
     const urn = document._metadata.links.self.href;
-    const filePath = this._getPath(type, urn);
+    const filePath = this._getPath(urn);
     mkdirp.sync(path.dirname(filePath));
     return new Promise((resolve, reject) =>
       fs.writeFile(filePath, JSON.stringify(document, null, 2), error =>
@@ -29,15 +29,15 @@ class FileStore {
   }
 
   async get(type, key) {
-    const path = this._getPath(type, key);
+    const path = this._getPath(key);
     return new Promise((resolve, reject) =>
       fs.readFile(path, (error, data) =>
         error ? reject(error) : resolve(JSON.parse(data))));
   }
 
-  _getPath(type, key) {
+  _getPath(key) {
     const realKey = key.startsWith('urn:') ? key.slice(4) : key;
-    return `${this.options.location}/${type}/${realKey.replace(/:/g, '/')}.json`;
+    return `${this.options.location}/${realKey.replace(/:/g, '/')}.json`;
   }
 
   etag(type, key) {
@@ -50,7 +50,7 @@ class FileStore {
   }
 
   delete(type, key) {
-    const path = this._getPath(type, urn);
+    const path = this._getPath(urn);
     return new Promise((resolve, reject) =>
       fs.unlink(path, error => error ? reject(error) : resolve(null)));
   }
