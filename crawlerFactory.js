@@ -194,7 +194,11 @@ class CrawlerFactory {
   }
 
   static _getAllProviders(options, namespace, ...params) {
-    return Object.getOwnPropertyNames(options)
+    return CrawlerFactory._getNamedProviders(options, namespace, Object.getOwnPropertyNames(options), ...params);
+  }
+
+  static _getNamedProviders(options, namespace, names, ...params) {
+    return names
       .filter(key => !['_config', 'logger', 'dispatcher', options.dispatcher].includes(key))
       .map(name =>
         CrawlerFactory._getProvider(options, name, namespace, ...params));
@@ -205,7 +209,14 @@ class CrawlerFactory {
   }
 
   static createStore(options, provider = options.provider) {
-    return CrawlerFactory._getProvider(options, provider, 'store');
+    if (provider)
+      return CrawlerFactory._getProvider(options, provider, 'store');
+    const names = options.dispatcher.split('+');
+    const stores = CrawlerFactory._getNamedProviders(options, 'store', names.slice(1));
+    const dispatcher = names[0];
+    return dispatcher
+      ? CrawlerFactory._getProvider(options, dispatcher, 'store', stores)
+      : stores;
   }
 
   static createDeadLetterStore(options, provider = options.provider) {
