@@ -69,7 +69,7 @@ class AmqpQueue {
       const body = JSON.stringify(request);
       const deferred = Q.defer();
       this.channel.then(channel => {
-        channel.sendToQueue(this.queueName, new Buffer(body), { persistent: true }, (err, ok) => {
+        channel.sendToQueue(this.queueName, Buffer.from(body), { persistent: true }, (err, ok) => {
           if (err) {
             return deferred.reject(err);
           }
@@ -101,7 +101,7 @@ class AmqpQueue {
 
   _handleMessage(response) {
     this._incrementMetric('pop');
-    const message = new Buffer(response.content).toString();
+    const message = Buffer.from(response.content).toString();
     const request = this.messageFormatter(message);
     request._message = response;
     return request;
