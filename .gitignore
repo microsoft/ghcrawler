@@ -4,4 +4,3 @@ npm-debug.log
 coverage/
 .DS_Store
 nohup*
-.npmrc
