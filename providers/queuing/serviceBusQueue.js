@@ -16,6 +16,7 @@ class ServiceBusQueue {
   }
 
   subscribe() {
+    this.logger.info(`Subscribed to ${this.queueName} using Service Bus`);
     return this.manager.createQueue(this.queueName, this.options);
   }
 
