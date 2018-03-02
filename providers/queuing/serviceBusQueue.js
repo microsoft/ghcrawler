@@ -136,7 +136,7 @@ class ServiceBusQueue {
   }
 
   _log(actionMessage, request) {
-    const attemptString = request._renewLockAttemptCount ? ` (attempt ${request._renewLockAttemptCount})` : '';
+    const attemptString = request._renewLockAttemptCount ? ` (renew lock attempt ${request._renewLockAttemptCount})` : '';
     this.logger.verbose(`${actionMessage} ${request.type} ${request.url}${attemptString}`);
   }
 }
