@@ -9,6 +9,7 @@ const InMemoryRateLimiter = require('../limiting/inmemoryRateLimiter');
 const RateLimitedPushQueue = require('./ratelimitedPushQueue');
 const Request = require('../../lib/request');
 const serviceBus = require('azure-sb');
+const ServiceBusQueue = require('./serviceBusQueue');
 const TrackedQueue = require('./trackedQueue');
 const Q = require('q');
 
@@ -34,6 +35,9 @@ class ServiceBusQueueManager {
   }
 
   _createClient(name, queueName, formatter, options) {
+    if (!this.amqpUrl) {
+      return new ServiceBusQueue(this.serviceBusService, name, queueName, formatter, this, options);
+    }
     return new Amqp10Queue(this._getClient(), name, queueName, formatter, this, options);
   }
 
@@ -85,15 +89,15 @@ class ServiceBusQueueManager {
     return deferred.promise;
   }
 
-  createQueue(name) {
-    const options = {
+  createQueue(name, options = {}) {
+    const queueOptions = {
       EnablePartitioning: true,
-      LockDuration: 'PT5M',
+      LockDuration: options.lockDuration || 'PT5M',
       DefaultMessageTimeToLive: 'P10675199D',
-      MaxDeliveryCount: '10000000'
+      MaxDeliveryCount: options.maxDeliveryCount ? options.maxDeliveryCount.toString() : '10000000'
     };
     const deferred = Q.defer();
-    this.serviceBusService.createQueueIfNotExists(name, options, (error, created, response) => {
+    this.serviceBusService.createQueueIfNotExists(name, queueOptions, (error, created, response) => {
       if (error) {
         return deferred.reject(error);
       }
