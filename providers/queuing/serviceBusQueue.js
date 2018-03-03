@@ -128,7 +128,7 @@ class ServiceBusQueue {
     const timeoutId = setTimeout(() => {
       this.client.renewLockForMessage(message, (renewLockError) => {
         if (renewLockError) {
-          this.logger.error(renewLockError);
+          return this.logger.error(renewLockError);
         }
         this.logger.verbose(`Renewed lock on ${message.body.type} ${message.body.url}, attempt ${attempts}`);
         message._renewLockAttemptCount = attempts;
