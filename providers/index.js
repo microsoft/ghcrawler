@@ -6,7 +6,7 @@ module.exports = {
     amqp: require('./queuing/amqpFactory'),
     amqp10: require('./queuing/amqp10Factory'),
     serviceBus: require('./queuing/serviceBusFactory'),
-    storageQueueFactory: require('./queuing/storageQueueFactory'),
+    storageQueue: require('./queuing/storageQueueFactory'),
     memory: require('./queuing/memoryFactory'),
     amqp10Subscription: require('./queuing/amqp10SubscriptionFactory'),
     webhook: require('./queuing/webhookFactory')
