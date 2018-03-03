@@ -3,11 +3,14 @@
     "browser": false,
     "commonjs": true,
     "es6": true,
-    "node": true
+    "node": true,
+    "mocha": true
   },
+  "extends": "eslint:recommended",
   "parserOptions": {
     "ecmaFeatures": {
-      "jsx": true
+      "ecmaVersion": 8,
+      "jsx": false
     },
     "sourceType": "module"
   },
@@ -18,6 +21,7 @@
     "no-unreachable": "warn",
     "no-unused-vars": "warn",
     "constructor-super": "warn",
-    "valid-typeof": "warn"
+    "valid-typeof": "warn",
+    "quotes": ["warn", "single"]
   }
 }

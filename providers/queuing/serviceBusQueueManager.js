@@ -9,6 +9,7 @@ const InMemoryRateLimiter = require('../limiting/inmemoryRateLimiter');
 const RateLimitedPushQueue = require('./ratelimitedPushQueue');
 const Request = require('../../lib/request');
 const serviceBus = require('azure-sb');
+const ServiceBusQueue = require('./serviceBusQueue');
 const TrackedQueue = require('./trackedQueue');
 const Q = require('q');
 
@@ -17,9 +18,10 @@ const AmqpClient = amqp10.Client;
 const AmqpPolicy = amqp10.Policy;
 
 class ServiceBusQueueManager {
-  constructor(amqpUrl, managementEndpoint) {
+  constructor(amqpUrl, managementEndpoint, isServiceBusQueue = false, options) {
     this.amqpUrl = amqpUrl;
     this.managementEndpoint = managementEndpoint;
+    this.isServiceBusQueue = isServiceBusQueue;
     this.client = null;
     const retryOperations = new azureCommon.ExponentialRetryPolicyFilter();
     this.serviceBusService = serviceBus.createServiceBusService(managementEndpoint).withFilter(retryOperations);
@@ -34,6 +36,9 @@ class ServiceBusQueueManager {
   }
 
   _createClient(name, queueName, formatter, options) {
+    if (this.isServiceBusQueue) {
+      return new ServiceBusQueue(this.serviceBusService, name, queueName, formatter, this, options);
+    }
     return new Amqp10Queue(this._getClient(), name, queueName, formatter, this, options);
   }
 
@@ -85,15 +90,16 @@ class ServiceBusQueueManager {
     return deferred.promise;
   }
 
-  createQueue(name) {
-    const options = {
-      EnablePartitioning: true,
-      LockDuration: 'PT5M',
+  createQueue(name, options = {}) {
+    const queueOptions = {
+      EnablePartitioning: options.enablePartitioning || 'true',
+      MaxSizeInMegabytes: options.maxSizeInMegabytes,
+      LockDuration: options.lockDuration || 'PT5M',
       DefaultMessageTimeToLive: 'P10675199D',
-      MaxDeliveryCount: '10000000'
+      MaxDeliveryCount: options.maxDeliveryCount ? options.maxDeliveryCount.toString() : '10000000'
     };
     const deferred = Q.defer();
-    this.serviceBusService.createQueueIfNotExists(name, options, (error, created, response) => {
+    this.serviceBusService.createQueueIfNotExists(name, queueOptions, (error, created, response) => {
       if (error) {
         return deferred.reject(error);
       }

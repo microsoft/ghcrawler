@@ -5,17 +5,16 @@ const ServiceBusQueueManager = require('./serviceBusQueueManager');
 const CrawlerFactory = require('../../crawlerFactory');
 
 // {
-//   managementEndpoint: config.get('CRAWLER_SERVICEBUS_MANAGER_ENDPOINT'),
-//   url: config.get('CRAWLER_AMQP10_URL')
+//   connectionString: config.get('CRAWLER_SERVICEBUS_CONNECTION_STRING') || config.get('CRAWLER_SERVICEBUS_MANAGER_ENDPOINT')
 // }
 
 module.exports = options => {
-  const { managementEndpoint, url } = options;
-  const manager = new ServiceBusQueueManager(url, managementEndpoint, false, options);
+  const { connectionString } = options;
+  const manager = new ServiceBusQueueManager(null, connectionString, true, options);
   const env = process.env.NODE_ENV;
   let tracker;
   if (options.tracker) {
-    tracker = CrawlerFactory.createRequestTracker(`${env}:AMQP10:${options.queueName}`, options);
+    tracker = CrawlerFactory.createRequestTracker(`${env}:ServiceBus:${options.queueName}`, options);
   }
   return CrawlerFactory.createQueueSet(manager, tracker, options);
 }
