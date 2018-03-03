@@ -11,7 +11,7 @@ const CrawlerFactory = require('../../crawlerFactory');
 
 module.exports = options => {
   const { managementEndpoint, url } = options;
-  const manager = new ServiceBusQueueManager(url, managementEndpoint);
+  const manager = new ServiceBusQueueManager(url, managementEndpoint, false, options);
   const env = process.env.NODE_ENV;
   let tracker;
   if (options.tracker) {

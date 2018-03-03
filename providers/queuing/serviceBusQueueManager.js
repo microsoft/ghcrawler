@@ -18,9 +18,10 @@ const AmqpClient = amqp10.Client;
 const AmqpPolicy = amqp10.Policy;
 
 class ServiceBusQueueManager {
-  constructor(amqpUrl, managementEndpoint) {
+  constructor(amqpUrl, managementEndpoint, isServiceBusQueue = false, options) {
     this.amqpUrl = amqpUrl;
     this.managementEndpoint = managementEndpoint;
+    this.isServiceBusQueue = isServiceBusQueue;
     this.client = null;
     const retryOperations = new azureCommon.ExponentialRetryPolicyFilter();
     this.serviceBusService = serviceBus.createServiceBusService(managementEndpoint).withFilter(retryOperations);
@@ -35,7 +36,7 @@ class ServiceBusQueueManager {
   }
 
   _createClient(name, queueName, formatter, options) {
-    if (!this.amqpUrl) {
+    if (this.isServiceBusQueue) {
       return new ServiceBusQueue(this.serviceBusService, name, queueName, formatter, this, options);
     }
     return new Amqp10Queue(this._getClient(), name, queueName, formatter, this, options);
@@ -91,7 +92,8 @@ class ServiceBusQueueManager {
 
   createQueue(name, options = {}) {
     const queueOptions = {
-      EnablePartitioning: true,
+      EnablePartitioning: options.enablePartitioning || 'true',
+      MaxSizeInMegabytes: options.maxSizeInMegabytes,
       LockDuration: options.lockDuration || 'PT5M',
       DefaultMessageTimeToLive: 'P10675199D',
       MaxDeliveryCount: options.maxDeliveryCount ? options.maxDeliveryCount.toString() : '10000000'

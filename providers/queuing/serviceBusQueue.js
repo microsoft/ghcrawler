@@ -55,7 +55,7 @@ class ServiceBusQueue {
       message.body = JSON.parse(message.body);
       const request = this.messageFormatter(message);
       request._message = message;
-      this._log('Popped', request);
+      this._log('Popped', message.body);
       this._setLockRenewalTimer(message, 0, this.options.lockRenewal || 4.75 * 60 * 1000);
       deferred.resolve(request);
     });
@@ -72,7 +72,7 @@ class ServiceBusQueue {
         return deferred.reject(error);
       }
       this._incrementMetric('done');
-      this._log('ACKed', request);
+      this._log('ACKed', request._message.body);
       clearTimeout(request._message._timeoutId);
       deferred.resolve();
     });
@@ -91,7 +91,7 @@ class ServiceBusQueue {
         return deferred.reject(error);
       }
       this._incrementMetric('abandon');
-      this._log('NAKed', request);
+      this._log('NAKed', request._message.body);
       clearTimeout(request._message._timeoutId);
       deferred.resolve();
     });
@@ -138,9 +138,9 @@ class ServiceBusQueue {
     message._timeoutId = timeoutId;
   }
 
-  _log(actionMessage, request) {
-    const attemptString = request._message && request._message._renewLockAttemptCount ? ` (renew lock attempt ${request._message._renewLockAttemptCount})` : '';
-    this.logger.verbose(`${actionMessage} ${request.type} ${request.url}${attemptString}`);
+  _log(actionMessage, message) {
+    const attemptString = message && message._renewLockAttemptCount ? ` (renew lock attempt ${message._renewLockAttemptCount})` : '';
+    this.logger.verbose(`${actionMessage} ${message.type} ${message.url}${attemptString}`);
   }
 }
 

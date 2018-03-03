@@ -19,10 +19,13 @@ const formatter = message => {
 };
 const options = {
   logger: {
+    info: console.log,
     verbose: console.log,
     error: console.error
   },
   queueName,
+  enablePartitioning: 'false',
+  maxSizeInMegabytes: '5120',
   lockDuration: 'PT4S', // 4 sec
   lockRenewal: 3000, // 3 sec
   maxDeliveryCount: 100,
@@ -35,14 +38,14 @@ describe('AMQP 1.0 Integration', () => {
     if (!connectionString) {
       throw new Error('ServiceBus connectionString not configured.');
     }
-    const manager = new ServiceBusQueueManager(null, connectionString);
+    const manager = new ServiceBusQueueManager(null, connectionString, true, options);
     serviceBusQueue = new ServiceBusQueue(manager.serviceBusService, name, queueName, formatter, manager, options);
     await serviceBusQueue.subscribe();
   });
 
-  after(async () => {
-    await serviceBusQueue.flush();
-  });
+  // after(async () => {
+  //   await serviceBusQueue.flush();
+  // });
 
   it('Should push, pop and ack a message', async () => {
     let info = await serviceBusQueue.getInfo();
@@ -52,7 +55,6 @@ describe('AMQP 1.0 Integration', () => {
     info = await serviceBusQueue.getInfo();
     expect(Number(info.count)).to.equal(1);
 
-    await setTimeout[promisify.custom](1000);
     const request = await serviceBusQueue.pop();
     expect(request).to.exist;
     expect(request instanceof Request).to.be.true;
@@ -73,7 +75,6 @@ describe('AMQP 1.0 Integration', () => {
     info = await serviceBusQueue.getInfo();
     expect(Number(info.count)).to.equal(1);
 
-    await setTimeout[promisify.custom](4000);
     let request = await serviceBusQueue.pop();
     expect(request).to.exist;
     expect(request instanceof Request).to.be.true;
@@ -105,7 +106,6 @@ describe('AMQP 1.0 Integration', () => {
     info = await serviceBusQueue.getInfo();
     expect(Number(info.count)).to.equal(1);
 
-    await setTimeout[promisify.custom](4000);
     let request = await serviceBusQueue.pop();
     expect(request).to.exist;
     expect(request instanceof Request).to.be.true;
