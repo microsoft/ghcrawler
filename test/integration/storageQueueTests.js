@@ -38,9 +38,9 @@ describe('Azure Storage Queue Integration', () => {
     await storageQueue.subscribe();
   });
 
-  // after(async () => {
-  //   await storageQueue.flush();
-  // });
+  after(async () => {
+    await storageQueue.flush();
+  });
 
   it('Should push, pop and ack a message, pop empty queue', async () => {
     let info = await storageQueue.getInfo();
