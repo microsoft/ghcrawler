@@ -46,16 +46,17 @@ class ServiceBusQueue {
     this.client.receiveQueueMessage(this.queueName, { isPeekLock: true }, (error, message) => {
       if (error === 'No messages to receive') {
         this.logger.verbose(error);
-        return Q();
+        return deferred.resolve(null);
       }
       if (error) {
         return deferred.reject(new Error(error));
       }
       this._incrementMetric('pop');
-      const request = this.messageFormatter(JSON.parse(message.body));
+      message.body = JSON.parse(message.body);
+      const request = this.messageFormatter(message);
       request._message = message;
       this._log('Popped', request);
-      this._setLockRenewalTimer(request, 0, this.options.lockRenewal || 4.75 * 60 * 1000);
+      this._setLockRenewalTimer(message, 0, this.options.lockRenewal || 4.75 * 60 * 1000);
       deferred.resolve(request);
     });
     return deferred.promise;
@@ -72,7 +73,7 @@ class ServiceBusQueue {
       }
       this._incrementMetric('done');
       this._log('ACKed', request);
-      clearTimeout(request._timeoutId);
+      clearTimeout(request._message._timeoutId);
       deferred.resolve();
     });
     return deferred.promise;
@@ -91,9 +92,10 @@ class ServiceBusQueue {
       }
       this._incrementMetric('abandon');
       this._log('NAKed', request);
-      clearTimeout(request._timeoutId);
+      clearTimeout(request._message._timeoutId);
       deferred.resolve();
     });
+    return deferred.promise;
   }
 
   flush() {
@@ -121,23 +123,23 @@ class ServiceBusQueue {
     }
   }
 
-  _setLockRenewalTimer(request, attempts = 0, delay = 4.5 * 60 * 1000) {
+  _setLockRenewalTimer(message, attempts = 0, delay = 4.5 * 60 * 1000) {
     attempts++;
     const timeoutId = setTimeout(() => {
-      this.client.renewLockForMessage(request._message, (renewLockError) => {
+      this.client.renewLockForMessage(message, (renewLockError) => {
         if (renewLockError) {
           this.logger.error(renewLockError);
         }
-        this.logger.verbose(`Renewed lock on ${request.type} ${request.url}, attempt ${attempts}`);
-        request._renewLockAttemptCount = attempts;
-        this._setLockRenewalTimer(request, attempts, delay);
+        this.logger.verbose(`Renewed lock on ${message.body.type} ${message.body.url}, attempt ${attempts}`);
+        message._renewLockAttemptCount = attempts;
+        this._setLockRenewalTimer(message, attempts, delay);
       });
     }, delay);
-    request._timeoutId = timeoutId;
+    message._timeoutId = timeoutId;
   }
 
   _log(actionMessage, request) {
-    const attemptString = request._renewLockAttemptCount ? ` (renew lock attempt ${request._renewLockAttemptCount})` : '';
+    const attemptString = request._message && request._message._renewLockAttemptCount ? ` (renew lock attempt ${request._message._renewLockAttemptCount})` : '';
     this.logger.verbose(`${actionMessage} ${request.type} ${request.url}${attemptString}`);
   }
 }
