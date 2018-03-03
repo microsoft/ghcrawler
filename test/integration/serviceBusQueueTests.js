@@ -33,19 +33,19 @@ const options = {
 };
 let serviceBusQueue = null;
 
-describe('AMQP 1.0 Integration', () => {
+describe('Service Bus Integration', () => {
   before(async () => {
     if (!connectionString) {
       throw new Error('ServiceBus connectionString not configured.');
     }
-    const manager = new ServiceBusQueueManager(null, connectionString, true, options);
+    const manager = new ServiceBusQueueManager(null, connectionString, true);
     serviceBusQueue = new ServiceBusQueue(manager.serviceBusService, name, queueName, formatter, manager, options);
     await serviceBusQueue.subscribe();
   });
 
-  // after(async () => {
-  //   await serviceBusQueue.flush();
-  // });
+  after(async () => {
+    await serviceBusQueue.flush();
+  });
 
   it('Should push, pop and ack a message', async () => {
     let info = await serviceBusQueue.getInfo();
