@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation and others. Made available under the MIT license.
 // SPDX-License-Identifier: MIT
 
 module.exports = {
@@ -6,6 +6,7 @@ module.exports = {
     amqp: require('./queuing/amqpFactory'),
     amqp10: require('./queuing/amqp10Factory'),
     serviceBus: require('./queuing/serviceBusFactory'),
+    storageQueueFactory: require('./queuing/storageQueueFactory'),
     memory: require('./queuing/memoryFactory'),
     amqp10Subscription: require('./queuing/amqp10SubscriptionFactory'),
     webhook: require('./queuing/webhookFactory')
