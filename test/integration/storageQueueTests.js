@@ -122,7 +122,3 @@ describe('Azure Storage Queue Integration', () => {
     expect(Number(info.count)).to.equal(0);
   });
 });
-
-function getTimerAsyncId(timeoutId) {
-  return timeoutId[Object.getOwnPropertySymbols(timeoutId)[0]];
-}
