@@ -1,16 +1,12 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation and others. Made available under the MIT license.
 // SPDX-License-Identifier: MIT
 
-const ServiceBusQueueManager = require('./serviceBusQueueManager');
+const StorageQueueManager = require('./storageQueueManager');
 const CrawlerFactory = require('../../crawlerFactory');
-
-// {
-//   connectionString: config.get('CRAWLER_SERVICEBUS_CONNECTION_STRING') || config.get('CRAWLER_SERVICEBUS_MANAGER_ENDPOINT')
-// }
 
 module.exports = options => {
   const { connectionString } = options;
-  const manager = new ServiceBusQueueManager(null, connectionString, true);
+  const manager = new StorageQueueManager(connectionString, options);
   const env = process.env.NODE_ENV;
   let tracker;
   if (options.tracker) {

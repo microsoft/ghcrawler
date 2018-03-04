@@ -18,7 +18,7 @@ const AmqpClient = amqp10.Client;
 const AmqpPolicy = amqp10.Policy;
 
 class ServiceBusQueueManager {
-  constructor(amqpUrl, managementEndpoint, isServiceBusQueue = false, options) {
+  constructor(amqpUrl, managementEndpoint, isServiceBusQueue = false) {
     this.amqpUrl = amqpUrl;
     this.managementEndpoint = managementEndpoint;
     this.isServiceBusQueue = isServiceBusQueue;
