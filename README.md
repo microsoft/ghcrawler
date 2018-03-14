@@ -92,6 +92,9 @@ Note that the dashboard does not report queue message rates (top right graph) wh
 
 # Working with the code
 
+### Node version
+`>=6`
+
 ### Build
   `npm install`
 
