@@ -25,6 +25,7 @@ class MongoDocStore {
   upsert(document) {
     const selfHref = document._metadata.links.self.href;
     const collection = this.db.collection(document._metadata.type);
+    collection.createIndex( { '_metadata.links.self.href':  "hashed" } );
     return collection.updateOne({ '_metadata.links.self.href': selfHref }, document, { upsert: true }).then(result => {
       memoryCache.put(document._metadata.url, { etag: document._metadata.etag, document: document }, this.options.ttl);
       return result;
@@ -88,7 +89,9 @@ class MongoDocStore {
 
   _getDocument(type, key) {
     const filter = key && key.startsWith('urn:') ? '_metadata.links.self.href' : '_metadata.url';
-    return this.db.collection(type).findOne({ [filter]: key }).then(value => {
+    const collection = this.db.collection(type);
+    collection.createIndex( { filter:  "hashed" } );
+    return collection.findOne({ [filter]: key }).then(value => {
       if (!value) {
         return null;
       }
