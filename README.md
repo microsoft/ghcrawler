@@ -5,7 +5,7 @@
 # GHCrawler
 GHCrawler is a robust GitHub API crawler that walks a queue of GitHub entities transitively retrieving and storing their contents. GHCrawler is primarily intended for people trying to track sets of orgs and repos. For example, the Microsoft Open Source Programs Office uses this to track 1000s of repos in which Microsoft is involved. In short, GHCrawler is great for:
 
-* Retreiving all GitHub entities related to an org, repo, user, team, ...
+* Retrieving all GitHub entities related to an org, repo, user, team, ...
 * Efficiently storing and the retrieved entities
 * Keeping the stored data up to date when used in conjunction with a GitHub webhook to track events
 
@@ -71,7 +71,7 @@ The *crawler-cli* (aka `cc`) can run interactively or as a single command proces
 node bin/cc -i [-s <server url>]
 ```
 
-The app's built-in help has general usage info and more details can be found in [the project's readme](https://github.com/Microsoft/crawler-cli/blob/develop/README.md). A typical command sequence shown in the snippet below starts `cc` in interactive mode talking to the crawler on http://localhost:3000 (default if -s is not specified), configures the crawler with a public and an admin GitHub token, and then queues and starts the processing of the repo called contoso-d/test.
+The app's built-in help has general usage info and more details can be found in [the project's readme](https://github.com/Microsoft/crawler-cli/blob/develop/README.md). A typical command sequence shown in the snippet below starts `cc` in interactive mode talking to the crawler on http://localhost:3000 (default if `-s` is not specified), configures the crawler with a public and an admin GitHub token, and then queues and starts the processing of the repo called `contoso-d/test`.
 
 ```
 > node bin/cc -i
