@@ -6,11 +6,15 @@ services:
     image: redis:latest
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
   rabbitmq:
     image: rabbitmq:management
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
   dashboard:
     build: ../../ghcrawler-dashboard
     ports:
@@ -29,6 +33,9 @@ services:
     ports:
       - "27017:27017"
       - "28017:28017"
+    volumes:
+      - mongo_data_db:/data/db
+      - mongo_configdb:/data/configdb
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
     ports:
@@ -43,6 +50,8 @@ services:
     image: metabase/metabase:latest
     ports:
       - "5000:3000"
+    volumes:
+      - metabase_data:/var/opt/metabase
     # links:
     #   - mongo
   crawler:
