@@ -12,7 +12,7 @@ function run(service) {
   /**
    * Get port from environment and store in Express.
    */
-  let port = normalizePort(config.get('CRAWLER_SERVICE_PORT') || process.env.PORT || '3000');
+  let port = normalizePort(config.get('CRAWLER_SERVICE_PORT') || process.env.PORT || '5000');
   port = port === 'random' ? null : port;
 
   if (!service) {
