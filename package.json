@@ -60,7 +60,7 @@
     "refreshing-config-redis": "^0.1.0",
     "tmp": "0.0.33",
     "winston": "2.2.0",
-    "winston-azure-application-insights": "^1.1.1"
+    "winston-azure-application-insights": "1.1.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
