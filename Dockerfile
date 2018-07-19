@@ -1,7 +1,13 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-FROM node:6
+FROM node:8
+
+LABEL maintainer="opensource@microsoft.com"\
+  vendor="Microsoft"\
+  com.microsoft.product="GHCrawler"\
+  com.microsoft.url="https://hub.docker.com/r/microsoft/ghcrawler"\
+  com.microsoft.vcs-url="https://github.com/Microsoft/ghcrawler"
 
 EXPOSE 3000
 EXPOSE 5858
