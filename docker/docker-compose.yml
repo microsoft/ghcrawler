@@ -38,3 +38,9 @@ services:
       - mongo
       - redis
       - rabbitmq
+volumes:
+  redis_data:
+  rabbitmq_data:
+  mongo_configdb:
+  mongo_data_db:
+  metabase_data:

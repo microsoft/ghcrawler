@@ -40,3 +40,6 @@ services:
       - elasticsearch
       - redis
       - rabbitmq
+volumes:
+  redis_data:
+  rabbitmq_data:
