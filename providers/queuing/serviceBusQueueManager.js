@@ -4,7 +4,6 @@
 const amqp10 = require('amqp10');
 const Amqp10Queue = require('./amqp10Queue');
 const AttenuatedQueue = require('./attenuatedQueue');
-const azureSb = require('azure-sb');
 const InMemoryRateLimiter = require('../limiting/inmemoryRateLimiter');
 const RateLimitedPushQueue = require('./ratelimitedPushQueue');
 const Request = require('../../lib/request');
@@ -21,7 +20,7 @@ class ServiceBusQueueManager {
     this.amqpUrl = amqpUrl;
     this.managementEndpoint = managementEndpoint;
     this.client = null;
-    const retryOperations = new azureSb.ExponentialRetryPolicyFilter();
+    const retryOperations = new serviceBus.ExponentialRetryPolicyFilter();
     this.serviceBusService = serviceBus.createServiceBusService(managementEndpoint).withFilter(retryOperations);
   }
 
