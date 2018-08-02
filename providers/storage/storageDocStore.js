@@ -206,15 +206,15 @@ class AzureStorageDocStore {
     return this._getBlobNameFromUrn(type, document._metadata.links.self.href);
   }
 
-  _getBlobNameFromUrl(type, url) {
+  _getBlobNameFromUrl(type, url, preserveCase = true) {
     if (url.startsWith('urn:')) {
       return url;
     }
     const parsed = URL.parse(url, true);
-    return `${type}${parsed.path.toLowerCase()}.json`;
+    return `${type}${preserveCase ? parsed.path : parsed.path.toLowerCase()}.json`;
   }
 
-  _getBlobPathFromUrn(type, urn) {
+  _getBlobPathFromUrn(type, urn, preserveCase = true) {
     if (!urn) {
       return '';
     }
@@ -222,7 +222,8 @@ class AzureStorageDocStore {
       return urn;
     }
     const pathed = urn.startsWith('urn:') ? urn.slice(4) : urn;
-    return pathed.replace(/:/g, '/').toLowerCase();
+    const replaced = pathed.replace(/:/g, '/');
+    return preserveCase ? replaced : replaced.toLowerCase();
   }
 
   _getBlobNameFromUrn(type, urn) {
