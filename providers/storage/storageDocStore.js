@@ -211,7 +211,7 @@ class AzureStorageDocStore {
       return url;
     }
     const parsed = URL.parse(url, true);
-    return `${type}${parsed.path.toLowerCase()}.json`;
+    return `${type}${this.options.preserveCase ? parsed.path : parsed.path.toLowerCase()}.json`;
   }
 
   _getBlobPathFromUrn(type, urn) {
@@ -222,7 +222,8 @@ class AzureStorageDocStore {
       return urn;
     }
     const pathed = urn.startsWith('urn:') ? urn.slice(4) : urn;
-    return pathed.replace(/:/g, '/').toLowerCase();
+    const replaced = pathed.replace(/:/g, '/');
+    return this.options.preserveCase ? replaced : replaced.toLowerCase();
   }
 
   _getBlobNameFromUrn(type, urn) {
