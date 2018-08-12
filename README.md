@@ -65,7 +65,7 @@ Given a running crawler service (see above), you can control it using either a s
 
 ## `cc` command line
 
-The *crawler-cli* (aka `cc`) can run interactively or as a single command processor and enables a number of basic operations.  For now the crawler-cli is not published as an npm. Instead, [clone its repo]((https://github.com/Microsoft/crawler-cli.git), run `npm install` and run the command line using
+The *crawler-cli* (aka `cc`) can run interactively or as a single command processor and enables a number of basic operations.  For now the crawler-cli is not published as an npm. Instead, [clone its repo](https://github.com/Microsoft/crawler-cli.git), run `npm install` and run the command line using
 
 ```
 node bin/cc -i [-s <server url>]
