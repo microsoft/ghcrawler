@@ -9,6 +9,7 @@ module.exports.queueSet = require('./providers/queuing/queueSet');
 module.exports.request = require('./lib/request');
 module.exports.traversalPolicy = require('./lib/traversalPolicy');
 module.exports.visitorMap = require('./lib/visitorMap');
+module.exports.providers = require('./providers')
 
 const www = require('./bin/www');
 const CrawlerFactory = require('./crawlerFactory');
