@@ -36,6 +36,7 @@ class FileStore {
   }
 
   _getPath(key) {
+    key = key.toLowerCase()
     const realKey = key.startsWith('urn:') ? key.slice(4) : key;
     return `${this.options.location}/${realKey.replace(/:/g, '/')}.json`;
   }

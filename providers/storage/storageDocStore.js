@@ -203,7 +203,7 @@ class AzureStorageDocStore {
     if (this.options.blobKey === 'url') {
       return this._getBlobNameFromUrl(type, document._metadata.url);
     }
-    return this._getBlobNameFromUrn(type, document._metadata.links.self.href);
+    return this._getBlobNameFromUrn(type, document._metadata.links.self.href.toLowerCase());
   }
 
   _getBlobNameFromUrl(type, url) {
