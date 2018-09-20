@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-const appInsights = require("applicationinsights");
+const appInsights = require('applicationinsights');
 
 class MockInsights {
   constructor(client = null) {
@@ -10,11 +10,11 @@ class MockInsights {
 
   static setup(key = null, echo = false) {
     // exit if we we are already setup
-    if (appInsights.client instanceof MockInsights) {
+    if (appInsights.defaultClient instanceof MockInsights) {
       return;
     }
     if (!key || key === 'mock') {
-      appInsights.client = new MockInsights();
+      appInsights.defaultClient = new MockInsights();
     } else {
       appInsights
         .setup(key)
@@ -22,61 +22,61 @@ class MockInsights {
         .setAutoCollectDependencies(false)
         .start();
       if (echo) {
-        appInsights.client = new MockInsights(appInsights.client);
+        appInsights.defaultClient = new MockInsights(appInsights.defaultClient);
       }
     }
   }
 
-  trackEvent(name, properties, measurements) {
-    console.log(`Event: ${name}, properties: ${JSON.stringify(properties)}`);
+  trackEvent(eventTelemetry) {
+    console.log(`Event: ${eventTelemetry.name}, properties: ${JSON.stringify(eventTelemetry.properties)}`);
     if (this.client) {
-      this.client.trackEvent(name, properties, measurements);
+      this.client.trackEvent(eventTelemetry);
     }
   }
 
-  trackException(error, properties) {
+  trackException(exceptionTelemetry) {
     console.log('trackException:');
-    console.dir(error);
-    properties = properties || {};
-    if (error && error._type) {
-      properties.type = error._type;
-      properties.url = error._url;
-      properties.cid = error._cid;
+    console.dir(exceptionTelemetry.exception);
+    exceptionTelemetry.properties = exceptionTelemetry.properties || {};
+    if (exceptionTelemetry.exception && exceptionTelemetry.exception._type) {
+      exceptionTelemetry.properties.type = error._type;
+      exceptionTelemetry.properties.url = error._url;
+      exceptionTelemetry.properties.cid = error._cid;
     }
     if (this.client) {
-      this.client.trackException(error, properties);
+      this.client.trackException(exceptionTelemetry);
     }
   }
 
-  trackMetric(name, value, count, min, max, stdDev) {
-    console.log(`Metric: ${name} = ${value}`);
+  trackMetric(metricTelemetry) {
+    console.log(`Metric: ${metricTelemetry.name} = ${metricTelemetry.value}`);
     if (this.client) {
-      this.client.trackMetric(name, value, count, min, max, stdDev);
+      this.client.trackMetric(metricTelemetry);
     }
   }
 
-  trackRequest(request, response, properties) {
+  trackRequest(requestTelemetry) {
     console.log('Request: ');
     if (this.client) {
-      this.client.trackRequest(request, response, properties);
+      this.client.trackRequest(requestTelemetry)
     }
   }
 
-  trackTrace(message, severityLevel = 1, properties = null) {
+  trackTrace(traceTelemetry) {
     // const severities = ['Verbose', 'Info', 'Warning', 'Error', 'Critical'];
     const severities = ['V', 'I', 'W', 'E', 'C'];
-    const hasProperties = properties && Object.keys(properties).length > 0;
-    const propertyString = hasProperties ? `${JSON.stringify(properties)}` : '';
-    console.log(`[${severities[severityLevel]}] ${message}${propertyString}`);
+    const hasProperties = traceTelemetry.properties && Object.keys(traceTelemetry.properties).length > 0;
+    const propertyString = hasProperties ? `${JSON.stringify(traceTelemetry.properties)}` : '';
+    console.log(`[${severities[traceTelemetry.severity]}] ${traceTelemetry.message}${propertyString}`);
     if (this.client) {
-      this.client.trackTrace(message, severityLevel, properties);
+      this.client.trackTrace(traceTelemetry);
     }
   }
 
-  trackDependency(name, commandName, elapsedTimeMs, success, dependencyTypeName, properties, dependencyKind, async, dependencySource) {
-    console.log(`Dependency: ${name}`);
+  trackDependency(dependencyTelemetry) {
+    console.log(`Dependency: ${dependencyTelemetry.name}`);
     if (this.client) {
-      this.client.trackDependency(name, commandName, elapsedTimeMs, success, dependencyTypeName, properties, dependencyKind, async, dependencySource);
+      this.client.trackDependency(dependencyTelemetry)
     }
   }
 }
