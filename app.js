@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+process.on('unhandledRejection', (reason, p) => {
+  throw reason;
+});
+
 const appInsights = require('applicationinsights');
 const auth = require('./middleware/auth');
 const bodyParser = require('body-parser');
@@ -25,7 +29,7 @@ function configureApp(service) {
   // Note also that the GitHub doc says events are capped at 5mb
   app.use('/webhook', bodyParser.raw({ limit: '5mb', type: '*/*' }), require('./routes/webhook')(service, config.get('CRAWLER_WEBHOOK_SECRET')));
   // It's safe to set limitation to 2mb.
-  app.use(bodyParser.json({ limit: '2mb' , strict: false}));
+  app.use(bodyParser.json({ limit: '2mb', strict: false }));
   app.use('/status', require('./routes/status')(service));
   app.use('/config', require('./routes/config')(service));
   app.use('/requests', require('./routes/requests')(service));
@@ -64,7 +68,8 @@ function configureApp(service) {
 
   // Error handlers
   const handler = function (error, request, response, next) {
-    appInsights.client.trackException(error, { name: 'SvcRequestFailure' });
+    if (!(request && request.url && request.url.includes('robots933456.txt'))) // https://feedback.azure.com/forums/169385-web-apps/suggestions/32120617-document-healthcheck-url-requirement-for-custom-co
+      appInsights.defaultClient.trackException({ exception: error, properties: { name: 'SvcRequestFailure' } });
     if (response.headersSent) {
       return next(error);
     }
