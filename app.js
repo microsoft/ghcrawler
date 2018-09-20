@@ -43,7 +43,7 @@ function configureApp(service) {
 
   // Catch 404 and forward to error handler
   const requestHandler = function (request, response, next) {
-    let error = { message: 'Not Found' };
+    let error = new Error('404 - Not Found');
     error.status = 404;
     error.success = false;
     next(error);
