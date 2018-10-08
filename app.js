@@ -1,10 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-process.on('unhandledRejection', (reason, p) => {
-  throw reason;
-});
-
 const appInsights = require('applicationinsights');
 const auth = require('./middleware/auth');
 const bodyParser = require('body-parser');
@@ -15,6 +11,13 @@ const sendHelper = require('./middleware/sendHelper');
 const CrawlerFactory = require('./crawlerFactory');
 const mockInsights = require('./providers/logger/mockInsights');
 mockInsights.setup(config.get('CRAWLER_INSIGHTS_KEY') || 'mock', true);
+
+process.on('unhandledRejection', (reason, p) => {
+  appInsights.defaultClient.trackException({
+    exception: reason,
+    properties: { name: 'unhandledRejection' }
+  });
+});
 
 function configureApp(service) {
   auth.initialize(config.get('CRAWLER_SERVICE_AUTH_TOKEN') || 'secret', config.get('CRAWLER_SERVICE_FORCE_AUTH'));
