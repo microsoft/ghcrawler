@@ -1,49 +1,29 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-const mockInsights = require('./providers/logger/mockInsights');
-const InMemoryRateLimiter = require('./providers/limiting/inmemoryRateLimiter');
 const RedisRequestTracker = require('./providers/queuing/redisRequestTracker');
-const InMemoryDocStore = require('./providers/storage/inmemoryDocStore');
 const DeltaStore = require('./providers/storage/deltaStore');
 const MongoDocStore = require('./providers/storage/mongodocstore');
-const AzureStorageDocStore = require('./providers/storage/storageDocStore');
 const UrlToUrnMappingStore = require('./providers/storage/urlToUrnMappingStore');
 const AzureTableMappingStore = require('./providers/storage/tableMappingStore');
-const amqp10 = require('amqp10');
-const appInsights = require('applicationinsights');
-const aiLogger = require('winston-azure-application-insights').AzureApplicationInsightsLogger;
 const AzureStorage = require('azure-storage');
 const config = require('painless-config');
 const Crawler = require('./lib/crawler');
 const CrawlerService = require('./lib/crawlerService');
-const fs = require('fs');
-const ip = require('ip');
-const moment = require('moment');
-const policy = require('./lib/traversalPolicy');
 const Q = require('q');
 const QueueSet = require('./providers/queuing/queueSet');
-const redis = require('redis');
-const RedisMetrics = require('redis-metrics');
-const RedisRateLimiter = require('redis-rate-limiter');
 const redlock = require('redlock');
 const RefreshingConfig = require('refreshing-config');
 const RefreshingConfigRedis = require('refreshing-config-redis');
-const request = require('request');
-const Request = require('./lib/request');
-const requestor = require('ghrequestor');
-const winston = require('winston');
-const _ = require('lodash');
 
-let factoryLogger = null;
-let redisClient = null;
+let logger = null;
 let providerSearchPath = null;
 let finalOptions = null;
 
 class CrawlerFactory {
-
-  static createService(defaults, searchPath = []) {
-    factoryLogger.info('appInitStart');
+  static createService(defaults, appLogger, searchPath = []) {
+    logger = appLogger;
+    logger.info('appInitStart');
     providerSearchPath = [require('./providers')];
     // initialize the redis provider (if any) ASAP since it is used all over and we want to share the client
     CrawlerFactory._initializeRedis(defaults);
@@ -53,7 +33,7 @@ class CrawlerFactory {
     searchPath.forEach(entry => providerSearchPath.push(entry));
     const subsystemNames = ['crawler', 'filter', 'fetch', 'process', 'queue', 'store', 'deadletter', 'lock'];
     const crawlerPromise = CrawlerFactory.createRefreshingOptions(crawlerName, subsystemNames, defaults, optionsProvider).then(options => {
-      factoryLogger.info(`created all refreshingOptions`);
+      logger.info(`created all refreshingOptions`);
       finalOptions = options;
       const crawler = CrawlerFactory.createCrawler(options);
       return [crawler, options];
@@ -67,20 +47,19 @@ class CrawlerFactory {
   }
 
   static _decorateOptions(key, options) {
-    if (!options.logger)
-      options.logger = CrawlerFactory.createLogger(true);
+    if (!options.logger) options.logger = logger;
     if (!options.logger.metrics) {
       const capitalized = key.charAt(0).toUpperCase() + key.slice(1);
       const metricsFactory = CrawlerFactory[`create${capitalized}Metrics`];
       if (metricsFactory) {
-        factoryLogger.info('Creating metrics factory', { factory: capitalized });
+        logger.info('Creating metrics factory', {factory: capitalized});
         logger.metrics = metricsFactory(options.crawler.name, options[key]);
       }
     }
   }
 
   static createCrawler(options, { queues = null, store = null, deadletters = null, locker = null, filter = null, fetchers = null, processors = null } = {}) {
-    factoryLogger.info('creating crawler');
+    logger.info('creating crawler');
     queues = queues || CrawlerFactory.createQueues(options.queue);
     if (options.event)
       CrawlerFactory.addEventQueue(queues, options.event);
@@ -104,13 +83,13 @@ class CrawlerFactory {
   }
 
   static createRefreshingOptions(crawlerName, subsystemNames, defaults, refreshingProvider = 'redis') {
-    factoryLogger.info(`creating refreshing options with crawlerName:${crawlerName}`);
+    logger.info(`creating refreshing options with crawlerName:${crawlerName}`);
     const result = {};
     refreshingProvider = refreshingProvider.toLowerCase();
     return Q.all(subsystemNames.map(subsystemName => {
       // Any given subsytem may have a provider or may be a list of providers. If a particular provider is
       // identified then hook up just that set of options for refreshing.
-      factoryLogger.info(`creating refreshing options ${subsystemName} with provider ${refreshingProvider}`);
+      logger.info(`creating refreshing options ${subsystemName} with provider ${refreshingProvider}`);
       let config = null;
       const subDefaults = defaults[subsystemName] || {};
       const subProvider = subDefaults && subDefaults.provider;
@@ -123,11 +102,11 @@ class CrawlerFactory {
         throw new Error(`Invalid refreshing provider setting ${refreshingProvider}`);
       }
       return config.getAll().then(values => {
-        factoryLogger.info(`got refreshingOption values for ${subsystemName}`);
+        logger.info(`got refreshingOption values for ${subsystemName}`);
         // grab the right defaults. May need to drill down a level if the subsystem has a provider
         const trueDefaults = subProvider ? subDefaults[subProvider] || {} : subDefaults;
         return CrawlerFactory.initializeSubsystemOptions(values, trueDefaults).then(resolved => {
-          factoryLogger.info(`${subsystemName} options initialized`);
+          logger.info(`${subsystemName} options initialized`);
           // Hook the refreshing options into the right place in the result structure.
           // Be sure to retain the 'provider' setting
           if (subProvider)
@@ -149,7 +128,10 @@ class CrawlerFactory {
   }
 
   static createRedisRefreshingConfig(crawlerName, subsystemName) {
-    factoryLogger.info('Creating refreshing redis config', { crawlerName: crawlerName, subsystemName: subsystemName });
+    logger.info('Creating refreshing redis config', {
+      crawlerName: crawlerName,
+      subsystemName: subsystemName
+    });
     const redisClient = CrawlerFactory.getProvider('redis');
     const key = `${crawlerName}:options:${subsystemName}`;
     const channel = `${key}-channel`;
@@ -160,7 +142,7 @@ class CrawlerFactory {
   }
 
   static createInMemoryRefreshingConfig(values = {}) {
-    factoryLogger.info('creating in memory refreshing config');
+    logger.info('creating in memory refreshing config');
     const configStore = new RefreshingConfig.InMemoryConfigStore(values);
     const config = new RefreshingConfig.RefreshingConfig(configStore)
       .withExtension(new RefreshingConfig.InMemoryPubSubRefreshPolicyAndChangePublisher());
@@ -269,13 +251,13 @@ class CrawlerFactory {
   }
 
   static createRedisAndStorageStore(options, name = null) {
-    factoryLogger.info(`creating azure redis store`, { name: name });
+    logger.info(`creating azure redis store`, {name: name});
     const baseStore = CrawlerFactory.createAzureStorageStore(options, name);
     return new UrlToUrnMappingStore(baseStore, CrawlerFactory.getProvider('redis'), baseStore.name, options);
   }
 
   static createTableAndStorageStore(options, name = null) {
-    factoryLogger.info(`creating azure store`, { name: name });
+    logger.info(`creating azure store`, {name: name});
     const baseStore = CrawlerFactory.createAzureStorageStore(options, name);
     const account = config.get('CRAWLER_STORAGE_ACCOUNT');
     const key = config.get('CRAWLER_STORAGE_KEY');
@@ -304,7 +286,7 @@ class CrawlerFactory {
     if (!options.delta || !options.delta.provider || options.delta.provider === 'none') {
       return inner;
     }
-    factoryLogger.info(`creating delta store`);
+    logger.info(`creating delta store`);
     const deltaStoreProviders = typeof options.delta.provider === 'string' ? [options.delta.provider] : options.delta.provider;
     let store = inner;
     deltaStoreProviders.forEach(deltaProvider => {
@@ -318,7 +300,7 @@ class CrawlerFactory {
             const PluggableDeltaStore = require(`ghcrawler-${deltaProvider}`);
             store = new PluggableDeltaStore(store, options);
           } catch (error) {
-            factoryLogger.error(error);
+            logger.error(error);
             throw new Error(`Invalid delta store provider: ${deltaProvider}`);
           }
       }
@@ -330,32 +312,20 @@ class CrawlerFactory {
     name = name || config.get('CRAWLER_DELTA_STORAGE_NAME') || `${config.get('CRAWLER_STORAGE_NAME')}-log`;
     const account = config.get('CRAWLER_DELTA_STORAGE_ACCOUNT') || config.get('CRAWLER_STORAGE_ACCOUNT');
     const key = config.get('CRAWLER_DELTA_STORAGE_KEY') || config.get('CRAWLER_STORAGE_KEY');
-    factoryLogger.info('creating delta store', { name: name, account: account });
+    logger.info('creating delta store', {name: name, account: account});
     const retryOperations = new AzureStorage.ExponentialRetryPolicyFilter();
     const blobService = AzureStorage.createBlobService(account, key).withFilter(retryOperations);
     return new DeltaStore(inner, blobService, name, options);
   }
 
   static createTableService(account, key) {
-    factoryLogger.info(`creating table service`);
+    logger.info(`creating table service`);
     const retryOperations = new AzureStorage.ExponentialRetryPolicyFilter();
     return AzureStorage.createTableService(account, key).withFilter(retryOperations);
   }
 
   static createLocker(options, provider = options.provider || 'memory') {
     return CrawlerFactory._getProvider(options, provider, 'lock');
-  }
-
-  static createLogger(echo = false, level = 'info') {
-    mockInsights.setup(config.get('CRAWLER_INSIGHTS_KEY') || 'mock', echo);
-    const result = new winston.Logger();
-    result.add(aiLogger, {
-      insights: appInsights,
-      treatErrorsAsExceptions: true,
-      exitOnError: false,
-      level: level
-    });
-    return result;
   }
 
   static createRequestTracker(prefix, options) {
@@ -395,7 +365,5 @@ class CrawlerFactory {
     }
   }
 }
-
-factoryLogger = CrawlerFactory.createLogger(true);
 
 module.exports = CrawlerFactory;

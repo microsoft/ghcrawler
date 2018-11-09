@@ -15,8 +15,8 @@ const www = require('./bin/www');
 const CrawlerFactory = require('./crawlerFactory');
 const VisitorMap = require('./lib/visitorMap');
 
-module.exports.run = (defaults, searchPath, maps) => {
-  const service = CrawlerFactory.createService(defaults, searchPath);
+module.exports.run = (defaults, logger, searchPath, maps) => {
+  const service = CrawlerFactory.createService(defaults, logger, searchPath);
   Object.getOwnPropertyNames(maps).forEach(name =>
     VisitorMap.register(name, maps[name]))
   www(service);

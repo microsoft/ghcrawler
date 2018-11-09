@@ -27,7 +27,6 @@
   "dependencies": {
     "amqp10": "noodlefrenzy/node-amqp10#issue295",
     "amqplib": "^0.5.1",
-    "applicationinsights": "^1.0.4",
     "async": "^2.6.0",
     "azure-sb": "^0.10.6",
     "azure-storage": "^1.3.2",
@@ -58,9 +57,7 @@
     "redlock": "2.0.1",
     "refreshing-config": "^0.1.2",
     "refreshing-config-redis": "^0.1.0",
-    "tmp": "0.0.33",
-    "winston": "^2.3.0",
-    "winston-azure-application-insights": "^1.2.0"
+    "tmp": "0.0.33"
   },
   "devDependencies": {
     "chai": "^3.5.0",
