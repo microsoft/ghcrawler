@@ -20,7 +20,7 @@ function run(service, logger) {
     const defaults = config.get('CRAWLER_OPTIONS') || './memoryConfig';
     service = CrawlerFactory.createService(require(defaults), logger);
   }
-  const app = appFactory(service);
+  const app = appFactory(service, logger);
   app.set('port', port);
 
   const server = http.createServer(app);
