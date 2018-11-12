@@ -1,31 +1,21 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-const appInsights = require('applicationinsights');
 const auth = require('./middleware/auth');
 const bodyParser = require('body-parser');
 const config = require('painless-config');
 const express = require('express');
-const logger = require('morgan');
+const morgan = require('morgan');
 const sendHelper = require('./middleware/sendHelper');
-const CrawlerFactory = require('./crawlerFactory');
-const mockInsights = require('./providers/logger/mockInsights');
-mockInsights.setup(config.get('CRAWLER_INSIGHTS_KEY') || 'mock', true);
 
-process.on('unhandledRejection', (reason, p) => {
-  appInsights.defaultClient.trackException({
-    exception: reason,
-    properties: { name: 'unhandledRejection' }
-  });
-});
-
-function configureApp(service) {
+function configureApp(service, logger) {
+  process.on('unhandledRejection', exception => logger.error('unhandledRejection', exception))
   auth.initialize(config.get('CRAWLER_SERVICE_AUTH_TOKEN') || 'secret', config.get('CRAWLER_SERVICE_FORCE_AUTH'));
 
   const app = express();
 
   app.disable('x-powered-by');
-  app.use(logger('dev'));
+  app.use(morgan('dev'));
   app.use(sendHelper());
 
   // If we should be listening for webhooks, add the route before the json body parser so we get the raw bodies.
@@ -71,11 +61,9 @@ function configureApp(service) {
 
   // Error handlers
   const handler = function (error, request, response, next) {
+    if (response.headersSent) return next(error);
     if (!(request && request.url && request.url.includes('robots933456.txt'))) // https://feedback.azure.com/forums/169385-web-apps/suggestions/32120617-document-healthcheck-url-requirement-for-custom-co
-      appInsights.defaultClient.trackException({ exception: error, properties: { name: 'SvcRequestFailure' } });
-    if (response.headersSent) {
-      return next(error);
-    }
+      logger.error('SvcRequestFailure: ' + request.url, error)
     response.status(error.status || 500);
     let propertiesToSerialize = ['success', 'message'];
     if (app.get('env') !== 'production') {

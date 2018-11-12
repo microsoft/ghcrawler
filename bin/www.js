@@ -7,7 +7,7 @@ const http = require('http');
 const init = require('express-init');
 const CrawlerFactory = require('../crawlerFactory');
 
-function run(service) {
+function run(service, logger) {
 
   /**
    * Get port from environment and store in Express.
@@ -18,7 +18,7 @@ function run(service) {
   if (!service) {
     // Create a default service. Seems unlikely that it will do much but could be fun
     const defaults = config.get('CRAWLER_OPTIONS') || './memoryConfig';
-    service = CrawlerFactory.createService(require(defaults));
+    service = CrawlerFactory.createService(require(defaults), logger);
   }
   const app = appFactory(service);
   app.set('port', port);
