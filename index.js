@@ -19,5 +19,5 @@ module.exports.run = (defaults, logger, searchPath, maps) => {
   const service = CrawlerFactory.createService(defaults, logger, searchPath);
   Object.getOwnPropertyNames(maps).forEach(name =>
     VisitorMap.register(name, maps[name]))
-  www(service);
+  www(service, logger);
 }
