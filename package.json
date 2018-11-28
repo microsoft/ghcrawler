@@ -43,7 +43,7 @@
     "memory-cache": "^0.2.0",
     "moment": "^2.22.2",
     "mongodb": "2.2.11",
-    "morgan": "^1.7.0",
+    "morgan": "^1.9.1",
     "node-uuid": "^1.4.8",
     "painless-config": "^0.1.1",
     "parse-link-header": "^0.4.1",
