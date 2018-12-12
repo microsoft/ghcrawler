@@ -33,7 +33,7 @@
     "body-parser": "^1.15.2",
     "connect-redis": "^3.1.0",
     "debug": "^2.6.1",
-    "express": "^4.14.0",
+    "express": "^4.16.4",
     "express-init": "^1.1.0",
     "express-joi": "^0.3.1",
     "extend": "3.0.0",

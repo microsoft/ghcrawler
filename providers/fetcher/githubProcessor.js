@@ -605,6 +605,11 @@ class GitHubProcessor {
 
   IssuesEvent(request) {
     let [document, repo, payload] = this._addEventBasics(request);
+    if (['deleted', 'transferred'].includes(payload.action)) {
+      const context = { deletedAt: request.payload.fetchedAt, cacheKey: `urn:repo:${repo}:issue:${payload.issue.id}` };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, repo, 'issue', 'issue', null, context, policy);
+    }
     this._addEventResource(request, repo, 'issue');
     if (payload.assignee) {
       this._addEventResource(request, null, 'assignee', 'user');
