@@ -60,11 +60,19 @@ class StorageQueue {
         this.logger.verbose('No messages to receive');
         return deferred.resolve(null);
       }
-      message.body = JSON.parse(message.messageText);
-      const request = this.messageFormatter(message);
-      request._message = message;
-      this._log('Popped', message.body);
-      deferred.resolve(request);
+      if (this.options.maxDequeueCount && message.dequeueCount > this.options.maxDequeueCount) {
+        this.logger.verbose('maxDequeueCount exceeded');
+        this.client.deleteMessage(this.queueName, message.messageId, message.popReceipt, error => {
+          if (error) return deferred.reject(error);
+          deferred.resolve(null);
+        })
+      } else {
+        message.body = JSON.parse(message.messageText);
+        const request = this.messageFormatter(message);
+        request._message = message;
+        this._log('Popped', message.body);
+        deferred.resolve(request);
+      }
     });
     return deferred.promise;
   }
