@@ -27,7 +27,8 @@ router.post('/', wrap(function* (request, response, next) {
   const data = request.body;
   const computedSignature = 'sha1=' + crypto.createHmac('sha1', webhookSecret).update(data).digest('hex');
   if (!crypto.timingSafeEqual(new Buffer(signature), new Buffer(computedSignature))) {
-    return fatal(request, response, 'X-Hub-Signature does not match blob signature');
+    getLogger().info('X-Hub-Signature', 'does not match blob signature', { delivery: deliveryId, signature, computedSignature, eventType, body: data });
+    // return fatal(request, response, 'X-Hub-Signature does not match blob signature');
   }
   const event = JSON.parse(request.body);
   const eventsUrl = event.repository ? event.repository.events_url : event.organization.events_url;
