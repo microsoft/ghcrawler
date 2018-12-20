@@ -300,13 +300,6 @@ class GitHubProcessor {
     if (document._links.commits && document.commits) {
       this._addCollection(request, 'pull_request_commits', 'pull_request_commit', document._links.commits.href);
     }
-
-    // link and queue the related issue.  Getting the issue will bring in the comments for this PR
-    if (document._links.issue) {
-      // link to the relate issue and its comments.
-      request.linkResource('issue', `${context.qualifier}:issue:${document.id}`);
-      request.linkCollection('issue_comments', `${context.qualifier}:issue:${document.id}:issue_comments`);
-    }
     return document;
   }
 
