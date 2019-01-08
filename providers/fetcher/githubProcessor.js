@@ -705,7 +705,10 @@ class GitHubProcessor {
       request.queue('LegacyPullRequestReviewCommentEvent', request.document.payload.comment.pull_request_url, request.policy, context);
       return null;
     }
-    let [, repo, payload] = this._addEventBasics(request);
+    let [document, repo, payload] = this._addEventBasics(request);
+    if (!payload.pull_request) {
+      return document;
+    }
     const qualifier = `urn:repo:${repo}:pull_request:${payload.pull_request.id}`;
     if (payload.action === 'deleted') {
       const context = { deletedAt: request.payload.fetchedAt };
