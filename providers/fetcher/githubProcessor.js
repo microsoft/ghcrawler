@@ -706,6 +706,7 @@ class GitHubProcessor {
       return null;
     }
     let [document, repo, payload] = this._addEventBasics(request);
+    // Sometimes payload.pull_request is null instead of an object.
     if (!payload.pull_request) {
       return document;
     }
