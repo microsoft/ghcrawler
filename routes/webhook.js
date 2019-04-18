@@ -24,7 +24,7 @@ router.post('/', wrap(function* (request, response, next) {
     return fatal(request, response, 'Missing signature or event type on GitHub webhook');
   }
 
-  // Ignoring since check events aren't useful for now and constitute over 99% of the events traffic.
+  // Ignoring since check events aren't useful for now and constitute over 99% of events with mismatched blob signature.
   if (['check_run', 'check_suite'].includes(eventType)) {
     getLogger().info('Ignored', 'Webhook event', { delivery: deliveryId, eventType, signature });
     return response.status(200);
