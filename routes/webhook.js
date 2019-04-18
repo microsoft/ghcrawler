@@ -16,12 +16,18 @@ router.post('/', wrap(function* (request, response, next) {
     return warn(request, response, 'Webhooks not enabled');
   }
   const deliveryId = request.headers['x-github-delivery'];
-  getLogger().verbose('Received', `Webhook event`, { delivery: deliveryId });
+  getLogger().verbose('Received', 'Webhook event', { delivery: deliveryId });
   const signature = request.headers['x-hub-signature'];
   const eventType = request.headers['x-github-event'];
 
   if (!signature || !eventType) {
     return fatal(request, response, 'Missing signature or event type on GitHub webhook');
+  }
+
+  // Ignoring since check events aren't useful for now and constitute over 99% of the events traffic.
+  if (['check_run', 'check_suite'].includes(eventType)) {
+    getLogger().info('Ignored', 'Webhook event', { delivery: deliveryId, eventType, signature });
+    return response.status(200);
   }
 
   const data = request.body;
