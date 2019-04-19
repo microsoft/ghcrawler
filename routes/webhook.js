@@ -27,7 +27,7 @@ router.post('/', wrap(function* (request, response, next) {
   // Ignoring since check events aren't useful for now and constitute over 99% of events with mismatched blob signature.
   if (['check_run', 'check_suite'].includes(eventType)) {
     getLogger().info('Ignored', 'Webhook event', { delivery: deliveryId, eventType, signature });
-    return response.status(200);
+    return response.status(200).end();
   }
 
   const data = request.body;
