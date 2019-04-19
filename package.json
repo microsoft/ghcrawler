@@ -36,12 +36,12 @@
     "express": "^4.16.4",
     "express-init": "^1.1.0",
     "express-joi": "^0.3.1",
-    "extend": "3.0.0",
+    "extend": "3.0.2",
     "ghrequestor": "^0.1.6",
     "htmlencode": "0.0.4",
     "ip": "^1.1.4",
     "memory-cache": "^0.2.0",
-    "moment": "^2.22.2",
+    "moment": "^2.24.0",
     "mongodb": "2.2.11",
     "morgan": "^1.9.1",
     "node-uuid": "^1.4.8",
@@ -61,8 +61,6 @@
   },
   "devDependencies": {
     "chai": "^4.1.2",
-    "grunt": "^1.0.3",
-    "grunt-mocha-test": "^0.13.3",
     "istanbul": "^0.4.5",
     "mocha": "^5.2.0",
     "sinon": "^1.17.6"
