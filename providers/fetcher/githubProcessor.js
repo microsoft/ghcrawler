@@ -459,7 +459,7 @@ class GitHubProcessor {
 
   _isEventVisibleInTimeline(type, action) {
     if (['deployment', 'deployment_status', 'label', 'membership', 'milestone', 'organization',
-      'page_build', 'repository', 'status', 'team', 'team_add'].includes(type)) {
+      'page_build', 'repository', 'status', 'team', 'team_add', 'star'].includes(type)) {
       return false;
     }
     if (['issue_comment', 'pull_request_review_comment'].includes(type) && action === 'deleted') {
@@ -492,6 +492,7 @@ class GitHubProcessor {
       pull_request: 'PullRequestEvent',
       pull_request_review_comment: 'PullRequestReviewCommentEvent',
       repository: 'RepositoryEvent',
+      star: 'StarEvent',
       status: 'StatusEvent',
       team: 'TeamEvent',
       team_add: 'TeamAddEvent',
@@ -658,8 +659,16 @@ class GitHubProcessor {
   }
 
   OrganizationEvent(request) {
-    // TODO complete implementation and add organization handler
-    let [document] = this._addEventBasics(request);
+    let [document, , payload] = this._addEventBasics(request);
+    if (payload.action === 'renamed') {
+      const policy = TraversalPolicy.reload('org');
+      return this._addEventResource(request, null, 'organization', 'org', null, {}, policy);
+    }
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: request.payload.fetchedAt };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, null, 'organization', 'org', null, context, policy);
+    }
     return document;
   }
 
@@ -765,7 +774,7 @@ class GitHubProcessor {
 
   RepositoryEvent(request) {
     let [, , payload] = this._addEventBasics(request, null, ['actor', 'org']);
-    if (payload.action === 'created') {
+    if (['created', 'transferred'].includes(payload.action)) {
       const policy = TraversalPolicy.reload('repo');
       return this._addEventResource(request, null, 'repository', 'repo', null, {}, policy);
     }
@@ -775,6 +784,12 @@ class GitHubProcessor {
       return this._addEventResource(request, null, 'repository', 'repo', null, context, policy);
     }
     return this._addEventResource(request, null, 'repository', 'repo');
+  }
+
+  StarEvent(request) {
+    let [document] = this._addEventBasics(request);
+    request.linkResource('repository', document._metadata.links.repo.href);
+    return document;
   }
 
   StatusEvent(request) {
