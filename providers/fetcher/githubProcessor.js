@@ -659,8 +659,16 @@ class GitHubProcessor {
   }
 
   OrganizationEvent(request) {
-    // TODO complete implementation and add organization handler
-    let [document] = this._addEventBasics(request);
+    let [document, , payload] = this._addEventBasics(request);
+    if (payload.action === 'renamed') {
+      const policy = TraversalPolicy.reload('org');
+      return this._addEventResource(request, null, 'organization', 'org', null, {}, policy);
+    }
+    if (payload.action === 'deleted') {
+      const context = { deletedAt: request.payload.fetchedAt };
+      const policy = this._getNextDeletedPolicy();
+      return this._addEventResource(request, null, 'organization', 'org', null, context, policy);
+    }
     return document;
   }
 
