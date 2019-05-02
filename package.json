@@ -37,9 +37,9 @@
     "express-init": "^1.1.0",
     "express-joi": "^0.3.1",
     "extend": "3.0.2",
-    "ghrequestor": "^0.1.6",
+    "ghrequestor": "^0.1.7",
     "htmlencode": "0.0.4",
-    "ip": "^1.1.4",
+    "ip": "^1.1.5",
     "memory-cache": "^0.2.0",
     "moment": "^2.24.0",
     "mongodb": "2.2.11",
@@ -60,10 +60,10 @@
     "winston-azure-application-insights": "1.1.1"
   },
   "devDependencies": {
-    "chai": "^4.1.2",
+    "chai": "^4.2.0",
     "istanbul": "^0.4.5",
-    "mocha": "^5.2.0",
-    "sinon": "^1.17.6"
+    "mocha": "^6.1.4",
+    "sinon": "^2.4.1"
   },
   "optionalDependencies": {
     "@google-cloud/storage": "^1.7.0"
