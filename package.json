@@ -25,11 +25,12 @@
     "url": "https://github.com/microsoft/ghcrawler"
   },
   "dependencies": {
+    "@microsoft/refreshing-config": "^0.1.3",
     "amqp10": "noodlefrenzy/node-amqp10#issue295",
     "amqplib": "^0.5.1",
     "applicationinsights": "^0.17.0",
-    "azure-sb": "^0.10.6",
-    "azure-storage": "^1.3.2",
+    "azure-sb": "^0.11.0",
+    "azure-storage": "^2.10.3",
     "body-parser": "^1.15.2",
     "connect-redis": "^3.4.1",
     "debug": "^4.1.0",
@@ -51,10 +52,9 @@
     "q": "1.5.1",
     "qlimit": "^0.1.1",
     "redis": "^2.8.0",
-    "redis-metrics": "^0.5.0",
+    "redis-metrics": "^1.3.1",
     "redis-rate-limiter": "jeffmcaffer/redis-rate-limiter",
     "redlock": "2.0.1",
-    "refreshing-config": "^0.1.2",
     "refreshing-config-redis": "^0.1.0",
     "winston": "2.2.0",
     "winston-azure-application-insights": "1.1.1"
