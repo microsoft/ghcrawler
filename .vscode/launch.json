@@ -18,7 +18,7 @@
       "env": {
         "NODE_ENV": "localhost"
       },
-      "console": "internalConsole"
+      "console": "integratedTerminal"
     },
     {
       "name": "Coverage",
@@ -39,7 +39,7 @@
       "env": {
         "NODE_ENV": "localhost"
       },
-      "console": "internalConsole"
+      "console": "integratedTerminal"
     },
     {
       "name": "Docker Infrastructure",
@@ -69,7 +69,7 @@
         "CRAWLER_AMQP_URL": "amqp://localhost:5672",
         "CRAWLER_RABBIT_MANAGER_ENDPOINT": "http://guest:guest@localhost:15672"
       },
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "sourceMaps": false,
       "outFiles": []
     },
@@ -91,7 +91,7 @@
         "CRAWLER_MODE": "Standard",
         "CRAWLER_OPTIONS_PROVIDER": "redis"
       },
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "sourceMaps": false,
       "outFiles": []
     },
@@ -107,7 +107,7 @@
         "CRAWLER_OPTIONS_PROVIDER": "redis",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
-      "console": "internalConsole"
+      "console": "integratedTerminal"
     },
     {
       "name": "Local StandardWithoutEvents",
@@ -129,7 +129,7 @@
         "CRAWLER_OPTIONS_PROVIDER": "redis",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "sourceMaps": false,
       "outFiles": []
     },
@@ -150,7 +150,7 @@
         "NODE_ENV": "development",
         "CRAWLER_OPTIONS_PROVIDER": "redis"
       },
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "sourceMaps": false,
       "outFiles": []
     },
@@ -170,7 +170,7 @@
       "env": {
         "NODE_ENV": "localhost"
       },
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "sourceMaps": false,
       "outFiles": []
     },
@@ -194,7 +194,7 @@
         "CRAWLER_OPTIONS_PROVIDER": "redis",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
-      "console": "internalConsole",
+      "console": "integratedTerminal",
       "sourceMaps": false,
       "outFiles": []
     },
