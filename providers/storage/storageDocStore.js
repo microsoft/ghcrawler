@@ -5,6 +5,7 @@ const async = require('async');
 const azure = require('azure-storage');
 const memoryCache = require('memory-cache');
 const Q = require('q');
+const { Readable } = require('stream');
 const URL = require('url');
 
 class AzureStorageDocStore {
@@ -33,7 +34,6 @@ class AzureStorageDocStore {
   upsert(document) {
     const deferred = Q.defer();
     const blobName = this._getBlobNameFromDocument(document);
-    const text = JSON.stringify(document);
     const blobMetadata = {
       version: document._metadata.version,
       etag: document._metadata.etag,
@@ -47,13 +47,18 @@ class AzureStorageDocStore {
       blobMetadata.extra = JSON.stringify(document._metadata.extra);
     }
     const options = { metadata: blobMetadata, contentSettings: { contentType: 'application/json' } };
-    this.service.createBlockBlobFromText(this.name, blobName, text, options, (error, result, response) => {
-      if (error) {
+    const dataStream = new Readable();
+    dataStream.push(JSON.stringify(document));
+    dataStream.push(null);
+    dataStream
+      .pipe(this.service.createWriteStreamToBlockBlob(this.name, blobName, options))
+      .on('error', (error) => {
         return deferred.reject(error);
-      }
-      memoryCache.put(document._metadata.url, { etag: document._metadata.etag, document: document }, this.options.ttl);
-      deferred.resolve(blobName);
-    });
+      })
+      .on('finish', () => {
+        memoryCache.put(document._metadata.url, { etag: document._metadata.etag, document: document }, this.options.ttl);
+        deferred.resolve(blobName);
+      });
     return deferred.promise;
   }
 
