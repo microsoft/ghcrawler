@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "chai": "^4.2.0",
+    "eslint": "^5.16.0",
     "istanbul": "^0.4.5",
     "mocha": "^6.1.4",
     "sinon": "^2.4.1"
