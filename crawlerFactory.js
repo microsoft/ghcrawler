@@ -13,7 +13,7 @@ const CrawlerService = require('./lib/crawlerService');
 const Q = require('q');
 const QueueSet = require('./providers/queuing/queueSet');
 const redlock = require('redlock');
-const RefreshingConfig = require('refreshing-config');
+const RefreshingConfig = require('@microsoft/refreshing-config');
 const RefreshingConfigRedis = require('refreshing-config-redis');
 
 let logger = null;

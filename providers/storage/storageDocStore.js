@@ -5,6 +5,7 @@ const async = require('async');
 const azure = require('azure-storage');
 const memoryCache = require('memory-cache');
 const Q = require('q');
+const { Readable } = require('stream');
 const URL = require('url');
 
 class AzureStorageDocStore {
@@ -33,7 +34,6 @@ class AzureStorageDocStore {
   upsert(document) {
     const deferred = Q.defer();
     const blobName = this._getBlobNameFromDocument(document);
-    const text = JSON.stringify(document);
     const blobMetadata = {
       version: document._metadata.version,
       etag: document._metadata.etag,
@@ -47,23 +47,22 @@ class AzureStorageDocStore {
       blobMetadata.extra = JSON.stringify(document._metadata.extra);
     }
     const options = { metadata: blobMetadata, contentSettings: { contentType: 'application/json' } };
-    this.service.createBlockBlobFromText(this.name, blobName, text, options, (error, result, response) => {
-      if (error) {
+    const dataStream = new Readable();
+    dataStream.push(JSON.stringify(document));
+    dataStream.push(null);
+    dataStream
+      .pipe(this.service.createWriteStreamToBlockBlob(this.name, blobName, options))
+      .on('error', (error) => {
         return deferred.reject(error);
-      }
-      memoryCache.put(document._metadata.url, { etag: document._metadata.etag, document: document }, this.options.ttl);
-      deferred.resolve(blobName);
-    });
+      })
+      .on('finish', () => {
+        deferred.resolve(blobName);
+      });
     return deferred.promise;
   }
 
   // TODO: Consistency on whether key is a URL or URN
   get(type, key) {
-    const cached = memoryCache.get(key);
-    if (cached) {
-      return Q(cached.document);
-    }
-
     const deferred = Q.defer();
     const blobName = this._getBlobNameFromKey(type, key);
     this.service.getBlobToText(this.name, blobName, (error, text, blob, response) => {
@@ -71,7 +70,6 @@ class AzureStorageDocStore {
         return deferred.reject(error);
       }
       const result = JSON.parse(text);
-      memoryCache.put(key, { etag: result._metadata.etag, document: result }, this.options.ttl);
       deferred.resolve(result);
     });
     return deferred.promise;
@@ -79,11 +77,6 @@ class AzureStorageDocStore {
 
   // TODO: Consistency on whether key is a URL or URN
   etag(type, key) {
-    const cached = memoryCache.get(key);
-    if (cached) {
-      return Q(cached.etag);
-    }
-
     const deferred = Q.defer();
     const blobName = this._getBlobNameFromKey(type, key);
     this.service.getBlobMetadata(this.name, blobName, (error, blob, response) => {
@@ -100,7 +93,6 @@ class AzureStorageDocStore {
     const deferred = Q.defer();
     async.doWhilst(
       callback => {
-        var started = new Date().getTime();
         this.service.listBlobsSegmented(this.name, continuationToken, { include: azure.BlobUtilities.BlobListingDetails.METADATA, location: azure.StorageUtilities.LocationMode.PRIMARY_THEN_SECONDARY }, function (err, result, response) {
           // metricsClient.trackDependency(url.parse(blobService.host.primaryHost).hostname, 'listBlobsSegmented', (new Date().getTime() - started), !err, "Http", { 'Container name': 'download', 'Continuation token present': result == null ? false : (result.continuationToken != null), 'Blob count': result == null ? 0 : result.entries.length });
 
