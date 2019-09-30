@@ -545,6 +545,7 @@ describe('Crawler convert to document', () => {
       expect(metadata.etag).to.be.equal(42);
       expect(metadata.links).to.be.not.null;
       expect(metadata.fetchedAt).to.be.not.null;
+      expect(metadata.rootRequest).to.be.undefined;
     });
   });
 
@@ -564,6 +565,7 @@ describe('Crawler convert to document', () => {
       expect(metadata.etag).to.be.equal(42);
       expect(metadata.links).to.be.not.null;
       expect(metadata.fetchedAt).to.be.not.null;
+      expect(metadata.rootRequest).to.be.undefined;
       expect(request.document.elements === array).to.be.true;
     });
   });
