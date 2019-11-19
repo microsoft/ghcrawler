@@ -272,7 +272,7 @@ class GitHubFetcher {
       teams: { tokenTraits: ['admin'] },
       team: { tokenTraits: ['admin'] },
       members: { tokenTraits: ['admin'] },
-      events: { tokenTraits: ['admin'] },
+      events: { tokenTraits: [['admin'], ['public']] },
       collaborators: { tokenTraits: ['admin'], headers: { Accept: 'application/vnd.github.korra-preview' } },
       reviews: { headers: { Accept: 'application/vnd.github.black-cat-preview+json' } },
       review: { headers: { Accept: 'application/vnd.github.black-cat-preview+json' } },
