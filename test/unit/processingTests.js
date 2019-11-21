@@ -19,7 +19,7 @@ describe('Simple processing', () => {
         .then(processOne)
         .then(checkDoc.bind(null, 'org', 'urn:org:1', 4))
         .then(processOne)
-        .then(checkDoc.bind(null, 'user', 'urn:user:1', 1))
+        .then(checkDoc.bind(null, 'user', 'urn:user:1', 2))
         .then(processOne)
         .then(checkDoc.bind(null, 'repos', 'urn:org:1:repos:page:1', 0))
         .then(processOne)
@@ -29,7 +29,7 @@ describe('Simple processing', () => {
         .then(processOne)
         .then(checkDoc.bind(null, 'repos', 'urn:org:1:repos:page:1', 0))
         .then(processOne)
-        .then(checkDoc.bind(null, 'user', 'urn:user:2', 1))  // queued as a member of the org
+        .then(checkDoc.bind(null, 'user', 'urn:user:2', 2))  // queued as a member of the org
         .then(processOne)
         .then(checkDoc.bind(null, 'team', 'urn:team:20', 2))
         .then(processOne)
@@ -133,6 +133,7 @@ const resources = {
       "id": 1,
       "url": "https://api.github.com/users/test",
       "repos_url": "https://api.github.com/users/test/repos",
+      "events_url": "https://api.github.com/users/test/events",
     }
   },
   'https://api.github.com/users/user2': {
@@ -141,6 +142,7 @@ const resources = {
       "id": 2,
       "url": "https://api.github.com/users/user2",
       "repos_url": "https://api.github.com/users/user2/repos",
+      "events_url": "https://api.github.com/users/user2/events",
     }
   },
   'https://api.github.com/users/user2/repos': {

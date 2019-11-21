@@ -759,7 +759,7 @@ describe('Crawler whole meal deal', () => {
     const request = new Request('user', 'http://test.com/users/user1');
     request.policy = TraversalPolicy.reload('user');
     normal.requests = [request];
-    crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos' })];
+    crawler.fetcher.responses = [createResponse({ id: 42, repos_url: 'http://test.com/users/user1/repos', events_url: 'http://test.com/users/user1/events' })];
     return Q.try(() => { return crawler.processOne({ name: 'test' }); }).then(
       () => {
         expect(normal.pop.callCount).to.be.equal(1);

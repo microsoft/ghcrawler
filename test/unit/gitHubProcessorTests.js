@@ -179,6 +179,7 @@ describe('User processing', () => {
       _metadata: { links: {} },
       id: 9,
       repos_url: 'http://repos',
+      events_url: 'https://api.github.com/users/testuser/events',
     };
 
     const processor = new GitHubProcessor();
@@ -187,12 +188,14 @@ describe('User processing', () => {
     const links = {
       self: { href: 'urn:user:9', type: 'resource' },
       siblings: { href: 'urn:users', type: 'collection' },
-      repos: { href: 'urn:user:9:repos', type: 'collection' }
+      repos: { href: 'urn:user:9:repos', type: 'collection' },
+      events: {href: 'urn:user:9:events', type: 'collection'}
     }
     expectLinks(document._metadata.links, links);
 
     const expected = [
       { type: 'repos', url: 'http://repos', qualifier: 'urn:user:9', path: '/repos' },
+      { type: 'events', url: 'https://api.github.com/users/testuser/events', qualifier: 'urn:user:9', path: '/events'},
     ];
     expectQueued(queue, expected);
   });
