@@ -66,8 +66,13 @@ function buildRequestFromSpec(spec) {
   let crawlType = null;
   let crawlUrl = 'https://api.github.com/';
   if (spec.indexOf('/') > -1) {
-    crawlType = 'repo';
-    crawlUrl += 'repos/' + spec;
+    if(spec.slice(0, 6)==="users/") {
+      crawlType = 'user';
+      crawlUrl += spec;
+    } else {
+      crawlType = 'repo';
+      crawlUrl += 'repos/' + spec;
+    }
   } else {
     crawlType = 'org';
     crawlUrl += 'orgs/' + spec;
